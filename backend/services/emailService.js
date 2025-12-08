@@ -1,54 +1,30 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const path = require('path');
 const fs = require('fs').promises;
 
 class EmailService {
   constructor() {
-    this.transporter = null;
+    this.resend = null;
     this.isConfigured = false;
+    this.fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
     this.init();
   }
 
   async init() {
     try {
-      // Create transporter based on environment
-      if (process.env.NODE_ENV === 'production') {
-        // Check if required environment variables are set
-        if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-          console.error('❌ Missing email environment variables for production mode');
-          console.error('Required: EMAIL_USER, EMAIL_PASSWORD');
-          this.isConfigured = false;
-          return;
-        }
-        
-        // Production email service (Gmail, SendGrid, etc.)
-        this.transporter = nodemailer.createTransport({
-          service: process.env.EMAIL_SERVICE || 'gmail',
-          auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASSWORD
-          },
-          secure: true,
-          port: 465
-        });
-      } else {
-        // Development - use Ethereal for testing
-        const testAccount = await nodemailer.createTestAccount();
-        this.transporter = nodemailer.createTransport({
-          host: 'smtp.ethereal.email',
-          port: 587,
-          secure: false,
-          auth: {
-            user: testAccount.user,
-            pass: testAccount.pass
-          }
-        });
+      // Check if Resend API key is set
+      const apiKey = process.env.RESEND_API_KEY;
+
+      if (!apiKey) {
+        console.error('❌ Missing RESEND_API_KEY environment variable');
+        this.isConfigured = false;
+        return;
       }
 
-      // Verify connection
-      await this.transporter.verify();
+      // Initialize Resend client
+      this.resend = new Resend(apiKey);
       this.isConfigured = true;
-      console.log('✅ Email service configured successfully');
+      console.log('✅ Email service (Resend) configured successfully');
     } catch (error) {
       console.error('❌ Email service configuration failed:', error.message);
       this.isConfigured = false;
@@ -60,13 +36,13 @@ class EmailService {
     try {
       const templatePath = path.join(__dirname, 'templates', `${templateName}.html`);
       let template = await fs.readFile(templatePath, 'utf8');
-      
+
       // Replace placeholders with data
       Object.keys(data).forEach(key => {
         const regex = new RegExp(`{{${key}}}`, 'g');
         template = template.replace(regex, data[key]);
       });
-      
+
       return template;
     } catch (error) {
       console.error(`Error loading template ${templateName}:`, error);
@@ -126,20 +102,22 @@ class EmailService {
         institutionName: process.env.INSTITUTION_NAME || 'EduConnect University'
       });
 
-      const mailOptions = {
-        from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-        to: Array.isArray(to) ? to.join(', ') : to,
+      const recipients = Array.isArray(to) ? to : [to];
+
+      const result = await this.resend.emails.send({
+        from: `EduConnect <${this.fromEmail}>`,
+        to: recipients,
         subject: subject,
         html: htmlContent
-      };
+      });
 
-      const result = await this.transporter.sendMail(mailOptions);
-      
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('📧 Email sent (development):', nodemailer.getTestMessageUrl(result));
+      if (result.error) {
+        console.error('Resend error:', result.error);
+        return { success: false, error: result.error.message };
       }
-      
-      return { success: true, messageId: result.messageId };
+
+      console.log('📧 Email sent successfully via Resend:', result.data?.id);
+      return { success: true, messageId: result.data?.id };
     } catch (error) {
       console.error('Email send error:', error);
       return { success: false, error: error.message };
@@ -163,7 +141,7 @@ class EmailService {
   // Send password reset email
   async sendPasswordResetEmail(user, resetToken) {
     const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
-    
+
     return this.sendEmail(
       user.email,
       'Password Reset Request',
@@ -179,7 +157,7 @@ class EmailService {
   // Send verification email
   async sendVerificationEmail(user, verificationToken) {
     const verificationUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/verify-email?token=${verificationToken}`;
-    
+
     return this.sendEmail(
       user.email,
       'Verify Your Email Address',
@@ -313,7 +291,7 @@ class EmailService {
   // Send bulk emails
   async sendBulkEmail(users, subject, templateName, data = {}) {
     const results = [];
-    
+
     for (const user of users) {
       const result = await this.sendEmail(
         user.email,
@@ -323,7 +301,7 @@ class EmailService {
       );
       results.push({ user: user._id, ...result });
     }
-    
+
     return results;
   }
 
@@ -343,7 +321,7 @@ class EmailService {
           timestamp: new Date().toISOString()
         }
       );
-      
+
       return testResult;
     } catch (error) {
       return { success: false, error: error.message };

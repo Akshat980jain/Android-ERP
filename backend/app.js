@@ -8,6 +8,7 @@ const morgan = require('morgan');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
+const { cacheMiddleware, getCacheStats, clearCache, clearAllCache } = require('./middleware/cache');
 
 // Load environment variables
 dotenv.config();
@@ -114,19 +115,29 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ========== DATABASE CONNECTION ==========
-mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://akshat980jain:zm3aHd1m1a4pxU7q@cluster0.nkrpubg.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0')
-.then(() => console.log('Connected to MongoDB'))
-.catch((err) => {
-  console.error('MongoDB connection error:', err);
-  process.exit(1);
-});
+// Optimized connection with connection pooling for better scalability
+mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://akshat980jain:zm3aHd1m1a4pxU7q@cluster0.nkrpubg.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0', {
+  maxPoolSize: 50,              // Maximum number of connections in the pool
+  minPoolSize: 10,              // Minimum number of connections to maintain
+  serverSelectionTimeoutMS: 5000, // Timeout for server selection
+  socketTimeoutMS: 45000,       // Socket timeout
+  family: 4                     // Use IPv4, skip trying IPv6
+})
+  .then(() => {
+    console.log('✅ Connected to MongoDB with optimized connection pool');
+    console.log(`📊 Pool size: 10-50 connections`);
+  })
+  .catch((err) => {
+    console.error('❌ MongoDB connection error:', err);
+    process.exit(1);
+  });
 
 // ========== API ROUTES ==========
 // Root endpoint for basic connectivity test
 app.get('/', (req, res) => {
-  res.json({ 
-    success: true, 
-    message: 'EduConnect Backend Server', 
+  res.json({
+    success: true,
+    message: 'EduConnect Backend Server',
     timestamp: new Date().toISOString(),
     version: '1.0.0'
   });
@@ -135,6 +146,19 @@ app.get('/', (req, res) => {
 // Test endpoint
 app.get('/api/test', (req, res) => {
   res.json({ success: true, message: 'Backend is running!', timestamp: new Date().toISOString() });
+});
+
+// Cache statistics endpoint (admin only in production)
+app.get('/api/cache/stats', (req, res) => {
+  const stats = getCacheStats();
+  res.json({ success: true, cache: stats });
+});
+
+// Clear cache endpoint (admin only in production)
+app.post('/api/cache/clear', (req, res) => {
+  const { pattern } = req.body;
+  const cleared = pattern ? clearCache(pattern) : clearAllCache();
+  res.json({ success: true, message: `Cleared ${cleared} cache entries`, pattern: pattern || 'all' });
 });
 
 app.use('/api/auth', authRoutes);
@@ -179,12 +203,21 @@ const io = new Server(server, {
       .split(',')
       .map((s) => s.trim())
       .includes('*')
-        ? '*'
-        : (process.env.CORS_ORIGINS || process.env.CLIENT_URL || 'http://localhost:5173,http://192.168.1.13:5000,http://192.168.1.13:3000')
-            .split(',')
-            .map((s) => s.trim()),
+      ? '*'
+      : (process.env.CORS_ORIGINS || process.env.CLIENT_URL || 'http://localhost:5173,http://192.168.1.13:5000,http://192.168.1.13:3000')
+        .split(',')
+        .map((s) => s.trim()),
     methods: ['GET', 'POST']
-  }
+  },
+  // Performance optimizations for Socket.IO
+  pingTimeout: 60000,        // 60 seconds - how long to wait for pong
+  pingInterval: 25000,       // 25 seconds - how often to send ping
+  upgradeTimeout: 10000,     // 10 seconds - time to wait for upgrade
+  maxHttpBufferSize: 1e6,    // 1MB - max message size
+  transports: ['websocket', 'polling'], // Prefer websocket
+  allowEIO3: true,           // Allow Engine.IO v3 clients
+  // Ready for horizontal scaling with Redis adapter (uncomment when needed)
+  // adapter: require('socket.io-redis')({ host: 'localhost', port: 6379 })
 });
 
 // Cron: generate reminders daily at 08:00 server time
@@ -220,7 +253,7 @@ try {
           targetUsers: [fee.student._id],
           createdBy: fee.student._id,
         });
-        try { if (global.io) global.io.to(String(fee.student._id)).emit('notification', { _id: doc._id, title: doc.title, message: doc.message, type: doc.type, category: doc.category, createdAt: doc.createdAt, targetRoles: doc.targetRoles, read: false }); } catch {}
+        try { if (global.io) global.io.to(String(fee.student._id)).emit('notification', { _id: doc._id, title: doc.title, message: doc.message, type: doc.type, category: doc.category, createdAt: doc.createdAt, targetRoles: doc.targetRoles, read: false }); } catch { }
       }
 
       // Assignments
@@ -229,7 +262,7 @@ try {
         const recent = await Notification.findOne({ category: 'academic', title: /Assignments due soon/i, createdAt: { $gte: inDays(-1) } });
         if (!recent) {
           const doc = await Notification.create({ title: 'Assignments due soon', message: `${upcomingAssignments.length} assignment(s) due within 3 days. Please review and submit on time.`, type: 'info', category: 'academic', targetRoles: ['student'], createdBy: null });
-          try { if (global.io) global.io.emit('notification', { _id: doc._id, title: doc.title, message: doc.message, type: doc.type, category: doc.category, createdAt: doc.createdAt, targetRoles: doc.targetRoles, read: false }); } catch {}
+          try { if (global.io) global.io.emit('notification', { _id: doc._id, title: doc.title, message: doc.message, type: doc.type, category: doc.category, createdAt: doc.createdAt, targetRoles: doc.targetRoles, read: false }); } catch { }
         }
       }
 
@@ -246,7 +279,7 @@ try {
         const recent = await Notification.findOne({ category: 'academic', 'targetUsers': sid, title: /Low attendance alert/i, createdAt: { $gte: inDays(-1) } });
         if (recent) continue;
         const doc = await Notification.create({ title: 'Low attendance alert', message: 'Your attendance in the last 30 days is below 75%. Please improve attendance.', type: 'warning', category: 'academic', targetUsers: [sid], createdBy: sid });
-        try { if (global.io) global.io.to(String(sid)).emit('notification', { _id: doc._id, title: doc.title, message: doc.message, type: doc.type, category: doc.category, createdAt: doc.createdAt, targetRoles: doc.targetRoles, read: false }); } catch {}
+        try { if (global.io) global.io.to(String(sid)).emit('notification', { _id: doc._id, title: doc.title, message: doc.message, type: doc.type, category: doc.category, createdAt: doc.createdAt, targetRoles: doc.targetRoles, read: false }); } catch { }
       }
       console.log('Daily reminders generated');
     } catch (e) {

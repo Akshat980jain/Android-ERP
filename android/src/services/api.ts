@@ -1,14 +1,21 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform, NativeModules } from 'react-native';
 import { AuthResponse, ApiResponse, User } from '../types';
+import { API_CONFIG } from '../config/api.config';
 
-// Base URL and candidates
-const API_BASE_URL = __DEV__ 
-  ? 'http://192.168.1.14:5000/api'  // Development - use current computer IP
-  : 'http://192.168.1.14:5000/api'; // Production - same for now
+// Use centralized configuration
+const API_BASE_URL = API_CONFIG.BASE_URL;
 
 function getCandidateBaseUrls(): string[] {
   const urls: string[] = [];
+
+  // In production, only use the production URL
+  if (API_CONFIG.IS_PRODUCTION) {
+    urls.push(API_BASE_URL);
+    return urls;
+  }
+
+  // Development: Try multiple fallback URLs
   // Prefer the configured base first
   urls.push(API_BASE_URL);
 
@@ -22,16 +29,15 @@ function getCandidateBaseUrls(): string[] {
         urls.push(`http://${host}:5000/api`);
       }
     }
-  } catch (_) {}
+  } catch (_) { }
 
   // If running on Android emulator, 10.0.2.2 maps to host machine
   if (Platform.OS === 'android') {
     urls.push('http://10.0.2.2:5000/api');
   }
 
-  // Typical LAN IPs that might be used during development
-  urls.push('http://192.168.1.14:5000/api');
-  urls.push('http://192.168.1.14:5000/api');
+  // Fallback to configured local IP
+  urls.push(`http://${API_CONFIG.LOCAL_IP}:5000/api`);
 
   // 'localhost' only makes sense on iOS simulator or web; exclude on Android
   if (Platform.OS !== 'android') {
@@ -62,7 +68,7 @@ class ApiService {
   constructor() {
     this.baseURL = API_BASE_URL;
     // Prime cache from storage (best-effort)
-    AsyncStorage.getItem('educonnect_token').then((t) => { this.cachedToken = t; }).catch(() => {});
+    AsyncStorage.getItem('educonnect_token').then((t) => { this.cachedToken = t; }).catch(() => { });
   }
 
   private async getToken(): Promise<string | null> {
@@ -95,24 +101,24 @@ class ApiService {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     const urlsToTry = getCandidateBaseUrls();
-    
+
     for (let i = 0; i < urlsToTry.length; i++) {
       const baseURL = urlsToTry[i];
       const url = `${baseURL}${endpoint}`;
-      
+
       try {
         this.debugLog(`Attempt ${i + 1}: Making API request to:`, url);
         this.debugLog('Network status check - attempting connection...');
         this.debugLog('Current baseURL:', this.baseURL);
         this.debugLog('All URLs to try:', urlsToTry);
         this.debugLog('Testing basic network connectivity...');
-        
+
         const headers = await this.getHeaders();
-        
+
         // Create AbortController for timeout (shorter to fail over faster)
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
-        
+
         const response = await fetch(url, {
           ...options,
           headers: {
@@ -121,7 +127,7 @@ class ApiService {
           },
           signal: controller.signal,
         });
-        
+
         clearTimeout(timeoutId);
 
         this.debugLog('Response status:', response.status);
@@ -145,12 +151,12 @@ class ApiService {
 
         let data: any;
         let responseText = '';
-        
+
         try {
           // First, get the response as text to avoid "Already read" error
           responseText = await response.text();
           this.debugLog('Response text (truncated):', responseText?.slice?.(0, 200));
-          
+
           // Try to parse as JSON
           if (responseText.trim()) {
             data = JSON.parse(responseText);
@@ -162,7 +168,7 @@ class ApiService {
           this.debugLog('JSON Parse Error:', jsonError);
           this.debugLog('Response status:', response.status);
           this.debugLog('Response headers:', response.headers);
-          
+
           // If it's HTML, it might be an error page
           if (responseText.includes('<html>') || responseText.includes('<!DOCTYPE')) {
             if (this.shouldStopRetriesForStatus(response.status)) {
@@ -170,7 +176,7 @@ class ApiService {
             }
             return { success: false, error: 'Server returned HTML instead of JSON' } as any;
           }
-          
+
           return { success: false, error: 'Invalid JSON returned by server' } as any;
         }
 
@@ -198,7 +204,7 @@ class ApiService {
         return data;
       } catch (error: any) {
         this.debugLog(`Attempt ${i + 1} failed:`, error?.message || String(error));
-        
+
         // If this is the last attempt, return the error
         if (i === urlsToTry.length - 1) {
           // eslint-disable-next-line no-console
@@ -207,7 +213,7 @@ class ApiService {
             tried: urlsToTry,
             reason: error?.name === 'AbortError' ? 'timeout' : (error?.message || 'unknown')
           });
-          
+
           // Return a more user-friendly error message
           let errorMessage = 'Network error';
           if (error.name === 'AbortError') {
@@ -223,18 +229,18 @@ class ApiService {
           } else {
             errorMessage = error.message;
           }
-          
+
           return {
             success: false,
             error: errorMessage,
           } as any;
         }
-        
+
         // Continue to next URL
         this.debugLog(`Trying next URL...`);
       }
     }
-    
+
     return {
       success: false,
       error: 'All connection attempts failed',
@@ -594,7 +600,7 @@ class ApiService {
     if (search) query.append('search', search);
     if (category && category !== 'all') query.append('category', category);
     if (searchType) query.append('searchType', searchType);
-    
+
     const queryString = query.toString();
     return this.request(`/library/books${queryString ? `?${queryString}` : ''}`);
   }

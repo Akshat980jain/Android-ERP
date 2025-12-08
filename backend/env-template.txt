@@ -1,15 +1,13 @@
-# Copy this file to .env and replace the values with your actual email credentials
+# Copy this file to .env and replace the values with your actual credentials
 
-# Production mode - uses real email
+# Production mode
 NODE_ENV=production
 
-# Gmail Configuration
-EMAIL_SERVICE=gmail
-EMAIL_USER=your-email@gmail.com
-EMAIL_PASSWORD=your-16-digit-app-password
-EMAIL_FROM=EduConnect <your-email@gmail.com>
+# Resend Email Configuration
+RESEND_API_KEY=your-resend-api-key
+RESEND_FROM_EMAIL=akshat480jain@gmail.com
 
-# Test Email
+# Test Email (for testing email service)
 TEST_EMAIL=your-email@gmail.com
 
 # Client URL

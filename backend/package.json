@@ -6,6 +6,13 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop erp-backend",
+    "pm2:restart": "pm2 restart erp-backend",
+    "pm2:delete": "pm2 delete erp-backend",
+    "pm2:logs": "pm2 logs erp-backend",
+    "pm2:monit": "pm2 monit",
+    "pm2:status": "pm2 status",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -31,9 +38,11 @@
     "mongoose": "^8.0.3",
     "morgan": "^1.10.0",
     "multer": "^2.0.2",
+    "node-cache": "^5.1.2",
     "node-cron": "^4.2.1",
-    "nodemailer": "^7.0.5",
+    "pm2": "^6.0.13",
     "qrcode": "^1.5.3",
+    "resend": "^4.8.0",
     "routes": "^2.1.0",
     "routes.js": "^0.0.1",
     "socket.io": "^4.8.1",

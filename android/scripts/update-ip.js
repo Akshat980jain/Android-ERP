@@ -1,132 +1,109 @@
-#!/usr/bin/env node
-
+const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const os = require('os');
 
-// Get the current local IP address
+/**
+ * Auto-detect and update local IP in API configuration
+ * Run this script whenever your IP changes: node scripts/update-ip.js
+ */
+
 function getLocalIP() {
-  const interfaces = os.networkInterfaces();
-  
-  for (const name of Object.keys(interfaces)) {
-    for (const iface of interfaces[name]) {
-      // Skip internal (loopback) addresses and IPv6
-      if (iface.family === 'IPv4' && !iface.internal) {
-        // Prefer Wi-Fi or Ethernet interfaces
-        if (name.toLowerCase().includes('wifi') || name.toLowerCase().includes('ethernet') || name.toLowerCase().includes('lan')) {
-          return iface.address;
+  try {
+    // Windows
+    if (process.platform === 'win32') {
+      const output = execSync('ipconfig', { encoding: 'utf-8' });
+      const lines = output.split('\n');
+
+      const validIPs = [];
+
+      // Collect all valid IPv4 addresses
+      for (const line of lines) {
+        if (line.includes('IPv4 Address')) {
+          const match = line.match(/(\d+\.\d+\.\d+\.\d+)/);
+          if (match && match[1] && !match[1].startsWith('127.') && !match[1].startsWith('169.254.')) {
+            validIPs.push(match[1]);
+          }
+        }
+      }
+
+      // Prioritize 192.168.1.x (typical home WiFi) over 192.168.137.x (Windows hotspot)
+      const preferredIP = validIPs.find(ip => ip.startsWith('192.168.1.'));
+      if (preferredIP) return preferredIP;
+
+      // Otherwise return the first valid IP
+      if (validIPs.length > 0) return validIPs[0];
+    }
+    // macOS/Linux
+    else {
+      const output = execSync('ifconfig', { encoding: 'utf-8' });
+      const lines = output.split('\n');
+
+      for (const line of lines) {
+        if (line.includes('inet ') && !line.includes('127.0.0.1')) {
+          const match = line.match(/inet (\d+\.\d+\.\d+\.\d+)/);
+          if (match && match[1] && !match[1].startsWith('169.254.')) {
+            return match[1];
+          }
         }
       }
     }
+  } catch (error) {
+    console.error('Error detecting IP:', error.message);
   }
-  
-  // Fallback to first non-internal IPv4 address
-  for (const name of Object.keys(interfaces)) {
-    for (const iface of interfaces[name]) {
-      if (iface.family === 'IPv4' && !iface.internal) {
-        return iface.address;
-      }
-    }
-  }
-  
+
   return null;
 }
 
-// Update API service file
-function updateApiService(newIP) {
-  const apiServicePath = path.join(__dirname, '..', 'src', 'services', 'api.ts');
-  
-  if (!fs.existsSync(apiServicePath)) {
-    console.error('API service file not found:', apiServicePath);
-    return false;
-  }
-  
-  let content = fs.readFileSync(apiServicePath, 'utf8');
-  
-  // Replace IP addresses in API_BASE_URL
-  content = content.replace(
-    /const API_BASE_URL = __DEV__\s*\?\s*'http:\/\/[^']+'\s*:\s*'http:\/\/[^']+';/,
-    `const API_BASE_URL = __DEV__ \n  ? 'http://${newIP}:5000/api'  // Development - use current computer IP\n  : 'http://${newIP}:5000/api'; // Production - same for now`
-  );
-  
-  // Update FALLBACK_URLS
-  const fallbackUrlsRegex = /const FALLBACK_URLS = \[([\s\S]*?)\];/;
-  const match = content.match(fallbackUrlsRegex);
-  
-  if (match) {
-    const newFallbackUrls = `const FALLBACK_URLS = [
-  'http://${newIP}:5000/api',  // Current computer IP
-  'http://10.0.2.2:5000/api',  // Android emulator localhost
-  'http://localhost:5000/api',  // Localhost
-  'http://192.168.137.1:5000/api' // Previous IP (fallback)
-];`;
-    
-    content = content.replace(fallbackUrlsRegex, newFallbackUrls);
-  }
-  
-  fs.writeFileSync(apiServicePath, content);
-  console.log('✅ Updated API service with new IP:', newIP);
-  return true;
-}
+function updateConfigFile(newIP) {
+  const configPath = path.join(__dirname, '../src/config/api.config.ts');
 
-// Update network security config
-function updateNetworkSecurityConfig(newIP) {
-  const configPath = path.join(__dirname, '..', 'network_security_config.xml');
-  
   if (!fs.existsSync(configPath)) {
-    console.error('Network security config file not found:', configPath);
+    console.error('❌ Config file not found:', configPath);
     return false;
   }
-  
-  let content = fs.readFileSync(configPath, 'utf8');
-  
-  // Add new IP to domain config if not already present
-  const domainRegex = /<domain includeSubdomains="true">192\.168\.1\.\d+<\/domain>/;
-  if (!content.includes(`<domain includeSubdomains="true">${newIP}</domain>`)) {
-    // Insert new IP as first domain
-    content = content.replace(
-      /<domain-config cleartextTrafficPermitted="true">/,
-      `<domain-config cleartextTrafficPermitted="true">\n        <domain includeSubdomains="true">${newIP}</domain>`
-    );
-    console.log('✅ Updated network security config with new IP:', newIP);
-  } else {
-    console.log('✅ IP already exists in network security config:', newIP);
+
+  let content = fs.readFileSync(configPath, 'utf-8');
+
+  // Extract current IP
+  const currentIPMatch = content.match(/const LOCAL_IP = '(\d+\.\d+\.\d+\.\d+)'/);
+  const currentIP = currentIPMatch ? currentIPMatch[1] : 'unknown';
+
+  if (currentIP === newIP) {
+    console.log('✅ IP address is already up to date:', newIP);
+    return true;
   }
-  
-  fs.writeFileSync(configPath, content);
+
+  // Replace the IP
+  content = content.replace(
+    /const LOCAL_IP = '\d+\.\d+\.\d+\.\d+'/,
+    `const LOCAL_IP = '${newIP}'`
+  );
+
+  fs.writeFileSync(configPath, content, 'utf-8');
+
+  console.log('✅ Updated IP address:');
+  console.log('   Old IP:', currentIP);
+  console.log('   New IP:', newIP);
+  console.log('\n📱 Restart your app to apply changes');
+
   return true;
 }
 
-// Main function
-function main() {
-  console.log('🔍 Detecting local IP address...');
-  
-  const newIP = getLocalIP();
-  
-  if (!newIP) {
-    console.error('❌ Could not detect local IP address');
-    process.exit(1);
-  }
-  
-  console.log('📍 Detected IP address:', newIP);
-  
-  // Update files
-  const apiUpdated = updateApiService(newIP);
-  const configUpdated = updateNetworkSecurityConfig(newIP);
-  
-  if (apiUpdated && configUpdated) {
-    console.log('🎉 Successfully updated Android app configuration!');
-    console.log('📱 You can now run the Android app and it should connect to the backend.');
-    console.log('🔧 Make sure your backend server is running on port 5000');
-  } else {
-    console.error('❌ Failed to update some configuration files');
-    process.exit(1);
-  }
+// Main execution
+console.log('🔍 Detecting local IP address...\n');
+
+const detectedIP = getLocalIP();
+
+if (!detectedIP) {
+  console.error('❌ Could not detect local IP address');
+  console.log('\n💡 Manual update required:');
+  console.log('   1. Run "ipconfig" (Windows) or "ifconfig" (Mac/Linux)');
+  console.log('   2. Find your IPv4 address');
+  console.log('   3. Update LOCAL_IP in: src/config/api.config.ts');
+  process.exit(1);
 }
 
-if (require.main === module) {
-  main();
-}
+console.log('🌐 Detected IP:', detectedIP);
+console.log('');
 
-module.exports = { getLocalIP, updateApiService, updateNetworkSecurityConfig };
-
+updateConfigFile(detectedIP);
