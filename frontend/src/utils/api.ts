@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = 'https://android-1ej6.onrender.com/api';
 
 class ApiClient {
   private baseURL: string;
@@ -42,30 +42,30 @@ class ApiClient {
       });
 
       const response = await fetch(url, config);
-      
+
       // Log response details for debugging
       console.log(`Response status: ${response.status}`);
       console.log(`Response ok: ${response.ok}`);
       console.log(`Response headers:`, Object.fromEntries(response.headers.entries()));
-      
+
       // Check if response is ok before trying to parse JSON
       if (!response.ok) {
         console.log(`HTTP ${response.status}: ${response.statusText}`);
         console.log(`Content-Type: ${response.headers.get('content-type')}`);
-        
+
         // Try to get the response text for debugging
         const errorText = await response.text();
         console.log('Raw response text:', errorText);
-        
+
         let errorData;
         try {
           errorData = JSON.parse(errorText);
         } catch {
           errorData = { message: errorText };
         }
-        
+
         console.log('Parsed response data:', errorData);
-        
+
         throw new Error(`HTTP ${response.status}: ${errorData.message || response.statusText}`);
       }
 
@@ -99,9 +99,9 @@ class ApiClient {
         throw new Error('Please enter a valid email address');
       }
 
-      const requestBody = { 
-        email: trimmedEmail, 
-        password: password 
+      const requestBody = {
+        email: trimmedEmail,
+        password: password
       };
 
       console.log('Sending login request with:', { email: trimmedEmail, password: '***' });
@@ -229,15 +229,15 @@ class ApiClient {
       if (response.ok) {
         return { success: true, message: 'Server connection successful' };
       } else {
-        return { 
-          success: false, 
-          message: `Server responded with status: ${response.status} ${response.statusText}` 
+        return {
+          success: false,
+          message: `Server responded with status: ${response.status} ${response.statusText}`
         };
       }
     } catch (error) {
-      return { 
-        success: false, 
-        message: `Connection failed: ${error instanceof Error ? error.message : 'Unknown error'}` 
+      return {
+        success: false,
+        message: `Connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       };
     }
   }
@@ -458,7 +458,7 @@ class ApiClient {
     return this.request('/feedback', { method: 'POST', body: JSON.stringify(payload) });
   }
   async getFeedbackSummary(params?: { courseId?: string; semester?: number; academicYear?: string }) {
-    const qs = params ? `?${new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([_,v]) => v!==undefined && v!==null).map(([k,v]) => [k, String(v)]))).toString()}` : '';
+    const qs = params ? `?${new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([_, v]) => v !== undefined && v !== null).map(([k, v]) => [k, String(v)]))).toString()}` : '';
     return this.request(`/feedback/summary${qs}`);
   }
 

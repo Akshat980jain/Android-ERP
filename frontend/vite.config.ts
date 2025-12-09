@@ -11,8 +11,8 @@ export default defineConfig({
     host: true,
     port: 5173,
     proxy: {
-      '/api': 'http://localhost:5000',
-      '/uploads': 'http://localhost:5000'
+      '/api': 'https://android-1ej6.onrender.com',
+      '/uploads': 'https://android-1ej6.onrender.com'
     }
   }
 });

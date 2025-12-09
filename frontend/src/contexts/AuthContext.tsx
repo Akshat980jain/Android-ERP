@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Check for existing token and user
     const savedToken = localStorage.getItem('educonnect_token');
     const savedUser = localStorage.getItem('educonnect_user');
-    
+
     if (savedToken && savedUser) {
       setToken(savedToken);
       setUser(JSON.parse(savedUser));
@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Manage socket connection lifecycle
   useEffect(() => {
     if (user && !socketRef.current) {
-      const socket = io('http://localhost:5000', { transports: ['websocket'] });
+      const socket = io('https://android-1ej6.onrender.com', { transports: ['websocket'] });
       socketRef.current = socket;
       socket.on('connect', () => {
         // join personal room using user id
@@ -83,10 +83,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string): Promise<{ success: boolean; message?: string; twoFactorRequired?: boolean; tempToken?: string; method?: 'totp' | 'sms' | 'email'; maskedPhone?: string; devCode?: string }> => {
     setIsLoading(true);
-    
+
     try {
       console.log('Attempting login with email:', email);
-      
+
       const data = await apiClient.login(email, password) as any;
 
       // New email OTP flow (preferred)
@@ -105,15 +105,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       console.log('Login successful:', data);
-      
+
       setUser((data as { user: User }).user);
       setToken((data as { token: string }).token);
       localStorage.setItem('educonnect_user', JSON.stringify((data as { user: User }).user));
       localStorage.setItem('educonnect_token', (data as { token: string }).token);
-      
+
       // connect socket after successful login
       if (!socketRef.current) {
-        const socket = io('http://localhost:5000', { transports: ['websocket'] });
+        const socket = io('https://android-1ej6.onrender.com', { transports: ['websocket'] });
         socketRef.current = socket;
         socket.on('connect', () => {
           socket.emit('join-room', ((data as { user: any }).user)._id);
@@ -123,15 +123,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { success: true };
     } catch (error) {
       console.error('Login error:', error);
-      
+
       let errorMessage = 'Network error. Please check your connection and try again.';
-      
+
       if (error instanceof Error) {
         errorMessage = error.message;
       }
-      
-      return { 
-        success: false, 
+
+      return {
+        success: false,
         message: errorMessage
       };
     } finally {

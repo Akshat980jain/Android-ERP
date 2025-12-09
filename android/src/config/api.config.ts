@@ -16,13 +16,13 @@
 // ==================== CONFIGURATION ====================
 
 // Set to true when deploying to production
-const IS_PRODUCTION = false;
+const IS_PRODUCTION = true;
 
 // Your local computer's IP address (update this when it changes)
 const LOCAL_IP = '192.168.1.12';
 
 // Your production server URL (update before deploying)
-const PRODUCTION_URL = 'https://your-domain.com/api';
+const PRODUCTION_URL = 'https://android-1ej6.onrender.com/api';
 
 // ==================== DO NOT EDIT BELOW ====================
 

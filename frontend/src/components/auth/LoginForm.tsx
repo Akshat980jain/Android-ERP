@@ -9,13 +9,13 @@ import { z } from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Create a simple Toast component inline
-const Toast = ({ 
-  message, 
-  type, 
-  onClose 
-}: { 
-  message: string; 
-  type: 'success' | 'error' | 'info'; 
+const Toast = ({
+  message,
+  type,
+  onClose
+}: {
+  message: string;
+  type: 'success' | 'error' | 'info';
   onClose: () => void;
 }) => {
   const icons = {
@@ -52,13 +52,13 @@ const Toast = ({
 };
 
 // OTP Input Component
-const OTPInput = ({ 
-  value, 
-  onChange, 
-  error 
-}: { 
-  value: string; 
-  onChange: (value: string) => void; 
+const OTPInput = ({
+  value,
+  onChange,
+  error
+}: {
+  value: string;
+  onChange: (value: string) => void;
   error?: string;
 }) => {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -82,7 +82,7 @@ const OTPInput = ({
       });
       setOtp(newOtp);
       onChange(newOtp.join(''));
-      
+
       // Focus last filled input or next empty
       const nextIndex = Math.min(index + pastedValue.length, 5);
       inputRefs.current[nextIndex]?.focus();
@@ -122,9 +122,8 @@ const OTPInput = ({
             value={otp[index]}
             onChange={(e) => handleChange(index, e.target.value)}
             onKeyDown={(e) => handleKeyDown(index, e)}
-            className={`w-12 h-12 text-center text-lg font-semibold border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
-              error ? 'border-red-500 bg-red-50' : 'border-gray-300 hover:border-gray-400'
-            } ${otp[index] ? 'border-blue-500 bg-blue-50' : ''}`}
+            className={`w-12 h-12 text-center text-lg font-semibold border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${error ? 'border-red-500 bg-red-50' : 'border-gray-300 hover:border-gray-400'
+              } ${otp[index] ? 'border-blue-500 bg-blue-50' : ''}`}
             autoComplete="one-time-code"
           />
         ))}
@@ -205,11 +204,11 @@ export function LoginForm() {
   const handleResendOtp = useCallback(async () => {
     try {
       const res = await (await import('../../utils/api')).default.request(
-        '/auth/request-otp', 
-        { 
-          method: 'POST', 
-          body: JSON.stringify({ email: pendingEmail, purpose: 'login' }) 
-        }, 
+        '/auth/request-otp',
+        {
+          method: 'POST',
+          body: JSON.stringify({ email: pendingEmail, purpose: 'login' })
+        },
         ''
       );
       showToast('New verification code sent to your email.', 'success');
@@ -272,7 +271,7 @@ export function LoginForm() {
       const errorMessage = result?.message || 'Login failed. Please check your credentials and try again.';
       console.log('Login failed with message:', errorMessage);
       showToast(errorMessage, 'error');
-      
+
       // Reset sensitive fields
       setValue('password', '');
       setValue('twoFactorCode', '');
@@ -286,7 +285,7 @@ export function LoginForm() {
 
       // Provide more specific error messages based on error type
       let errorMessage = 'An unexpected error occurred. Please try again.';
-      
+
       if (error instanceof Error) {
         if (error.message.includes('Server error')) {
           errorMessage = 'Server is currently unavailable. Please try again in a few moments.';
@@ -304,7 +303,7 @@ export function LoginForm() {
       }
 
       showToast(errorMessage, 'error');
-      
+
       // Reset sensitive fields
       setValue('password', '');
       setValue('twoFactorCode', '');
@@ -318,13 +317,13 @@ export function LoginForm() {
   // Check if backend is reachable (optional diagnostic)
   const testConnection = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/health', {
+      const response = await fetch('https://android-1ej6.onrender.com/api/health', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
       });
-      
+
       if (response.ok) {
         showToast('Server connection is working!', 'success');
       } else {
@@ -354,7 +353,7 @@ export function LoginForm() {
                 <GraduationCap className="w-8 h-8 text-white mr-3" />
                 <h2 className="text-2xl font-bold text-white tracking-wide">EduConnect Login</h2>
               </div>
-              
+
               <form onSubmit={handleSubmit(onSubmit)} className="p-8 space-y-6">
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-gray-700">Email Address</label>
@@ -401,7 +400,7 @@ export function LoginForm() {
                     </div>
                   )}
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <label className="flex items-center space-x-2 cursor-pointer">
                     <input
@@ -419,7 +418,7 @@ export function LoginForm() {
                     Forgot password?
                   </button>
                 </div>
-                
+
                 <button
                   type="submit"
                   className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-semibold text-lg shadow hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
@@ -434,12 +433,12 @@ export function LoginForm() {
                     'Sign In'
                   )}
                 </button>
-                
+
                 <div className="text-center space-y-3">
                   <a href="/request-verification" className="block text-blue-600 hover:underline">
                     Need an account? Request verification here
                   </a>
-                  
+
                   {/* Debug button - remove in production */}
                   <button
                     type="button"
@@ -473,7 +472,7 @@ export function LoginForm() {
                 <Shield className="w-8 h-8 text-white mr-3" />
                 <h2 className="text-2xl font-bold text-white tracking-wide">Verify Your Identity</h2>
               </div>
-              
+
               <div className="p-8 space-y-6">
                 <div className="text-center space-y-3">
                   <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -481,20 +480,20 @@ export function LoginForm() {
                   </div>
                   <h3 className="text-xl font-semibold text-gray-900">Enter Verification Code</h3>
                   <p className="text-gray-600">
-                    {twoFactorMethod === 'sms' 
+                    {twoFactorMethod === 'sms'
                       ? `We've sent a 6-digit code to ${maskedPhone || 'your phone'}`
                       : `We've sent a 6-digit code to ${pendingEmail}`}
                   </p>
                 </div>
 
-                <OTPInput 
+                <OTPInput
                   value={otpValue}
                   onChange={handleOtpChange}
                   error={errors.twoFactorCode?.message}
                 />
 
                 {devCode && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     className="text-center p-3 bg-yellow-50 border border-yellow-200 rounded-lg"
