@@ -19,7 +19,7 @@
 const IS_PRODUCTION = false;
 
 // Your local computer's IP address (update this when it changes)
-const LOCAL_IP = '192.168.1.12';
+const LOCAL_IP = '192.168.1.11';
 
 // Your production server URL (update before deploying)
 const PRODUCTION_URL = 'https://your-domain.com/api';
