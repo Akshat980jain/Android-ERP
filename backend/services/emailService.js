@@ -1,25 +1,21 @@
-const nodemailer = require('nodemailer');
 const fs = require('fs');
 const path = require('path');
 
-// Email configuration
-const emailConfig = {
-    service: process.env.EMAIL_SERVICE || 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD
-    }
+// Check if Brevo email service is properly configured
+const isConfigured = !!process.env.BREVO_API_KEY;
+
+// Sender configuration
+const defaultSender = {
+    name: process.env.EMAIL_FROM_NAME || 'EduConnect',
+    email: process.env.BREVO_SENDER_EMAIL || process.env.EMAIL_FROM || 'noreply@educonnect.com'
 };
 
-// Check if email service is properly configured
-const isConfigured = !!(process.env.EMAIL_USER && process.env.EMAIL_PASSWORD);
-
-// Create transporter
-let transporter;
-if (isConfigured) {
-    transporter = nodemailer.createTransport(emailConfig);
+if (!isConfigured) {
+    console.warn('⚠️ Brevo email service not configured. Set BREVO_API_KEY in .env');
+    console.warn('📧 Emails will be logged to console in dev mode.');
 } else {
-    console.warn('⚠️ Email service not configured. Emails will be logged to console.');
+    console.log('✅ Brevo HTTP API configured');
+    console.log('   Sender:', defaultSender.email);
 }
 
 /**
@@ -58,7 +54,7 @@ const loadTemplate = (templateName, data = {}) => {
 };
 
 /**
- * Send an email using a template
+ * Send an email using Brevo HTTP API
  * @param {string} to - Recipient email address
  * @param {string} subject - Email subject
  * @param {string} templateName - Name of the template to use
@@ -68,16 +64,9 @@ const loadTemplate = (templateName, data = {}) => {
 const sendEmail = async (to, subject, templateName, data = {}) => {
     try {
         const html = loadTemplate(templateName, data);
+        const textContent = data.message || subject;
 
-        const mailOptions = {
-            from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-            to,
-            subject,
-            html: html || `<p>${JSON.stringify(data)}</p>`,
-            text: data.message || subject // Fallback plain text
-        };
-
-        if (!isConfigured || !transporter) {
+        if (!isConfigured) {
             console.log('📧 [DEV MODE] Email would be sent:');
             console.log('  To:', to);
             console.log('  Subject:', subject);
@@ -86,11 +75,34 @@ const sendEmail = async (to, subject, templateName, data = {}) => {
             return { success: true, messageId: 'dev-mode-' + Date.now(), devMode: true };
         }
 
-        const info = await transporter.sendMail(mailOptions);
-        console.log('✅ Email sent successfully:', info.messageId);
-        return { success: true, messageId: info.messageId };
+        // Use Brevo HTTP API directly
+        const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+            method: 'POST',
+            headers: {
+                'accept': 'application/json',
+                'api-key': process.env.BREVO_API_KEY,
+                'content-type': 'application/json'
+            },
+            body: JSON.stringify({
+                sender: defaultSender,
+                to: [{ email: to }],
+                subject: subject,
+                htmlContent: html || `<p>${JSON.stringify(data)}</p>`,
+                textContent: textContent
+            })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            console.log('✅ Email sent successfully via Brevo:', result.messageId);
+            return { success: true, messageId: result.messageId };
+        } else {
+            console.error('❌ Brevo API error:', result);
+            return { success: false, error: result.message || 'Brevo API error' };
+        }
     } catch (error) {
-        console.error('❌ Error sending email:', error.message);
+        console.error('❌ Error sending email via Brevo:', error.message);
         return { success: false, error: error.message };
     }
 };
@@ -200,13 +212,11 @@ const testEmailService = async () => {
     if (!isConfigured) {
         return {
             success: false,
-            message: 'Email service not configured. Set EMAIL_USER and EMAIL_PASSWORD in .env'
+            message: 'Brevo email service not configured. Set BREVO_API_KEY in .env'
         };
     }
 
     try {
-        await transporter.verify();
-
         // Send test email if TEST_EMAIL is configured
         const testEmail = process.env.TEST_EMAIL;
         if (testEmail) {
@@ -214,23 +224,23 @@ const testEmailService = async () => {
                 testEmail,
                 'EduConnect Email Test',
                 'test',
-                { name: 'Admin', testMessage: 'This is a test email from EduConnect.' }
+                { name: 'Admin', testMessage: 'This is a test email from EduConnect via Brevo.' }
             );
             return {
-                success: true,
-                message: 'Email service verified and test email sent',
+                success: result.success,
+                message: result.success ? 'Brevo HTTP API verified and test email sent' : 'Test email failed: ' + result.error,
                 result
             };
         }
 
         return {
             success: true,
-            message: 'Email service verified successfully'
+            message: 'Brevo HTTP API is configured (API key present)'
         };
     } catch (error) {
         return {
             success: false,
-            message: `Email service verification failed: ${error.message}`
+            message: `Brevo HTTP API verification failed: ${error.message}`
         };
     }
 };
