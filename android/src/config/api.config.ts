@@ -50,7 +50,8 @@ export const API_CONFIG = {
     }
 };
 
-// Log configuration on app start (only in development)
-if (!IS_PRODUCTION && __DEV__) {
-    API_CONFIG.logConfig();
-}
+// Log configuration on app start (always log in case of issues)
+console.log('🔗 API Config:', {
+    environment: IS_PRODUCTION ? 'PRODUCTION' : 'DEVELOPMENT',
+    baseUrl: API_CONFIG.BASE_URL
+});

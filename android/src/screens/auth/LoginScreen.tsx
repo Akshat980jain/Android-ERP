@@ -70,11 +70,13 @@ export default function LoginScreen({ navigation }: any) {
     setIsLoading(true);
     try {
       const response = await login(email, password);
-      console.log('Login response:', response);
+      console.log('Login response:', JSON.stringify(response, null, 2));
 
       // Check if login succeeded without checking success flag issues
       if (!response || response.success === false) {
-        const message = response?.message || 'Login failed. Please check your credentials.';
+        // Show the actual error message from backend for debugging
+        const message = response?.message || response?.error || 'Login failed. Please check your credentials.';
+        console.log('Login failed with message:', message);
         Alert.alert('Login Failed', message);
         return;
       }
@@ -122,12 +124,12 @@ export default function LoginScreen({ navigation }: any) {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardAvoidingView}
         >
-          <ScrollView 
+          <ScrollView
             contentContainerStyle={styles.scrollContainer}
             showsVerticalScrollIndicator={false}
           >
             {/* Professional Header */}
-            <Animated.View 
+            <Animated.View
               style={[
                 styles.header,
                 {
@@ -221,10 +223,10 @@ export default function LoginScreen({ navigation }: any) {
                       onPress={() => setShowPassword(!showPassword)}
                       activeOpacity={0.7}
                     >
-                      <Ionicons 
-                        name={showPassword ? "eye-off-outline" : "eye-outline"} 
-                        size={20} 
-                        color="#64748B" 
+                      <Ionicons
+                        name={showPassword ? "eye-off-outline" : "eye-outline"}
+                        size={20}
+                        color="#64748B"
                       />
                     </TouchableOpacity>
                   </View>

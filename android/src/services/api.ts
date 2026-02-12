@@ -56,7 +56,7 @@ function getCandidateBaseUrls(): string[] {
 class ApiService {
   private baseURL: string;
   private cachedToken: string | null = null;
-  private static readonly VERBOSE_LOGS: boolean = false; // set true only when debugging
+  private static readonly VERBOSE_LOGS: boolean = true; // TEMP: enabled for debugging
 
   private debugLog(...args: any[]) {
     if (ApiService.VERBOSE_LOGS) {
@@ -115,9 +115,9 @@ class ApiService {
 
         const headers = await this.getHeaders();
 
-        // Create AbortController for timeout (shorter to fail over faster)
+        // Create AbortController for timeout (30s to handle Render free tier cold starts)
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
 
         const response = await fetch(url, {
           ...options,

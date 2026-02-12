@@ -1,34 +1,41 @@
 {
   "expo": {
-    "name": "android",
+    "name": "EduConnect",
     "slug": "android",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0F172A"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.akshatjain.educonnect"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#0F172A"
       },
       "edgeToEdgeEnabled": true,
       "usesCleartextTraffic": true,
-      "networkSecurityConfig": "network_security_config.xml"
+      "networkSecurityConfig": "network_security_config.xml",
+      "package": "com.akshatjain.educonnect"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-secure-store"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "09f4609f-ef3d-4c61-9169-c0792f674cc1"
+      }
+    }
   }
 }
