@@ -31,6 +31,8 @@ const statusColors: Record<string, string> = {
   rejected: 'bg-red-100 text-red-800',
 };
 
+const API_URL = import.meta.env.VITE_API_URL || '';
+
 const UserManagement: React.FC = () => {
   const { token } = useAuth();
   const [requests, setRequests] = useState<VerificationRequest[]>([]);
@@ -50,7 +52,7 @@ const UserManagement: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/auth/verification-requests', {
+      const res = await fetch(`${API_URL}/api/auth/verification-requests`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -75,12 +77,12 @@ const UserManagement: React.FC = () => {
     if (search.trim()) {
       const s = search.trim().toLowerCase();
       filtered = filtered.filter(r =>
-        (r.user?.name?.toLowerCase().includes(s) ||
-         r.user?.email?.toLowerCase().includes(s) ||
-         r.name?.toLowerCase().includes(s) ||
-         r.email?.toLowerCase().includes(s) ||
-         r.requestedRole?.toLowerCase().includes(s) ||
-         (r.status || 'pending').toLowerCase().includes(s))
+      (r.user?.name?.toLowerCase().includes(s) ||
+        r.user?.email?.toLowerCase().includes(s) ||
+        r.name?.toLowerCase().includes(s) ||
+        r.email?.toLowerCase().includes(s) ||
+        r.requestedRole?.toLowerCase().includes(s) ||
+        (r.status || 'pending').toLowerCase().includes(s))
       );
     }
     // Sort: pending first, then approved, then rejected, then by date desc
@@ -108,7 +110,7 @@ const UserManagement: React.FC = () => {
   const handleDecision = async (id: string, status: 'approved' | 'rejected') => {
     const remarks = remarksMap[id] || '';
     try {
-      const res = await fetch(`/api/auth/verification-requests/${id}/decision`, {
+      const res = await fetch(`${API_URL}/api/auth/verification-requests/${id}/decision`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

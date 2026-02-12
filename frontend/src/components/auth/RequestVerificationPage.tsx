@@ -27,6 +27,7 @@ const programs = [
 ];
 
 export default function RequestVerificationPage() {
+  const API_URL = import.meta.env.VITE_API_URL || '';
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -116,7 +117,7 @@ export default function RequestVerificationPage() {
 
       console.log('Sending payload:', payload); // Debug log
 
-      const res = await fetch('/api/auth/request-registration', {
+      const res = await fetch(`${API_URL}/api/auth/request-registration`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -124,7 +125,7 @@ export default function RequestVerificationPage() {
 
       const data = await res.json();
       console.log('Response:', data); // Debug log
-      
+
       if (res.ok && data.success) {
         setStatus('Request submitted successfully! Awaiting admin approval.');
         setForm({
@@ -162,7 +163,7 @@ export default function RequestVerificationPage() {
             <UserPlus className="w-8 h-8 text-white mr-3" />
             <h2 className="text-2xl font-bold text-white tracking-wide">Request Verification</h2>
           </div>
-          
+
           <form className="p-8 space-y-5" onSubmit={handleSubmit}>
             <input
               name="name"
@@ -173,7 +174,7 @@ export default function RequestVerificationPage() {
               required
               disabled={loading}
             />
-            
+
             <input
               name="email"
               type="email"
@@ -184,7 +185,7 @@ export default function RequestVerificationPage() {
               required
               disabled={loading}
             />
-            
+
             <input
               name="password"
               type="password"
@@ -196,7 +197,7 @@ export default function RequestVerificationPage() {
               minLength={6}
               disabled={loading}
             />
-            
+
             <input
               name="confirmPassword"
               type="password"
@@ -207,7 +208,7 @@ export default function RequestVerificationPage() {
               required
               disabled={loading}
             />
-            
+
             <select
               name="requestedRole"
               value={form.requestedRole}
@@ -219,7 +220,7 @@ export default function RequestVerificationPage() {
                 <option key={role.value} value={role.value}>{role.label}</option>
               ))}
             </select>
-            
+
             {showCourseFields && (
               <>
                 <select
@@ -263,7 +264,7 @@ export default function RequestVerificationPage() {
                 ))}
               </select>
             )}
-            
+
             <button
               type="submit"
               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2.5 rounded-lg font-semibold text-lg shadow hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
@@ -271,20 +272,20 @@ export default function RequestVerificationPage() {
             >
               {loading ? 'Submitting...' : 'Submit Request'}
             </button>
-            
+
             {status && (
               <div className="text-green-700 text-center font-medium mt-2 p-2 bg-green-50 rounded">
                 {status}
               </div>
             )}
-            
+
             {error && (
               <div className="text-red-700 text-center font-medium mt-2 p-2 bg-red-50 rounded">
                 {error}
               </div>
             )}
           </form>
-          
+
           <div className="text-center mb-6">
             <a href="/" className="text-blue-600 hover:underline font-medium">
               Already have an account? Login here

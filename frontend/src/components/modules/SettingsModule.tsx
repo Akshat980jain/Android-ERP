@@ -6,6 +6,8 @@ import { Input } from '../ui/Input';
 import { useAuth } from '../../contexts/AuthContext';
 import apiClient from '../../utils/api';
 
+const API_URL = import.meta.env.VITE_API_URL || '';
+
 interface SystemSettings {
   institution: {
     name: string;
@@ -128,7 +130,7 @@ export function SettingsModule() {
 
   const fetchSystemSettings = async () => {
     try {
-      const response = await fetch('/api/settings/system', {
+      const response = await fetch(`${API_URL}/api/settings/system`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -201,7 +203,7 @@ export function SettingsModule() {
 
   const fetchUserPreferences = async () => {
     try {
-      const response = await fetch('/api/settings/preferences', {
+      const response = await fetch(`${API_URL}/api/settings/preferences`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -215,7 +217,7 @@ export function SettingsModule() {
 
   const fetchNotificationSettings = async () => {
     try {
-      const response = await fetch('/api/settings/notifications', {
+      const response = await fetch(`${API_URL}/api/settings/notifications`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -229,13 +231,13 @@ export function SettingsModule() {
 
   const updateSystemSettings = async () => {
     if (!systemSettings) return;
-    
+
     setLoading(true);
     setError('');
     setSuccess('');
-    
+
     try {
-      const response = await fetch('/api/settings/system', {
+      const response = await fetch(`${API_URL}/api/settings/system`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -243,7 +245,7 @@ export function SettingsModule() {
         },
         body: JSON.stringify(systemSettings)
       });
-      
+
       if (response.ok) {
         setSuccess('System settings updated successfully');
       } else {
@@ -259,13 +261,13 @@ export function SettingsModule() {
 
   const updateUserPreferences = async () => {
     if (!userPreferences) return;
-    
+
     setLoading(true);
     setError('');
     setSuccess('');
-    
+
     try {
-      const response = await fetch('/api/settings/preferences', {
+      const response = await fetch(`${API_URL}/api/settings/preferences`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -273,7 +275,7 @@ export function SettingsModule() {
         },
         body: JSON.stringify(userPreferences)
       });
-      
+
       if (response.ok) {
         setSuccess('User preferences updated successfully');
       } else {
@@ -289,13 +291,13 @@ export function SettingsModule() {
 
   const updateNotificationSettings = async () => {
     if (!notificationSettings) return;
-    
+
     setLoading(true);
     setError('');
     setSuccess('');
-    
+
     try {
-      const response = await fetch('/api/settings/notifications', {
+      const response = await fetch(`${API_URL}/api/settings/notifications`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -303,7 +305,7 @@ export function SettingsModule() {
         },
         body: JSON.stringify(notificationSettings)
       });
-      
+
       if (response.ok) {
         setSuccess('Notification settings updated successfully');
       } else {
@@ -319,7 +321,7 @@ export function SettingsModule() {
 
   const handleSystemSettingChange = (section: keyof SystemSettings, field: string, value: any) => {
     if (!systemSettings) return;
-    
+
     setSystemSettings(prev => ({
       ...prev!,
       [section]: {
@@ -331,7 +333,7 @@ export function SettingsModule() {
 
   const handlePreferenceChange = (section: keyof UserPreferences, field: string, value: any) => {
     if (!userPreferences) return;
-    
+
     setUserPreferences(prev => ({
       ...prev!,
       [section]: {
@@ -343,7 +345,7 @@ export function SettingsModule() {
 
   const handleNotificationSettingChange = (section: keyof NotificationSettings, field: string, value: any) => {
     if (!notificationSettings) return;
-    
+
     setNotificationSettings(prev => ({
       ...prev!,
       [section]: {
@@ -832,11 +834,10 @@ export function SettingsModule() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === tab.id
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+                }`}
             >
               <tab.icon className="w-4 h-4 inline mr-2" />
               {tab.label}

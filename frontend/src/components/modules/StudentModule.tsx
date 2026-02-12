@@ -5,6 +5,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Toast } from '../ui/Toast';
 import apiClient from '../../utils/api';
 
+const API_URL = import.meta.env.VITE_API_URL || '';
+
 interface Student {
   _id: string;
   name: string;
@@ -92,7 +94,7 @@ export function StudentModule() {
   const fetchStudents = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/students', {
+      const res = await fetch(`${API_URL}/api/students`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -114,7 +116,7 @@ export function StudentModule() {
 
   const fetchCourses = async () => {
     try {
-      const res = await fetch('/api/courses', {
+      const res = await fetch(`${API_URL}/api/courses`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -129,9 +131,9 @@ export function StudentModule() {
   const addStudent = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
-      const res = await fetch('/api/auth/create-student', {
+      const res = await fetch(`${API_URL}/api/auth/create-student`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -161,7 +163,7 @@ export function StudentModule() {
     if (!window.confirm('Are you sure you want to delete this student?')) return;
 
     try {
-      const res = await fetch(`/api/students/${studentId}`, {
+      const res = await fetch(`${API_URL}/api/students/${studentId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -193,7 +195,7 @@ export function StudentModule() {
     setLoading(true);
     try {
       console.log('Enrolling student:', { studentId, selectedCourse });
-      
+
       // Use API client method
       const data = await apiClient.enrollStudent(selectedCourse, studentId) as {
         success: boolean;
@@ -201,9 +203,9 @@ export function StudentModule() {
         alreadyEnrolled?: boolean;
         courseFull?: boolean;
       };
-      
+
       console.log('Enrollment response data:', data);
-      
+
       if (data.success) {
         setToastType('success');
         setToastMessage(data.message || 'Student added to course successfully!');
@@ -261,7 +263,7 @@ export function StudentModule() {
 
   const fetchEnrolledCourses = async (studentId: string) => {
     try {
-      const res = await fetch(`/api/courses/student/${studentId}/enrolled`, {
+      const res = await fetch(`${API_URL}/api/courses/student/${studentId}/enrolled`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -411,44 +413,44 @@ export function StudentModule() {
           <div className="divide-y divide-gray-200">
             {filteredStudents.map((student) => (
               <div key={student._id} className="flex items-center justify-between p-3 border rounded hover:bg-gray-50">
-                  <div className="flex-1">
-                    <div className="font-medium">{student.name}</div>
-                    <div className="text-sm text-gray-600">{student.studentId} • {student.email}</div>
-                    <div className="text-sm text-gray-500">Department: {student.department}</div>
-                    {/* Display enrolled courses */}
-                    {getStudentEnrolledCourses(student._id).length > 0 && (
-                      <div className="mt-2">
-                        <div className="text-xs text-gray-500 mb-1">Enrolled Courses:</div>
-                        <div className="flex flex-wrap gap-1">
-                          {getStudentEnrolledCourses(student._id).map(course => (
-                            <span key={course._id} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                              {course.name} ({course.code})
-                            </span>
-                          ))}
-                        </div>
+                <div className="flex-1">
+                  <div className="font-medium">{student.name}</div>
+                  <div className="text-sm text-gray-600">{student.studentId} • {student.email}</div>
+                  <div className="text-sm text-gray-500">Department: {student.department}</div>
+                  {/* Display enrolled courses */}
+                  {getStudentEnrolledCourses(student._id).length > 0 && (
+                    <div className="mt-2">
+                      <div className="text-xs text-gray-500 mb-1">Enrolled Courses:</div>
+                      <div className="flex flex-wrap gap-1">
+                        {getStudentEnrolledCourses(student._id).map(course => (
+                          <span key={course._id} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                            {course.name} ({course.code})
+                          </span>
+                        ))}
                       </div>
-                    )}
-                  </div>
-                  <div className="flex space-x-2">
-                    {!isStudentEnrolled(student) ? (
-                      <button
-                        onClick={() => enrollStudent(student._id)}
-                        disabled={loading}
-                        className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 disabled:opacity-50"
-                      >
-                        {loading ? 'Adding...' : 'Add to Course'}
-                      </button>
-                    ) : (
-                      <span className="text-green-600 text-sm font-medium">✓ Already Enrolled</span>
-                    )}
-                    <button
-                      onClick={() => deleteStudent(student._id)}
-                      className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
-                    >
-                      Delete
-                    </button>
-                  </div>
+                    </div>
+                  )}
                 </div>
+                <div className="flex space-x-2">
+                  {!isStudentEnrolled(student) ? (
+                    <button
+                      onClick={() => enrollStudent(student._id)}
+                      disabled={loading}
+                      className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 disabled:opacity-50"
+                    >
+                      {loading ? 'Adding...' : 'Add to Course'}
+                    </button>
+                  ) : (
+                    <span className="text-green-600 text-sm font-medium">✓ Already Enrolled</span>
+                  )}
+                  <button
+                    onClick={() => deleteStudent(student._id)}
+                    className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
         )}

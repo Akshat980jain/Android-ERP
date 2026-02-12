@@ -4,6 +4,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
 
+const API_URL = import.meta.env.VITE_API_URL || '';
+
 interface Chat {
   _id: string;
   name?: string;
@@ -72,7 +74,7 @@ export function ChatModule() {
     setError('');
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('/api/chat', {
+      const res = await fetch(`${API_URL}/api/chat`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -90,7 +92,7 @@ export function ChatModule() {
   const fetchMessages = async (chatId: string) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`/api/chat/${chatId}/messages`, {
+      const res = await fetch(`${API_URL}/api/chat/${chatId}/messages`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -109,7 +111,7 @@ export function ChatModule() {
 
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`/api/chat/${selectedChat._id}/messages`, {
+      const res = await fetch(`${API_URL}/api/chat/${selectedChat._id}/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -117,7 +119,7 @@ export function ChatModule() {
         },
         body: JSON.stringify({ content: newMessage.trim() })
       });
-      
+
       if (res.ok) {
         setNewMessage('');
         fetchMessages(selectedChat._id);
@@ -130,7 +132,7 @@ export function ChatModule() {
   const markAsRead = async (chatId: string) => {
     try {
       const token = localStorage.getItem('token');
-      await fetch(`/api/chat/${chatId}/read`, {
+      await fetch(`${API_URL}/api/chat/${chatId}/read`, {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -141,16 +143,16 @@ export function ChatModule() {
 
   const getChatDisplayName = (chat: Chat) => {
     if (chat.name) return chat.name;
-    
+
     const otherParticipants = chat.participants.filter(
       p => p.user._id !== user?.id
     );
-    
+
     if (otherParticipants.length === 1) {
       const participant = otherParticipants[0].user;
       return `${participant.firstName} ${participant.lastName}`;
     }
-    
+
     return `Group Chat (${chat.participants.length} members)`;
   };
 
@@ -158,7 +160,7 @@ export function ChatModule() {
     const date = new Date(timestamp);
     const now = new Date();
     const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-    
+
     if (diffInHours < 24) {
       return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     } else if (diffInHours < 168) { // 7 days
@@ -188,7 +190,7 @@ export function ChatModule() {
             />
           </div>
         </div>
-        
+
         <div className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="p-4 text-center text-gray-500">Loading chats...</div>
@@ -200,9 +202,8 @@ export function ChatModule() {
                 <button
                   key={chat._id}
                   onClick={() => setSelectedChat(chat)}
-                  className={`w-full p-4 text-left hover:bg-gray-50 transition-colors ${
-                    selectedChat?._id === chat._id ? 'bg-blue-50 border-r-2 border-blue-500' : ''
-                  }`}
+                  className={`w-full p-4 text-left hover:bg-gray-50 transition-colors ${selectedChat?._id === chat._id ? 'bg-blue-50 border-r-2 border-blue-500' : ''
+                    }`}
                 >
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
@@ -282,16 +283,14 @@ export function ChatModule() {
               {messages.map((message) => (
                 <div
                   key={message._id}
-                  className={`flex ${
-                    message.sender._id === user?.id ? 'justify-end' : 'justify-start'
-                  }`}
+                  className={`flex ${message.sender._id === user?.id ? 'justify-end' : 'justify-start'
+                    }`}
                 >
                   <div
-                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                      message.sender._id === user?.id
+                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${message.sender._id === user?.id
                         ? 'bg-blue-600 text-white'
                         : 'bg-gray-200 text-gray-900'
-                    }`}
+                      }`}
                   >
                     {message.sender._id !== user?.id && (
                       <p className="text-xs font-medium mb-1">
@@ -299,9 +298,8 @@ export function ChatModule() {
                       </p>
                     )}
                     <p className="text-sm">{message.content}</p>
-                    <p className={`text-xs mt-1 ${
-                      message.sender._id === user?.id ? 'text-blue-100' : 'text-gray-500'
-                    }`}>
+                    <p className={`text-xs mt-1 ${message.sender._id === user?.id ? 'text-blue-100' : 'text-gray-500'
+                      }`}>
                       {formatTime(message.timestamp)}
                     </p>
                   </div>

@@ -5,6 +5,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import apiClient from '../../utils/api';
 import { ScheduleAttendanceData } from '../../types';
 
+const API_URL = import.meta.env.VITE_API_URL || '';
+
 interface Student {
   _id: string;
   name: string;
@@ -71,7 +73,7 @@ export function AttendanceModule() {
   const fetchCourses = async () => {
     if (!token) return;
     try {
-      const res = await fetch('/api/courses', {
+      const res = await fetch(`${API_URL}/api/courses`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -106,11 +108,11 @@ export function AttendanceModule() {
     const endTime = slotEndTime
       ? new Date(selectedDate + 'T' + slotEndTime)
       : new Date(slotStartTime.getTime() + 60 * 60 * 1000); // default 1 hour
-    
+
     // Allow marking attendance 15 minutes before and 30 minutes after the scheduled time
     const earlyWindow = new Date(slotStartTime.getTime() - 15 * 60 * 1000);
     const lateWindow = new Date(endTime.getTime() + 30 * 60 * 1000);
-    
+
     return now >= earlyWindow && now <= lateWindow;
   };
 
@@ -120,7 +122,7 @@ export function AttendanceModule() {
     const endTime = slotEndTime
       ? new Date(selectedDate + 'T' + slotEndTime)
       : new Date(slotStartTime.getTime() + 60 * 60 * 1000);
-    
+
     if (now < slotStartTime) return 'upcoming';
     if (now >= slotStartTime && now <= endTime) return 'current';
     if (now > endTime) return 'past';
@@ -278,7 +280,7 @@ export function AttendanceModule() {
                 {scheduleAttendance.attendanceMatrix.map((slotData, slotIndex) => {
                   const timeStatus = getTimeStatus(slotData.slot.time, slotData.slot.endTime);
                   const isWithinWindow = isWithinTimeWindow(slotData.slot.time, slotData.slot.endTime);
-                  
+
                   return (
                     <div key={slotIndex} className="border rounded-lg p-4">
                       <div className="flex items-center justify-between mb-4">
@@ -290,8 +292,8 @@ export function AttendanceModule() {
                             </h4>
                             <p className={`text-sm ${getTimeStatusColor(timeStatus)}`}>
                               {timeStatus === 'current' ? 'Currently in session' :
-                               timeStatus === 'upcoming' ? 'Upcoming' :
-                               timeStatus === 'past' ? 'Completed' : 'Unknown'}
+                                timeStatus === 'upcoming' ? 'Upcoming' :
+                                  timeStatus === 'past' ? 'Completed' : 'Unknown'}
                             </p>
                           </div>
                         </div>
@@ -329,33 +331,30 @@ export function AttendanceModule() {
                             <div className="flex space-x-2">
                               <button
                                 onClick={() => markAttendance(slotIndex, studentIndex, 'present')}
-                                className={`flex items-center px-3 py-1 rounded border ${
-                                  record.status === 'present' 
-                                    ? 'bg-green-600 text-white border-green-600' 
+                                className={`flex items-center px-3 py-1 rounded border ${record.status === 'present'
+                                    ? 'bg-green-600 text-white border-green-600'
                                     : 'border-green-600 text-green-600 hover:bg-green-50'
-                                }`}
+                                  }`}
                               >
                                 <CheckCircle className="w-4 h-4 mr-1" />
                                 Present
                               </button>
                               <button
                                 onClick={() => markAttendance(slotIndex, studentIndex, 'absent')}
-                                className={`flex items-center px-3 py-1 rounded border ${
-                                  record.status === 'absent' 
-                                    ? 'bg-red-600 text-white border-red-600' 
+                                className={`flex items-center px-3 py-1 rounded border ${record.status === 'absent'
+                                    ? 'bg-red-600 text-white border-red-600'
                                     : 'border-red-600 text-red-600 hover:bg-red-50'
-                                }`}
+                                  }`}
                               >
                                 <XCircle className="w-4 h-4 mr-1" />
                                 Absent
                               </button>
                               <button
                                 onClick={() => markAttendance(slotIndex, studentIndex, 'late')}
-                                className={`flex items-center px-3 py-1 rounded border ${
-                                  record.status === 'late' 
-                                    ? 'bg-yellow-600 text-white border-yellow-600' 
+                                className={`flex items-center px-3 py-1 rounded border ${record.status === 'late'
+                                    ? 'bg-yellow-600 text-white border-yellow-600'
                                     : 'border-yellow-600 text-yellow-600 hover:bg-yellow-50'
-                                }`}
+                                  }`}
                               >
                                 <Clock className="w-4 h-4 mr-1" />
                                 Late

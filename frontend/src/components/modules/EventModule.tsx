@@ -4,6 +4,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
 
+const API_URL = import.meta.env.VITE_API_URL || '';
+
 interface Event {
   _id: string;
   title: string;
@@ -44,8 +46,8 @@ export function EventModule() {
       const token = localStorage.getItem('token');
       const params = new URLSearchParams();
       if (filter === 'upcoming') params.append('upcoming', 'true');
-      
-      const res = await fetch(`/api/events?${params.toString()}`, {
+
+      const res = await fetch(`${API_URL}/api/events?${params.toString()}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -67,7 +69,7 @@ export function EventModule() {
   const registerForEvent = async (eventId: string) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`/api/events/${eventId}/register`, {
+      const res = await fetch(`${API_URL}/api/events/${eventId}/register`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -113,17 +115,16 @@ export function EventModule() {
           <Calendar className="w-6 h-6 text-blue-600" />
           <h1 className="text-2xl font-bold text-gray-900">Events & Activities</h1>
         </div>
-        
+
         <div className="flex items-center space-x-2">
           {(['all', 'upcoming', 'registered'] as const).map((filterType) => (
             <button
               key={filterType}
               onClick={() => setFilter(filterType)}
-              className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                filter === filterType
+              className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${filter === filterType
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+                }`}
             >
               {filterType.charAt(0).toUpperCase() + filterType.slice(1)}
             </button>

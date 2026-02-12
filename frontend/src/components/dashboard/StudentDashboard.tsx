@@ -46,6 +46,8 @@ import { DynamicBackground } from '../ui/DynamicBackground';
 import { InteractiveParticles } from '../ui/InteractiveParticles';
 import { DynamicShadows } from '../ui/DynamicShadows';
 
+const API_URL = import.meta.env.VITE_API_URL || '';
+
 interface Assignment {
   _id: string;
   title: string;
@@ -177,7 +179,7 @@ export function StudentDashboard({ onTabChange }: StudentDashboardProps) {
 
         // Fetch assignments
         try {
-          const assignmentsRes = await fetch('/api/assignments', {
+          const assignmentsRes = await fetch(`${API_URL}/api/assignments`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           const assignmentsData = await assignmentsRes.json();

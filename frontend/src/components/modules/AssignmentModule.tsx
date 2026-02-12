@@ -8,6 +8,8 @@ import { useAuth } from '../../contexts/AuthContext';
 // import '@react-pdf-viewer/core/lib/styles/index.css';
 // import '@react-pdf-viewer/default-layout/lib/styles/index.css';
 
+const API_URL = import.meta.env.VITE_API_URL || '';
+
 interface Assignment {
   _id: string;
   title: string;
@@ -115,7 +117,7 @@ export function AssignmentModule() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/assignments', {
+      const res = await fetch(`${API_URL}/api/assignments`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -133,7 +135,7 @@ export function AssignmentModule() {
   const fetchCourses = async () => {
     if (!token) return;
     try {
-      const res = await fetch('/api/courses', {
+      const res = await fetch(`${API_URL}/api/courses`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -149,17 +151,17 @@ export function AssignmentModule() {
 
   const createAssignment = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate dates
     const startDate = new Date(createForm.startDate);
     const dueDate = new Date(createForm.dueDate);
     const now = new Date();
-    
+
     if (startDate >= dueDate) {
       setError('Due date must be after start date');
       return;
     }
-    
+
     if (startDate < now) {
       setError('Start date cannot be in the past');
       return;
@@ -178,13 +180,13 @@ export function AssignmentModule() {
       formData.append('instructions', createForm.instructions);
       formData.append('allowLateSubmission', String(createForm.allowLateSubmission));
       formData.append('lateSubmissionPenalty', String(createForm.lateSubmissionPenalty));
-      
-              // Add question files
-        if (createFiles && createFiles.length > 0) {
-          Array.from(createFiles).forEach(file => formData.append('attachments', file));
-        }
 
-      const res = await fetch('/api/assignments', {
+      // Add question files
+      if (createFiles && createFiles.length > 0) {
+        Array.from(createFiles).forEach(file => formData.append('attachments', file));
+      }
+
+      const res = await fetch(`${API_URL}/api/assignments`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -231,7 +233,7 @@ export function AssignmentModule() {
       if (submissionFiles) {
         Array.from(submissionFiles).forEach(file => formData.append('files', file));
       }
-      const res = await fetch(`/api/assignments/${assignmentId}/submit`, {
+      const res = await fetch(`${API_URL}/api/assignments/${assignmentId}/submit`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -256,7 +258,7 @@ export function AssignmentModule() {
   const downloadQuestionFile = async (file: { url: string; filename: string }) => {
     try {
       const res = await fetch(file.url, { headers: { 'Authorization': `Bearer ${token}` } });
-      
+
       if (res.ok) {
         const blob = await res.blob();
         const url = window.URL.createObjectURL(blob);
@@ -278,7 +280,7 @@ export function AssignmentModule() {
   const downloadSubmissionFile = async (file: { url: string; filename: string }) => {
     try {
       const res = await fetch(file.url, { headers: { 'Authorization': `Bearer ${token}` } });
-      
+
       if (res.ok) {
         const blob = await res.blob();
         const url = window.URL.createObjectURL(blob);
@@ -303,7 +305,7 @@ export function AssignmentModule() {
     setSubmissions([]);
     setSubmissionsLoading(true);
     try {
-      const res = await fetch(`/api/assignments/${assignment._id}/submissions`, {
+      const res = await fetch(`${API_URL}/api/assignments/${assignment._id}/submissions`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -336,7 +338,7 @@ export function AssignmentModule() {
 
   const gradeSubmission = async (assignmentId: string, studentId: string, marks: number, feedback: string): Promise<boolean> => {
     try {
-      const res = await fetch(`/api/assignments/${assignmentId}/grade/${studentId}`, {
+      const res = await fetch(`${API_URL}/api/assignments/${assignmentId}/grade/${studentId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -424,7 +426,7 @@ export function AssignmentModule() {
     const now = new Date();
     const startDate = new Date(assignment.startDate);
     const dueDate = new Date(assignment.dueDate);
-    
+
     if (now < startDate) return false; // Not started yet
     if (assignment.hasSubmitted) return false; // Already submitted
     if (now <= dueDate) return true; // Within deadline
@@ -463,9 +465,9 @@ export function AssignmentModule() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-      <div className="flex items-center space-x-3">
-        <FileText className="w-6 h-6 text-blue-600" />
-        <h1 className="text-2xl font-bold text-gray-900">Assignments</h1>
+        <div className="flex items-center space-x-3">
+          <FileText className="w-6 h-6 text-blue-600" />
+          <h1 className="text-2xl font-bold text-gray-900">Assignments</h1>
         </div>
         {(user?.role === 'faculty' || user?.role === 'admin') && (
           <Button onClick={() => setShowCreateForm(!showCreateForm)}>
@@ -494,21 +496,21 @@ export function AssignmentModule() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Assignment Title *</label>
-                  <input 
+                  <input
                     type="text"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                    value={createForm.title} 
-                    onChange={e => setCreateForm({ ...createForm, title: e.target.value })} 
-                    required 
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    value={createForm.title}
+                    onChange={e => setCreateForm({ ...createForm, title: e.target.value })}
+                    required
                     placeholder="Enter assignment title"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Course *</label>
-                  <select 
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                    value={createForm.courseId} 
-                    onChange={e => setCreateForm({ ...createForm, courseId: e.target.value })} 
+                  <select
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    value={createForm.courseId}
+                    onChange={e => setCreateForm({ ...createForm, courseId: e.target.value })}
                     required
                   >
                     <option value="">Select a course</option>
@@ -521,12 +523,12 @@ export function AssignmentModule() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Description *</label>
-                <textarea 
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                  rows={4} 
-                  value={createForm.description} 
-                  onChange={e => setCreateForm({ ...createForm, description: e.target.value })} 
-                  required 
+                <textarea
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  rows={4}
+                  value={createForm.description}
+                  onChange={e => setCreateForm({ ...createForm, description: e.target.value })}
+                  required
                   placeholder="Describe the assignment objectives and requirements"
                 />
               </div>
@@ -542,12 +544,12 @@ export function AssignmentModule() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       📅 Start Date & Time *
                     </label>
-                    <input 
-                      type="datetime-local" 
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white" 
-                      value={createForm.startDate} 
-                      onChange={e => setCreateForm({ ...createForm, startDate: e.target.value })} 
-                      required 
+                    <input
+                      type="datetime-local"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                      value={createForm.startDate}
+                      onChange={e => setCreateForm({ ...createForm, startDate: e.target.value })}
+                      required
                       min={new Date().toISOString().slice(0, 16)}
                     />
                     <p className="text-xs text-gray-500 mt-1">When students can start viewing and working on this assignment</p>
@@ -556,12 +558,12 @@ export function AssignmentModule() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       ⏰ Due Date & Time *
                     </label>
-                    <input 
-                      type="datetime-local" 
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white" 
-                      value={createForm.dueDate} 
-                      onChange={e => setCreateForm({ ...createForm, dueDate: e.target.value })} 
-                      required 
+                    <input
+                      type="datetime-local"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                      value={createForm.dueDate}
+                      onChange={e => setCreateForm({ ...createForm, dueDate: e.target.value })}
+                      required
                       min={createForm.startDate || new Date().toISOString().slice(0, 16)}
                     />
                     <p className="text-xs text-gray-500 mt-1">Final submission deadline</p>
@@ -572,25 +574,25 @@ export function AssignmentModule() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Maximum Marks *</label>
-                  <input 
-                    type="number" 
-                    min={1} 
+                  <input
+                    type="number"
+                    min={1}
                     max={1000}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                    value={createForm.maxMarks} 
-                    onChange={e => setCreateForm({ ...createForm, maxMarks: Number(e.target.value) })} 
-                    required 
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    value={createForm.maxMarks}
+                    onChange={e => setCreateForm({ ...createForm, maxMarks: Number(e.target.value) })}
+                    required
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Late Penalty (% per day)</label>
-                  <input 
-                    type="number" 
-                    min={0} 
-                    max={100} 
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                    value={createForm.lateSubmissionPenalty} 
-                    onChange={e => setCreateForm({ ...createForm, lateSubmissionPenalty: Number(e.target.value) })} 
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    value={createForm.lateSubmissionPenalty}
+                    onChange={e => setCreateForm({ ...createForm, lateSubmissionPenalty: Number(e.target.value) })}
                     disabled={!createForm.allowLateSubmission}
                   />
                 </div>
@@ -622,54 +624,54 @@ export function AssignmentModule() {
                       <p className="text-xs text-gray-500">Supported: PDF, DOC, PPT, XLS, TXT, Images (max 10 files, 50MB each)</p>
                     </label>
                   </div>
-                
-                {createFiles && createFiles.length > 0 && (
-                  <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                    <p className="text-sm font-semibold text-blue-800 mb-3">Selected Question Files:</p>
-                    <div className="space-y-2">
-                      {Array.from(createFiles).map((file, i) => (
-                        <div key={i} className="flex items-center justify-between bg-white p-2 rounded border">
-                          <div className="flex items-center">
-                            <FileText className="w-4 h-4 mr-2 text-blue-600" />
-                            <span className="text-sm font-medium">{file.name}</span>
-                            <span className="text-xs text-gray-500 ml-2">
-                              ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                            </span>
+
+                  {createFiles && createFiles.length > 0 && (
+                    <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                      <p className="text-sm font-semibold text-blue-800 mb-3">Selected Question Files:</p>
+                      <div className="space-y-2">
+                        {Array.from(createFiles).map((file, i) => (
+                          <div key={i} className="flex items-center justify-between bg-white p-2 rounded border">
+                            <div className="flex items-center">
+                              <FileText className="w-4 h-4 mr-2 text-blue-600" />
+                              <span className="text-sm font-medium">{file.name}</span>
+                              <span className="text-xs text-gray-500 ml-2">
+                                ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                              </span>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => removeCreateFile(i)}
+                            >
+                              <X className="w-3 h-3" />
+                            </Button>
                           </div>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => removeCreateFile(i)}
-                          >
-                            <X className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Instructions</label>
-                <textarea 
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                  rows={3} 
-                  value={createForm.instructions} 
-                  onChange={e => setCreateForm({ ...createForm, instructions: e.target.value })} 
+                <textarea
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  rows={3}
+                  value={createForm.instructions}
+                  onChange={e => setCreateForm({ ...createForm, instructions: e.target.value })}
                   placeholder="Additional instructions for students (optional)"
                 />
               </div>
 
               <div className="flex items-center space-x-3">
-                <input 
-                  id="allowLate" 
-                  type="checkbox" 
-                  className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" 
-                  checked={createForm.allowLateSubmission} 
-                  onChange={e => setCreateForm({ ...createForm, allowLateSubmission: e.target.checked })} 
+                <input
+                  id="allowLate"
+                  type="checkbox"
+                  className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  checked={createForm.allowLateSubmission}
+                  onChange={e => setCreateForm({ ...createForm, allowLateSubmission: e.target.checked })}
                 />
                 <label htmlFor="allowLate" className="text-sm font-medium text-gray-700">
                   Allow Late Submissions
@@ -680,13 +682,13 @@ export function AssignmentModule() {
                 <Button type="submit" disabled={creating}>
                   {creating ? 'Creating Assignment...' : 'Create Assignment'}
                 </Button>
-                <Button 
+                <Button
                   type="button"
-                  variant="outline" 
+                  variant="outline"
                   onClick={() => {
                     setShowCreateForm(false);
                     setCreateForm({
-                      title: '', description: '', courseId: '', startDate: '', dueDate: '', 
+                      title: '', description: '', courseId: '', startDate: '', dueDate: '',
                       maxMarks: 100, instructions: '', allowLateSubmission: false, lateSubmissionPenalty: 0
                     });
                     setCreateFiles(null);
@@ -707,8 +709,8 @@ export function AssignmentModule() {
             <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No assignments found</h3>
             <p className="text-gray-600">
-              {user?.role === 'student' 
-                ? 'No assignments have been posted yet. Check back later!' 
+              {user?.role === 'student'
+                ? 'No assignments have been posted yet. Check back later!'
                 : 'Create your first assignment to get started.'}
             </p>
           </CardContent>
@@ -725,7 +727,7 @@ export function AssignmentModule() {
                     <p className="text-sm text-gray-700 line-clamp-3">{assignment.description}</p>
                   </div>
                   <div className="ml-2 flex flex-col items-center">
-                  {getStatusIcon(assignment)}
+                    {getStatusIcon(assignment)}
                     <span className={`text-xs font-medium mt-1 ${getStatusColor(assignment)}`}>
                       {getStatusText(assignment)}
                     </span>
@@ -744,14 +746,14 @@ export function AssignmentModule() {
                     </div>
                     <div>
                       <span className="text-gray-600 block">Due:</span>
-                    <span className={`font-medium ${getStatusColor(assignment)}`}>
+                      <span className={`font-medium ${getStatusColor(assignment)}`}>
                         {new Date(assignment.dueDate).toLocaleDateString('en-US', {
                           month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
                         })}
-                    </span>
+                      </span>
+                    </div>
                   </div>
-                  </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600">Max Marks:</span>
                     <span className="font-semibold">{assignment.maxMarks}</span>
@@ -782,8 +784,8 @@ export function AssignmentModule() {
                     </>
                   )}
 
-                 {/* Question Files */}
-                 {assignment.attachments && assignment.attachments.length > 0 && (
+                  {/* Question Files */}
+                  {assignment.attachments && assignment.attachments.length > 0 && (
                     <div className="mt-3">
                       <p className="text-xs font-medium text-gray-600 mb-2">Question Files:</p>
                       <div className="space-y-1">
@@ -839,7 +841,7 @@ export function AssignmentModule() {
                       View Submissions
                     </Button>
                   )}
-                  </div>
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -890,18 +892,18 @@ export function AssignmentModule() {
                   </div>
                 </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Submission Content
-                </label>
-                <textarea
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Submission Content
+                  </label>
+                  <textarea
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     rows={6}
-                  value={submissionContent}
+                    value={submissionContent}
                     onChange={e => setSubmissionContent(e.target.value)}
                     placeholder="Enter your submission content here..."
-                />
-              </div>
+                  />
+                </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -952,25 +954,25 @@ export function AssignmentModule() {
                 </div>
 
                 <div className="flex items-center space-x-3 pt-4 border-t">
-                <Button
-                  onClick={() => submitAssignment(selectedAssignment._id)}
-                  disabled={submitting}
+                  <Button
+                    onClick={() => submitAssignment(selectedAssignment._id)}
+                    disabled={submitting}
                     className="flex-1"
-                >
-                  {submitting ? 'Submitting...' : 'Submit Assignment'}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setSelectedAssignment(null);
-                    setSubmissionContent('');
+                  >
+                    {submitting ? 'Submitting...' : 'Submit Assignment'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedAssignment(null);
+                      setSubmissionContent('');
                       setSubmissionFiles(null);
-                  }}
-                >
-                  Cancel
-                </Button>
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
               </div>
-            </div>
             </CardContent>
           </Card>
         </div>
@@ -1016,9 +1018,9 @@ export function AssignmentModule() {
                       <div className="flex items-start justify-between mb-4">
                         <div>
                           <h4 className="font-semibold text-gray-900">
-                          {submission.student.name ||
-                            `${submission.student.firstName || ''} ${submission.student.lastName || ''}`.trim() ||
-                            'Unknown Student'}
+                            {submission.student.name ||
+                              `${submission.student.firstName || ''} ${submission.student.lastName || ''}`.trim() ||
+                              'Unknown Student'}
                           </h4>
                           {(submission.student.studentId || submission.student.profile?.studentId) && (
                             <p className="text-sm text-gray-600">ID: {submission.student.studentId || submission.student.profile?.studentId}</p>
@@ -1037,11 +1039,10 @@ export function AssignmentModule() {
                           )}
                         </div>
                         <div className="text-right">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            submission.status === 'graded' 
-                              ? 'bg-green-100 text-green-800' 
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${submission.status === 'graded'
+                              ? 'bg-green-100 text-green-800'
                               : 'bg-blue-100 text-blue-800'
-                          }`}>
+                            }`}>
                             {submission.status === 'graded' ? 'Graded' : 'Submitted'}
                           </span>
                         </div>

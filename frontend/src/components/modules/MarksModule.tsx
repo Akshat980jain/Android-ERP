@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { GraduationCap, TrendingUp, FileText, Edit, Save, Plus, Trash2, Download, Upload } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
+const API_URL = import.meta.env.VITE_API_URL || '';
+
 interface StudentMark {
   _id: string;
   student: {
@@ -96,7 +98,7 @@ export function MarksModule() {
   const fetchCourses = async () => {
     if (!token) return;
     try {
-      const res = await fetch('/api/courses', {
+      const res = await fetch(`${API_URL}/api/courses`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -110,7 +112,7 @@ export function MarksModule() {
 
   const fetchAssessments = async () => {
     try {
-      const res = await fetch(`/api/assessments?course=${selectedCourse}`, {
+      const res = await fetch(`${API_URL}/api/assessments?course=${selectedCourse}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -124,7 +126,7 @@ export function MarksModule() {
 
   const fetchAssignments = async () => {
     try {
-      const res = await fetch(`/api/assignments?courseId=${selectedCourse}`, {
+      const res = await fetch(`${API_URL}/api/assignments?courseId=${selectedCourse}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -142,7 +144,7 @@ export function MarksModule() {
       // Check if selected assessment is an assignment
       if (selectedAssessment.startsWith('assignment-')) {
         const assignmentId = selectedAssessment.replace('assignment-', '');
-        const res = await fetch(`/api/assignments/${assignmentId}/submissions`, {
+        const res = await fetch(`${API_URL}/api/assignments/${assignmentId}/submissions`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -164,7 +166,7 @@ export function MarksModule() {
         }
       } else {
         // Regular assessment marks
-        const res = await fetch(`/api/marks?course=${selectedCourse}&assessment=${selectedAssessment}`, {
+        const res = await fetch(`${API_URL}/api/marks?course=${selectedCourse}&assessment=${selectedAssessment}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -197,23 +199,23 @@ export function MarksModule() {
       if (selectedAssessment.startsWith('assignment-')) {
         const assignmentId = selectedAssessment.replace('assignment-', '');
         const studentId = markId.split('-')[1]; // Extract student ID from markId
-        
-        const res = await fetch(`/api/assignments/${assignmentId}/grade/${studentId}`, {
+
+        const res = await fetch(`${API_URL}/api/assignments/${assignmentId}/grade/${studentId}`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({ 
-            marks: newMarks, 
-            feedback: `Grade: ${newMarks}/${marks.find(m => m._id === markId)?.maxMarks || 100}` 
+          body: JSON.stringify({
+            marks: newMarks,
+            feedback: `Grade: ${newMarks}/${marks.find(m => m._id === markId)?.maxMarks || 100}`
           })
         });
 
         const data = await res.json();
         if (data.success) {
-          setMarks(marks.map(mark => 
-            mark._id === markId 
+          setMarks(marks.map(mark =>
+            mark._id === markId
               ? { ...mark, marks: newMarks, grade: calculateGrade(newMarks, mark.maxMarks) }
               : mark
           ));
@@ -229,8 +231,8 @@ export function MarksModule() {
         if (!assessment) return;
 
         const grade = calculateGrade(newMarks, assessment.maxMarks);
-        
-        const res = await fetch(`/api/marks/${markId}`, {
+
+        const res = await fetch(`${API_URL}/api/marks/${markId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -241,8 +243,8 @@ export function MarksModule() {
 
         const data = await res.json();
         if (data.success) {
-          setMarks(marks.map(mark => 
-            mark._id === markId 
+          setMarks(marks.map(mark =>
+            mark._id === markId
               ? { ...mark, marks: newMarks, grade }
               : mark
           ));
@@ -270,7 +272,7 @@ export function MarksModule() {
     setSuccess('');
 
     try {
-      const res = await fetch('/api/assessments', {
+      const res = await fetch(`${API_URL}/api/assessments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -306,7 +308,7 @@ export function MarksModule() {
     if (!window.confirm('Are you sure? This will delete all marks for this assessment.')) return;
 
     try {
-      const res = await fetch(`/api/assessments/${assessmentId}`, {
+      const res = await fetch(`${API_URL}/api/assessments/${assessmentId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -331,7 +333,7 @@ export function MarksModule() {
     if (!selectedCourse || !selectedAssessment) return;
 
     try {
-      const res = await fetch(`/api/marks/export?course=${selectedCourse}&assessment=${selectedAssessment}`, {
+      const res = await fetch(`${API_URL}/api/marks/export?course=${selectedCourse}&assessment=${selectedAssessment}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const blob = await res.blob();
@@ -357,7 +359,7 @@ export function MarksModule() {
     formData.append('assessment', selectedAssessment);
 
     try {
-      const res = await fetch('/api/marks/import', {
+      const res = await fetch(`${API_URL}/api/marks/import`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData
@@ -373,7 +375,7 @@ export function MarksModule() {
     } catch {
       setError('Failed to import marks');
     }
-    
+
     // Reset file input
     event.target.value = '';
   };
@@ -393,15 +395,15 @@ export function MarksModule() {
 
   const calculateStats = () => {
     if (marks.length === 0) return { average: 0, highest: 0, lowest: 0, totalStudents: 0 };
-    
+
     const markValues = marks.map(m => (m.marks / m.maxMarks) * 100);
     const average = markValues.reduce((a, b) => a + b, 0) / markValues.length;
     const highest = Math.max(...markValues);
     const lowest = Math.min(...markValues);
-    
-    return { 
-      average: Math.round(average * 10) / 10, 
-      highest: Math.round(highest * 10) / 10, 
+
+    return {
+      average: Math.round(average * 10) / 10,
+      highest: Math.round(highest * 10) / 10,
       lowest: Math.round(lowest * 10) / 10,
       totalStudents: marks.length
     };
@@ -722,7 +724,7 @@ export function MarksModule() {
                   </div>
                 </div>
               ))}
-              
+
               {/* Assignments */}
               {assignments.map(assignment => (
                 <div key={`assignment-${assignment._id}`} className="border rounded-lg p-4 hover:shadow-md transition-shadow bg-blue-50">

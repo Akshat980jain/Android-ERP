@@ -6,6 +6,8 @@ import { Input } from '../ui/Input';
 import { useAuth } from '../../contexts/AuthContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 
+const API_URL = import.meta.env.VITE_API_URL || '';
+
 interface ReportData {
   academic?: any;
   financial?: any;
@@ -47,7 +49,7 @@ export function ReportsModule() {
 
   const fetchDepartments = async () => {
     try {
-      const response = await fetch('/api/auth/departments', {
+      const response = await fetch(`${API_URL}/api/auth/departments`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -61,7 +63,7 @@ export function ReportsModule() {
 
   const fetchCourses = async () => {
     try {
-      const response = await fetch('/api/courses', {
+      const response = await fetch(`${API_URL}/api/courses`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -76,19 +78,19 @@ export function ReportsModule() {
   const generateReport = async () => {
     setLoading(true);
     setError('');
-    
+
     try {
-      let url = `/api/reports/${activeTab}?`;
+      let url = `${API_URL}/api/reports/${activeTab}?`;
       const params = new URLSearchParams();
-      
+
       Object.entries(filters).forEach(([key, value]) => {
         if (value) params.append(key, value);
       });
-      
+
       const response = await fetch(url + params.toString(), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setReportData(prev => ({ ...prev, [activeTab]: data.report }));
@@ -109,7 +111,7 @@ export function ReportsModule() {
 
   const exportReport = async (format: 'pdf' | 'csv') => {
     try {
-      const response = await fetch('/api/reports/export', {
+      const response = await fetch(`${API_URL}/api/reports/export`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -121,7 +123,7 @@ export function ReportsModule() {
           filters
         })
       });
-      
+
       if (response.ok) {
         // In a real implementation, this would download the file
         alert(`${format.toUpperCase()} export will be implemented soon`);
@@ -602,11 +604,10 @@ export function ReportsModule() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === tab.id
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+                }`}
             >
               <tab.icon className="w-4 h-4 inline mr-2" />
               {tab.label}

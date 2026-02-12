@@ -4,6 +4,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { useAuth } from '../../contexts/AuthContext';
 
+const API_URL = import.meta.env.VITE_API_URL || '';
+
 interface StudentAnalytics {
   student: {
     name: string;
@@ -69,7 +71,7 @@ export function AnalyticsModule() {
     setError('');
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('/api/analytics/student', {
+      const res = await fetch(`${API_URL}/api/analytics/student`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -89,7 +91,7 @@ export function AnalyticsModule() {
     setError('');
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`/api/analytics/department/${department}`, {
+      const res = await fetch(`${API_URL}/api/analytics/department/${department}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -113,17 +115,17 @@ export function AnalyticsModule() {
     }
   };
 
-  const tabs = user?.role === 'student' 
+  const tabs = user?.role === 'student'
     ? [
-        { id: 'overview', label: 'Performance Overview' },
-        { id: 'predictions', label: 'Predictions & Insights' },
-        { id: 'recommendations', label: 'Recommendations' }
-      ]
+      { id: 'overview', label: 'Performance Overview' },
+      { id: 'predictions', label: 'Predictions & Insights' },
+      { id: 'recommendations', label: 'Recommendations' }
+    ]
     : [
-        { id: 'overview', label: 'Department Overview' },
-        { id: 'trends', label: 'Trends & Patterns' },
-        { id: 'predictions', label: 'Risk Analysis' }
-      ];
+      { id: 'overview', label: 'Department Overview' },
+      { id: 'trends', label: 'Trends & Patterns' },
+      { id: 'predictions', label: 'Risk Analysis' }
+    ];
 
   const departments = ['Computer Science', 'Electronics', 'Mechanical', 'Civil', 'Chemical'];
 
@@ -134,7 +136,7 @@ export function AnalyticsModule() {
           <BarChart3 className="w-6 h-6 text-blue-600" />
           <h1 className="text-2xl font-bold text-gray-900">Analytics & Insights</h1>
         </div>
-        
+
         {user?.role === 'admin' && (
           <select
             value={selectedDepartment}
@@ -155,11 +157,10 @@ export function AnalyticsModule() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === tab.id
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+                }`}
             >
               {tab.label}
             </button>
@@ -270,7 +271,7 @@ export function AnalyticsModule() {
                       {studentAnalytics.predictions.dropoutRisk.score}%
                     </div>
                   </div>
-                  
+
                   {studentAnalytics.predictions.dropoutRisk.factors.length > 0 && (
                     <div>
                       <h4 className="font-medium text-gray-900 mb-2">Risk Factors:</h4>
@@ -371,7 +372,7 @@ export function AnalyticsModule() {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div>
                       <h4 className="font-medium text-gray-900 mb-4">Performance Metrics</h4>
                       <div className="space-y-3">
@@ -413,7 +414,7 @@ export function AnalyticsModule() {
             <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">Analytics Dashboard</h3>
             <p className="text-gray-600">
-              {user?.role === 'admin' 
+              {user?.role === 'admin'
                 ? 'Select a department to view detailed analytics and insights.'
                 : 'Analytics and insights for your academic performance.'}
             </p>
