@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://android-1ej6.onrender.com/api';
+const API_BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`;
 
 class ApiClient {
   private baseURL: string;

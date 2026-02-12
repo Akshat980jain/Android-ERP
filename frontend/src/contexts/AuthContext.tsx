@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Manage socket connection lifecycle
   useEffect(() => {
     if (user && !socketRef.current) {
-      const socket = io('https://android-1ej6.onrender.com', { transports: ['websocket'] });
+      const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', { transports: ['websocket'] });
       socketRef.current = socket;
       socket.on('connect', () => {
         // join personal room using user id
@@ -113,7 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // connect socket after successful login
       if (!socketRef.current) {
-        const socket = io('https://android-1ej6.onrender.com', { transports: ['websocket'] });
+        const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', { transports: ['websocket'] });
         socketRef.current = socket;
         socket.on('connect', () => {
           socket.emit('join-room', ((data as { user: any }).user)._id);

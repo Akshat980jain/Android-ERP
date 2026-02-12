@@ -16,7 +16,7 @@
 // ==================== CONFIGURATION ====================
 
 // Set to true when deploying to production
-const IS_PRODUCTION = true;
+const IS_PRODUCTION = false;
 
 // Your local computer's IP address (update this when it changes)
 const LOCAL_IP = '192.168.1.12';

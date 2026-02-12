@@ -317,7 +317,7 @@ export function LoginForm() {
   // Check if backend is reachable (optional diagnostic)
   const testConnection = useCallback(async () => {
     try {
-      const response = await fetch('https://android-1ej6.onrender.com/api/health', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/health`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
