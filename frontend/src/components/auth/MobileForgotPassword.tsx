@@ -1,10 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+const API_BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`;
+
 const MobileForgotPassword: React.FC = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState<string | null>(null);
+  const [isError, setIsError] = useState(false);
+  const [loading, setLoading] = useState(false);
   const isDesktop = useMemo(() => window.matchMedia('(min-width: 768px)').matches, []);
 
   useEffect(() => {
@@ -13,10 +17,30 @@ const MobileForgotPassword: React.FC = () => {
     }
   }, [isDesktop, navigate]);
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // No backend endpoint yet; provide UX feedback
-    setMessage('Password reset is not set up yet. Please contact your administrator.');
+    if (!email.trim()) { setMessage('Please enter your email address.'); setIsError(true); return; }
+    setLoading(true); setMessage(null); setIsError(false);
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setMessage('Password reset link sent! Check your email inbox.');
+        setIsError(false);
+      } else {
+        setMessage(data.message || 'Failed to send reset email. Please try again.');
+        setIsError(true);
+      }
+    } catch {
+      setMessage('Network error. Please check your connection and try again.');
+      setIsError(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -50,11 +74,11 @@ const MobileForgotPassword: React.FC = () => {
               type="submit"
               className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 flex-1 bg-[#0d80f2] text-white text-base font-bold leading-normal tracking-[0.015em]"
             >
-              <span className="truncate">Send Reset Link</span>
+              <span className="truncate">{loading ? 'Sending...' : 'Send Reset Link'}</span>
             </button>
           </div>
         </form>
-        {message && <p className="text-[#9cabba] text-sm font-normal leading-normal pb-3 pt-1 px-4 text-center">{message}</p>}
+        {message && <p className={`text-sm font-normal leading-normal pb-3 pt-1 px-4 text-center ${isError ? 'text-red-400' : 'text-green-400'}`}>{message}</p>}
       </div>
       <div>
         <p className="text-[#9cabba] text-sm font-normal leading-normal pb-3 pt-1 px-4 text-center underline">

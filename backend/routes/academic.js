@@ -21,7 +21,7 @@ const timeToMinutes = (timeStr) => {
 router.get('/courses', auth, async (req, res) => {
   try {
     let courses;
-    
+
     if (req.user.role === 'student') {
       courses = await Course.find({ enrolledStudents: req.user._id })
         .populate('faculty', 'name email');
@@ -50,12 +50,12 @@ router.get('/courses', auth, async (req, res) => {
 router.get('/attendance', auth, async (req, res) => {
   try {
     const { courseId } = req.query;
-    
+
     let query = {};
     if (req.user.role === 'student') {
       query.student = req.user._id;
     }
-    
+
     if (courseId) {
       query.course = courseId;
     }
@@ -65,13 +65,22 @@ router.get('/attendance', auth, async (req, res) => {
       .populate('student', 'name profile.studentId')
       .sort({ date: -1 });
 
-    // Load attendance policy
-    const settings = await Settings.findOne();
-    const weights = settings?.attendancePolicy?.weights || { present: 1, late: 0.5, absent: 0 };
+    // Load attendance policy (safely, don't crash if Settings collection is empty)
+    let weights = { present: 1, late: 0.5, absent: 0 };
+    try {
+      const settings = await Settings.findOne();
+      if (settings?.attendancePolicy?.weights) {
+        weights = settings.attendancePolicy.weights;
+      }
+    } catch (settingsErr) {
+      console.warn('[ATTENDANCE] Settings not found, using defaults:', settingsErr.message);
+    }
 
     // Calculate attendance percentage by course (accounting for lecture counts and policy weights)
     const attendanceStats = {};
     attendance.forEach(record => {
+      // Skip records where the course failed to populate
+      if (!record.course || !record.course._id) return;
       const courseId = record.course._id.toString();
       if (!attendanceStats[courseId]) {
         attendanceStats[courseId] = {
@@ -105,7 +114,7 @@ router.get('/attendance', auth, async (req, res) => {
       stats: Object.values(attendanceStats)
     });
   } catch (error) {
-    console.error(error);
+    console.error('[ATTENDANCE] GET /api/academic/attendance error:', error.message, error.stack);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -224,12 +233,12 @@ router.put('/attendance', auth, authorize('faculty', 'admin'), async (req, res) 
 router.get('/marks', auth, async (req, res) => {
   try {
     const { courseId } = req.query;
-    
+
     let query = {};
     if (req.user.role === 'student') {
       query.student = req.user._id;
     }
-    
+
     if (courseId) {
       query.course = courseId;
     }
@@ -286,7 +295,7 @@ router.post('/marks', auth, authorize('faculty'), async (req, res) => {
 router.get('/schedule-attendance', auth, async (req, res) => {
   try {
     const { courseId, date } = req.query;
-    
+
     if (!courseId || !date) {
       return res.status(400).json({ message: 'Course ID and date are required' });
     }
@@ -302,7 +311,7 @@ router.get('/schedule-attendance', auth, async (req, res) => {
 
     // Get schedule slots for this day
     const daySchedule = course.schedule.filter(slot => slot.day === dayOfWeek);
-    
+
     // Get existing attendance for this date
     const existingAttendance = await Attendance.find({
       course: courseId,
@@ -316,7 +325,7 @@ router.get('/schedule-attendance', auth, async (req, res) => {
     // Create attendance matrix
     const attendanceMatrix = daySchedule.map(slot => {
       const slotAttendance = students.map(student => {
-        const existingRecord = existingAttendance.find(att => 
+        const existingRecord = existingAttendance.find(att =>
           att.student._id.toString() === student._id.toString() &&
           att.scheduleSlot.startTime === slot.time
         );
@@ -361,7 +370,7 @@ router.get('/schedule-attendance', auth, async (req, res) => {
 router.post('/schedule-attendance', auth, authorize('faculty', 'admin'), async (req, res) => {
   try {
     const { courseId, date, scheduleSlot, attendanceData } = req.body;
-    
+
     if (!courseId || !date || !scheduleSlot || !attendanceData) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
@@ -380,9 +389,9 @@ router.post('/schedule-attendance', auth, authorize('faculty', 'admin'), async (
     // Validate that the schedule slot exists
     const attendanceDate = new Date(date);
     const dayOfWeek = attendanceDate.toLocaleDateString('en-US', { weekday: 'long' });
-    
-    const validSlot = course.schedule.find(slot => 
-      slot.day === dayOfWeek && 
+
+    const validSlot = course.schedule.find(slot =>
+      slot.day === dayOfWeek &&
       slot.time === scheduleSlot.startTime
     );
 
@@ -396,11 +405,11 @@ router.post('/schedule-attendance', auth, authorize('faculty', 'admin'), async (
     // Prefer endTime from the course schedule; fallback to provided endTime or startTime
     const effectiveEndTime = (validSlot && validSlot.endTime) || scheduleSlot.endTime || scheduleSlot.startTime;
     const slotEndTime = new Date(date + 'T' + effectiveEndTime);
-    
+
     // Allow marking attendance 15 minutes before and 30 minutes after the scheduled time
     const earlyWindow = new Date(slotStartTime.getTime() - 15 * 60 * 1000);
     const lateWindow = new Date(slotEndTime.getTime() + 30 * 60 * 1000);
-    
+
     const isWithinTimeWindow = now >= earlyWindow && now <= lateWindow;
 
     const results = [];
@@ -439,14 +448,14 @@ router.post('/schedule-attendance', auth, authorize('faculty', 'admin'), async (
           } else {
             existingAttendance.scheduleSlot.endTime = effectiveEndTime;
           }
-          
+
           // Recalculate lecture count based on schedule duration
           const startMinutes = timeToMinutes(scheduleSlot.startTime);
           const endMinutes = timeToMinutes(effectiveEndTime);
           const durationMinutes = endMinutes - startMinutes;
           const standardLectureDuration = 50;
           existingAttendance.lectureCount = Math.max(1, Math.ceil(durationMinutes / standardLectureDuration));
-          
+
           await existingAttendance.save();
           results.push({ studentId: record.studentId, status: 'updated' });
         } else {
@@ -504,7 +513,7 @@ router.post('/schedule-attendance', auth, authorize('faculty', 'admin'), async (
 router.get('/attendance-schedule', auth, async (req, res) => {
   try {
     const { courseId } = req.query;
-    
+
     if (!courseId) {
       return res.status(400).json({ message: 'Course ID is required' });
     }
@@ -521,7 +530,7 @@ router.get('/attendance-schedule', auth, async (req, res) => {
 
     // Get schedule for today
     const todaySchedule = course.schedule.filter(slot => slot.day === dayOfWeek);
-    
+
     // Get attendance for today
     const todayAttendance = await Attendance.find({
       course: courseId,
@@ -530,7 +539,7 @@ router.get('/attendance-schedule', auth, async (req, res) => {
 
     // Create schedule with attendance status
     const scheduleWithAttendance = todaySchedule.map(slot => {
-      const slotAttendance = todayAttendance.filter(att => 
+      const slotAttendance = todayAttendance.filter(att =>
         att.scheduleSlot.startTime === slot.time
       );
 

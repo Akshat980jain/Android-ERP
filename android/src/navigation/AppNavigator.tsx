@@ -32,6 +32,14 @@ import ProfileScreen from '../screens/modules/ProfileScreen';
 import SettingsScreen from '../screens/modules/SettingsScreen';
 import EventsScreen from '../screens/modules/EventsScreen';
 import ReportsScreen from '../screens/modules/ReportsScreen';
+import CourseScreen from '../screens/modules/CourseScreen';
+import ExamScreen from '../screens/modules/ExamScreen';
+import CalendarScreen from '../screens/modules/CalendarScreen';
+import ChatScreen from '../screens/modules/ChatScreen';
+import PlacementScreen from '../screens/modules/PlacementScreen';
+import TransportScreen from '../screens/modules/TransportScreen';
+import HostelScreen from '../screens/modules/HostelScreen';
+import LeavesScreen from '../screens/modules/LeavesScreen';
 
 // Common Screens
 import LoadingScreen from '../screens/common/LoadingScreen';
@@ -47,7 +55,7 @@ const Drawer = createDrawerNavigator();
 // Student Tab Navigator
 function StudentTabNavigator() {
   const { theme } = useTheme();
-  
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -108,7 +116,7 @@ function StudentTabNavigator() {
 // Faculty Tab Navigator
 function FacultyTabNavigator() {
   const { theme } = useTheme();
-  
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -169,7 +177,7 @@ function FacultyTabNavigator() {
 // Admin Tab Navigator (Bottom Navigation)
 function AdminTabNavigator() {
   const { theme } = useTheme();
-  
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -298,6 +306,14 @@ function AppNavigator() {
         {renderMain()}
         <Stack.Screen name="Notifications" component={NotificationsScreen} />
         <Stack.Screen name="RequestApproval" component={RequestApprovalScreen} />
+        <Stack.Screen name="Courses" component={CourseScreen} />
+        <Stack.Screen name="Exams" component={ExamScreen} />
+        <Stack.Screen name="Calendar" component={CalendarScreen} />
+        <Stack.Screen name="Chat" component={ChatScreen} />
+        <Stack.Screen name="Placements" component={PlacementScreen} />
+        <Stack.Screen name="Transport" component={TransportScreen} />
+        <Stack.Screen name="Hostel" component={HostelScreen} />
+        <Stack.Screen name="Leaves" component={LeavesScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

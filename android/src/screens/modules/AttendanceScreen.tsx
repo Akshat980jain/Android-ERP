@@ -43,14 +43,14 @@ export default function AttendanceScreen({ navigation }: any) {
       if (response.success) {
         const data = response.data || [];
         setAttendance(data);
-        
+
         // Calculate attendance stats from real data if available
         if (Array.isArray(data) && data.length > 0) {
           const physical = data.filter((a: any) => a.status === 'present').length;
           const absent = data.filter((a: any) => a.status === 'absent').length;
           const placement = data.filter((a: any) => a.type === 'placement').length;
           const total = data.length;
-          
+
           setAttendanceData({ physical, placement, absent, total });
         }
       }
@@ -66,43 +66,12 @@ export default function AttendanceScreen({ navigation }: any) {
     onRefresh();
   }, []);
 
-  const mockAttendance = [
-    {
-      id: '1',
-      course: 'Data Structures',
-      date: '2024-01-15',
-      status: 'present',
-      type: 'Physical',
-    },
-    {
-      id: '2',
-      course: 'Database Systems',
-      date: '2024-01-15',
-      status: 'present',
-      type: 'Physical',
-    },
-    {
-      id: '3',
-      course: 'Web Development',
-      date: '2024-01-14',
-      status: 'absent',
-      type: 'Physical',
-    },
-    {
-      id: '4',
-      course: 'Algorithms',
-      date: '2024-01-14',
-      status: 'present',
-      type: 'Placement',
-    },
-  ];
-
-  const displayAttendance = attendance.length > 0 ? attendance : mockAttendance;
+  const displayAttendance = attendance;
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1F2937" />
-      
+
       {/* Header */}
       <LinearGradient
         colors={['#1F2937', '#111827']}
@@ -144,9 +113,9 @@ export default function AttendanceScreen({ navigation }: any) {
                     {record.course}
                   </DataTable.Cell>
                   <DataTable.Cell textStyle={styles.tableCellText}>
-                    {new Date(record.date).toLocaleDateString('en-US', { 
-                      month: 'short', 
-                      day: 'numeric' 
+                    {new Date(record.date).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric'
                     })}
                   </DataTable.Cell>
                   <DataTable.Cell>
@@ -159,8 +128,8 @@ export default function AttendanceScreen({ navigation }: any) {
                             record.status === 'present'
                               ? '#D1FAE5'
                               : record.status === 'absent'
-                              ? '#FEE2E2'
-                              : '#FEF3C7',
+                                ? '#FEE2E2'
+                                : '#FEF3C7',
                         },
                       ]}
                       textStyle={[
@@ -170,8 +139,8 @@ export default function AttendanceScreen({ navigation }: any) {
                             record.status === 'present'
                               ? '#059669'
                               : record.status === 'absent'
-                              ? '#DC2626'
-                              : '#D97706',
+                                ? '#DC2626'
+                                : '#D97706',
                         },
                       ]}
                     >

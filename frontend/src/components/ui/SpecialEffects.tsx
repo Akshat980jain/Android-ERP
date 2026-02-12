@@ -1,10 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 
-export const RippleButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ children, className = '', onClick, ...props }) => {
-  const containerRef = useRef<HTMLButtonElement | null>(null);
+export const RippleButton: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ children, className = '', onClick, ...props }) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const handleClick: React.MouseEventHandler<HTMLButtonElement> = (e) => {
+  const handleClick: React.MouseEventHandler<HTMLDivElement> = (e) => {
     const button = containerRef.current;
     if (!button) return;
     const rect = button.getBoundingClientRect();
@@ -27,9 +27,9 @@ export const RippleButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement
   };
 
   return (
-    <button ref={containerRef} onClick={handleClick} className={`ripple-container ${className}`} {...props}>
+    <div ref={containerRef} onClick={handleClick} className={`ripple-container ${className}`} {...props}>
       {children}
-    </button>
+    </div>
   );
 };
 

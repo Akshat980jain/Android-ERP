@@ -9,8 +9,8 @@ interface DynamicBackgroundProps {
   theme?: 'light' | 'dark';
 }
 
-export function DynamicBackground({ 
-  variant = 'floating-orbs', 
+export function DynamicBackground({
+  variant = 'floating-orbs',
   intensity = 'medium',
   colorScheme = 'dynamic',
   className = '',
@@ -62,7 +62,7 @@ export function DynamicBackground({
   // Floating Orbs Effect
   const FloatingOrbs = () => {
     const orbCount = intensity === 'intense' ? 20 : intensity === 'medium' ? 15 : 8;
-    
+
     return (
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {Array.from({ length: orbCount }).map((_, i) => (
@@ -90,7 +90,7 @@ export function DynamicBackground({
             }}
           />
         ))}
-        
+
         {/* Additional smaller orbs for depth */}
         {Array.from({ length: Math.floor(orbCount / 2) }).map((_, i) => (
           <motion.div
@@ -159,7 +159,7 @@ export function DynamicBackground({
             ease: "easeInOut",
           }}
         />
-        
+
         {/* Additional floating elements */}
         <motion.div
           className="absolute inset-0"
@@ -185,7 +185,7 @@ export function DynamicBackground({
   // Particle Field Effect
   const ParticleField = () => {
     const particleCount = intensity === 'intense' ? 150 : intensity === 'medium' ? 100 : 50;
-    
+
     return (
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {Array.from({ length: particleCount }).map((_, i) => (
@@ -214,7 +214,7 @@ export function DynamicBackground({
             }}
           />
         ))}
-        
+
         {/* Larger particles for depth */}
         {Array.from({ length: Math.floor(particleCount / 3) }).map((_, i) => (
           <motion.div
@@ -248,45 +248,35 @@ export function DynamicBackground({
 
   // Wave Animation Effect
   const WaveAnimation = () => {
+    const waveColor1 = colors[0] + Math.floor(getOpacity(0.2) * 255).toString(16).padStart(2, '0');
+    const waveColor2 = colors[1] + Math.floor(getOpacity(0.15) * 255).toString(16).padStart(2, '0');
+
     return (
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <svg className="absolute bottom-0 w-full h-32" viewBox="0 0 1200 120" preserveAspectRatio="none">
-          <motion.path
+          <path
             d="M0,0V46.29c47.79,22.2,103.59,32.17,158,28,70.36-5.37,136.33-33.31,206.8-37.5C438.64,32.43,512.34,53.67,583,72.05c69.27,18,138.3,24.88,209.4,13.08,36.15-6,69.85-17.84,104.45-29.34C989.49,25,1113-14.29,1200,52.47V0Z"
-            fill={colors[0] + Math.floor(getOpacity(0.2) * 100).toString(16).padStart(2, '0')}
-            animate={{
-              d: [
-                "M0,0V46.29c47.79,22.2,103.59,32.17,158,28,70.36-5.37,136.33-33.31,206.8-37.5C438.64,32.43,512.34,53.67,583,72.05c69.27,18,138.3,24.88,209.4,13.08,36.15-6,69.85-17.84,104.45-29.34C989.49,25,1113-14.29,1200,52.47V0Z",
-                "M0,0V15.81C13,36.92,27.64,56.86,47.69,72.05,99.41,111.27,165,111,224.58,91.58c31.15-10.15,60.09-26.07,89.67-39.8,40.92-19,84.73-46,130.83-49.67,36.26-2.85,70.9,9.42,98.6,31.56,31.77,25.39,62.32,62,103.63,73,40.44,10.46,81.35-6.69,119.13-24.28s75.16-39,116.92-43.05c59.73-5.85,113.28,22.88,168.9,38.84,30.2,8.66,59,6.17,87.09-7.5,22.43-10.89,48-26.93,60.65-49.24V0Z",
-                "M0,0V46.29c47.79,22.2,103.59,32.17,158,28,70.36-5.37,136.33-33.31,206.8-37.5C438.64,32.43,512.34,53.67,583,72.05c69.27,18,138.3,24.88,209.4,13.08,36.15-6,69.85-17.84,104.45-29.34C989.49,25,1113-14.29,1200,52.47V0Z",
-              ],
-            }}
-            transition={{
-              duration: 8,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
+            fill={waveColor1}
+            style={{ animation: 'waveShift1 8s ease-in-out infinite' }}
           />
         </svg>
         <svg className="absolute bottom-0 w-full h-24" viewBox="0 0 1200 120" preserveAspectRatio="none">
-          <motion.path
+          <path
             d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z"
-            fill={colors[1] + Math.floor(getOpacity(0.15) * 100).toString(16).padStart(2, '0')}
-            animate={{
-              d: [
-                "M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z",
-                "M0,0V7.23C0,65.52,0,167.83,0,211.77,0,233.76,0,245.88,0,248.5c0,1.9,0,3.79,0,5.69,0,8.14,0,16.29,0,24.43,0,8.14,0,16.29,0,24.43,0,1.9,0,3.79,0,5.69,0,2.62,0,14.74,0,36.73,0,43.94,0,146.25,0,204.54V0Z",
-                "M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z",
-              ],
-            }}
-            transition={{
-              duration: 6,
-              repeat: Infinity,
-              ease: "easeInOut",
-              delay: 1,
-            }}
+            fill={waveColor2}
+            style={{ animation: 'waveShift2 6s ease-in-out infinite 1s' }}
           />
         </svg>
+        <style>{`
+          @keyframes waveShift1 {
+            0%, 100% { transform: translateX(0) scaleY(1); }
+            50% { transform: translateX(-20px) scaleY(0.85); }
+          }
+          @keyframes waveShift2 {
+            0%, 100% { transform: translateX(0) scaleY(1); }
+            50% { transform: translateX(15px) scaleY(1.15); }
+          }
+        `}</style>
       </div>
     );
   };
@@ -294,7 +284,7 @@ export function DynamicBackground({
   // Geometric Shapes Effect
   const GeometricShapes = () => {
     const shapeCount = intensity === 'intense' ? 12 : intensity === 'medium' ? 8 : 5;
-    
+
     return (
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {Array.from({ length: shapeCount }).map((_, i) => (
@@ -326,7 +316,7 @@ export function DynamicBackground({
             }}
           />
         ))}
-        
+
         {/* Additional smaller shapes */}
         {Array.from({ length: Math.floor(shapeCount / 2) }).map((_, i) => (
           <motion.div

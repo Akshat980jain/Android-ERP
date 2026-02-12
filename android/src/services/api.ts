@@ -634,29 +634,6 @@ class ApiService {
     });
   }
 
-  // Events
-  async getEvents(): Promise<ApiResponse<any>> {
-    return this.request('/events');
-  }
-
-  async createEvent(eventData: any): Promise<ApiResponse<any>> {
-    return this.request('/events', {
-      method: 'POST',
-      body: JSON.stringify(eventData),
-    });
-  }
-
-  // Reports
-  async getReports(): Promise<ApiResponse<any>> {
-    return this.request('/reports');
-  }
-
-  async generateReport(reportType: string, params: any): Promise<ApiResponse<any>> {
-    return this.request('/reports/generate', {
-      method: 'POST',
-      body: JSON.stringify({ reportType, params }),
-    });
-  }
 
   // Schedule methods
   async getSchedule(): Promise<ApiResponse<any>> {
@@ -846,6 +823,98 @@ class ApiService {
 
   async downloadReceipt(feeId: string): Promise<ApiResponse<any>> {
     return this.request(`/finance/fees/${feeId}/receipt`);
+  }
+
+  // Exam Module
+  async getExams(): Promise<ApiResponse<any>> {
+    return this.request('/exams');
+  }
+
+  async getExamResults(): Promise<ApiResponse<any>> {
+    return this.request('/exams/results');
+  }
+
+  // Chat Module
+  async getChats(): Promise<ApiResponse<any>> {
+    return this.request('/chat');
+  }
+
+  async getChatMessages(chatId: string): Promise<ApiResponse<any>> {
+    return this.request(`/chat/${chatId}/messages`);
+  }
+
+  async sendMessage(chatId: string, messageData: any): Promise<ApiResponse<any>> {
+    return this.request(`/chat/${chatId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify(messageData),
+    });
+  }
+
+  async createChat(participantIds: string[]): Promise<ApiResponse<any>> {
+    return this.request('/chat', {
+      method: 'POST',
+      body: JSON.stringify({ participants: participantIds }),
+    });
+  }
+
+  // Placement Module
+  async getJobs(): Promise<ApiResponse<any>> {
+    return this.request('/placement/jobs');
+  }
+
+  async getJobById(jobId: string): Promise<ApiResponse<any>> {
+    return this.request(`/placement/jobs/${jobId}`);
+  }
+
+  async applyToJob(jobId: string, applicationData?: any): Promise<ApiResponse<any>> {
+    return this.request(`/placement/jobs/${jobId}/apply`, {
+      method: 'POST',
+      body: JSON.stringify(applicationData || {}),
+    });
+  }
+
+  async getMyApplications(): Promise<ApiResponse<any>> {
+    return this.request('/placement/applications');
+  }
+
+  // Transport Module
+  async getTransportRoutes(): Promise<ApiResponse<any>> {
+    return this.request('/transport/routes');
+  }
+
+  async getRouteEta(routeId: string): Promise<ApiResponse<any>> {
+    return this.request(`/transport/routes/${routeId}/eta`);
+  }
+
+  async subscribeToRoute(routeId: string, stop: string): Promise<ApiResponse<any>> {
+    return this.request(`/transport/routes/${routeId}/subscribe`, {
+      method: 'POST',
+      body: JSON.stringify({ stop }),
+    });
+  }
+
+  // Hostel Module
+  async getHostels(): Promise<ApiResponse<any>> {
+    return this.request('/hostel');
+  }
+
+  // Leaves Module
+  async getLeaves(): Promise<ApiResponse<any>> {
+    return this.request('/leaves');
+  }
+
+  async applyLeave(leaveData: { type: string; reason: string; startDate: string; endDate: string }): Promise<ApiResponse<any>> {
+    return this.request('/leaves', {
+      method: 'POST',
+      body: JSON.stringify(leaveData),
+    });
+  }
+
+  async processLeave(leaveId: string, status: 'approved' | 'rejected'): Promise<ApiResponse<any>> {
+    return this.request(`/leaves/${leaveId}/decision`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    });
   }
 }
 

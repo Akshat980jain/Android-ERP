@@ -166,6 +166,10 @@ export function LoginForm() {
   const [twoFactorMethod, setTwoFactorMethod] = useState<'totp' | 'sms' | 'email'>('email');
   const [maskedPhone, setMaskedPhone] = useState<string | undefined>(undefined);
   const [devCode, setDevCode] = useState<string | undefined>(undefined);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState<{ text: string; isError: boolean } | null>(null);
 
   const {
     register,
@@ -335,225 +339,301 @@ export function LoginForm() {
     }
   }, [showToast]);
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 px-4">
-      <AnimatePresence mode="wait">
-        {!twoFactorRequired ? (
-          // Login Form
-          <motion.div
-            key="login"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            transition={{ duration: 0.3 }}
-            className="w-full max-w-md"
-          >
-            <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-              <div className="flex items-center justify-center bg-gradient-to-r from-blue-600 to-purple-600 p-6">
-                <GraduationCap className="w-8 h-8 text-white mr-3" />
-                <h2 className="text-2xl font-bold text-white tracking-wide">EduConnect Login</h2>
-              </div>
+  const handleForgotPassword = async () => {
+    if (!forgotEmail.trim()) { setForgotMessage({ text: 'Please enter your email address.', isError: true }); return; }
+    setForgotLoading(true); setForgotMessage(null);
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail.trim().toLowerCase() }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setForgotMessage({ text: 'Password reset link sent! Check your email inbox.', isError: false });
+      } else {
+        setForgotMessage({ text: data.message || 'Failed to send reset email.', isError: true });
+      }
+    } catch {
+      setForgotMessage({ text: 'Network error. Please check your connection.', isError: true });
+    } finally {
+      setForgotLoading(false);
+    }
+  };
 
-              <form onSubmit={handleSubmit(onSubmit)} className="p-8 space-y-6">
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-gray-700">Email Address</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      {...register('email')}
-                      type="email"
-                      className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${errors.email ? 'border-red-500 bg-red-50' : 'border-gray-300 hover:border-gray-400'}`}
-                      placeholder="Enter your email address"
-                    />
-                  </div>
-                  {errors.email && (
-                    <div className="flex items-center space-x-1 text-red-600 text-sm mt-1">
-                      <AlertCircle className="w-4 h-4" />
-                      <span>{errors.email.message}</span>
-                    </div>
-                  )}
+  return (
+    <>
+      {/* Forgot Password Modal */}
+      <AnimatePresence>
+        {showForgotPassword && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4"
+            onClick={() => { setShowForgotPassword(false); setForgotMessage(null); }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center space-x-2">
+                <Mail className="w-6 h-6 text-blue-600" />
+                <h3 className="text-xl font-bold text-gray-900">Reset Password</h3>
+              </div>
+              <p className="text-sm text-gray-600">Enter your email address and we'll send you a link to reset your password.</p>
+              <input
+                type="email"
+                value={forgotEmail}
+                onChange={(e) => setForgotEmail(e.target.value)}
+                placeholder="Enter your email"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                onKeyDown={(e) => e.key === 'Enter' && handleForgotPassword()}
+              />
+              {forgotMessage && (
+                <p className={`text-sm ${forgotMessage.isError ? 'text-red-600' : 'text-green-600'}`}>{forgotMessage.text}</p>
+              )}
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => { setShowForgotPassword(false); setForgotMessage(null); }}
+                  className="flex-1 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleForgotPassword}
+                  disabled={forgotLoading}
+                  className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition disabled:opacity-50"
+                >
+                  {forgotLoading ? 'Sending...' : 'Send Reset Link'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 px-4">
+        <AnimatePresence mode="wait">
+          {!twoFactorRequired ? (
+            // Login Form
+            <motion.div
+              key="login"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.3 }}
+              className="w-full max-w-md"
+            >
+              <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+                <div className="flex items-center justify-center bg-gradient-to-r from-blue-600 to-purple-600 p-6">
+                  <GraduationCap className="w-8 h-8 text-white mr-3" />
+                  <h2 className="text-2xl font-bold text-white tracking-wide">EduConnect Login</h2>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-gray-700">Password</label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      {...register('password')}
-                      type={showPassword ? 'text' : 'password'}
-                      className={`w-full pl-12 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${errors.password ? 'border-red-500 bg-red-50' : 'border-gray-300 hover:border-gray-400'}`}
-                      placeholder="Enter your password"
-                    />
+                <form onSubmit={handleSubmit(onSubmit)} className="p-8 space-y-6">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-gray-700">Email Address</label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        {...register('email')}
+                        type="email"
+                        className={`w-full pl-12 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${errors.email ? 'border-red-500 bg-red-50' : 'border-gray-300 hover:border-gray-400'}`}
+                        placeholder="Enter your email address"
+                      />
+                    </div>
+                    {errors.email && (
+                      <div className="flex items-center space-x-1 text-red-600 text-sm mt-1">
+                        <AlertCircle className="w-4 h-4" />
+                        <span>{errors.email.message}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-gray-700">Password</label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        {...register('password')}
+                        type={showPassword ? 'text' : 'password'}
+                        className={`w-full pl-12 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${errors.password ? 'border-red-500 bg-red-50' : 'border-gray-300 hover:border-gray-400'}`}
+                        placeholder="Enter your password"
+                      />
+                      <button
+                        type="button"
+                        onClick={togglePasswordVisibility}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                        tabIndex={-1}
+                      >
+                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
+                    {errors.password && (
+                      <div className="flex items-center space-x-1 text-red-600 text-sm mt-1">
+                        <AlertCircle className="w-4 h-4" />
+                        <span>{errors.password.message}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        {...register('rememberMe')}
+                        type="checkbox"
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700">Remember me</span>
+                    </label>
                     <button
                       type="button"
-                      onClick={togglePasswordVisibility}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                      tabIndex={-1}
+                      className="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                      onClick={() => setShowForgotPassword(true)}
                     >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      Forgot password?
                     </button>
                   </div>
-                  {errors.password && (
-                    <div className="flex items-center space-x-1 text-red-600 text-sm mt-1">
-                      <AlertCircle className="w-4 h-4" />
-                      <span>{errors.password.message}</span>
-                    </div>
-                  )}
-                </div>
 
-                <div className="flex items-center justify-between">
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      {...register('rememberMe')}
-                      type="checkbox"
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-gray-700">Remember me</span>
-                  </label>
                   <button
-                    type="button"
-                    className="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
-                    onClick={() => showToast('Password reset feature coming soon!', 'info')}
+                    type="submit"
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-semibold text-lg shadow hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isSubmitting || isLoading}
                   >
-                    Forgot password?
+                    {(isSubmitting || isLoading) ? (
+                      <div className="flex items-center justify-center space-x-2">
+                        <span className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
+                        <span>Signing In...</span>
+                      </div>
+                    ) : (
+                      'Sign In'
+                    )}
                   </button>
-                </div>
 
-                <button
-                  type="submit"
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-semibold text-lg shadow hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={isSubmitting || isLoading}
-                >
-                  {(isSubmitting || isLoading) ? (
-                    <div className="flex items-center justify-center space-x-2">
-                      <span className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
-                      <span>Signing In...</span>
-                    </div>
-                  ) : (
-                    'Sign In'
-                  )}
-                </button>
+                  <div className="text-center space-y-3">
+                    <a href="/request-verification" className="block text-blue-600 hover:underline">
+                      Need an account? Request verification here
+                    </a>
 
-                <div className="text-center space-y-3">
-                  <a href="/request-verification" className="block text-blue-600 hover:underline">
-                    Need an account? Request verification here
-                  </a>
-
-                  {/* Debug button - remove in production */}
-                  <button
-                    type="button"
-                    onClick={testConnection}
-                    className="text-xs text-gray-500 hover:text-gray-700 underline"
-                  >
-                    Test Server Connection
-                  </button>
-                </div>
-              </form>
-            </div>
-          </motion.div>
-        ) : (
-          // OTP Verification Screen
-          <motion.div
-            key="otp"
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
-            transition={{ duration: 0.3 }}
-            className="w-full max-w-md"
-          >
-            <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-              <div className="flex items-center justify-center bg-gradient-to-r from-green-600 to-blue-600 p-6 relative">
-                <button
-                  onClick={handleBackToLogin}
-                  className="absolute left-4 text-white hover:text-gray-200 transition-colors"
-                >
-                  <ArrowLeft className="w-6 h-6" />
-                </button>
-                <Shield className="w-8 h-8 text-white mr-3" />
-                <h2 className="text-2xl font-bold text-white tracking-wide">Verify Your Identity</h2>
-              </div>
-
-              <div className="p-8 space-y-6">
-                <div className="text-center space-y-3">
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Mail className="w-8 h-8 text-blue-600" />
+                    {/* Debug button - remove in production */}
+                    <button
+                      type="button"
+                      onClick={testConnection}
+                      className="text-xs text-gray-500 hover:text-gray-700 underline"
+                    >
+                      Test Server Connection
+                    </button>
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900">Enter Verification Code</h3>
-                  <p className="text-gray-600">
-                    {twoFactorMethod === 'sms'
-                      ? `We've sent a 6-digit code to ${maskedPhone || 'your phone'}`
-                      : `We've sent a 6-digit code to ${pendingEmail}`}
-                  </p>
+                </form>
+              </div>
+            </motion.div>
+          ) : (
+            // OTP Verification Screen
+            <motion.div
+              key="otp"
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -50 }}
+              transition={{ duration: 0.3 }}
+              className="w-full max-w-md"
+            >
+              <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+                <div className="flex items-center justify-center bg-gradient-to-r from-green-600 to-blue-600 p-6 relative">
+                  <button
+                    onClick={handleBackToLogin}
+                    className="absolute left-4 text-white hover:text-gray-200 transition-colors"
+                  >
+                    <ArrowLeft className="w-6 h-6" />
+                  </button>
+                  <Shield className="w-8 h-8 text-white mr-3" />
+                  <h2 className="text-2xl font-bold text-white tracking-wide">Verify Your Identity</h2>
                 </div>
 
-                <OTPInput
-                  value={otpValue}
-                  onChange={handleOtpChange}
-                  error={errors.twoFactorCode?.message}
-                />
-
-                {devCode && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-center p-3 bg-yellow-50 border border-yellow-200 rounded-lg"
-                  >
-                    <p className="text-sm text-yellow-800">
-                      <span className="font-semibold">Dev Mode:</span> Use code <span className="font-mono font-bold">{devCode}</span>
-                    </p>
-                  </motion.div>
-                )}
-
-                <button
-                  onClick={handleSubmit(onSubmit)}
-                  className="w-full bg-gradient-to-r from-green-600 to-blue-600 text-white py-3 rounded-lg font-semibold text-lg shadow hover:from-green-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-green-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={isSubmitting || isLoading || otpValue.length < 6}
-                >
-                  {(isSubmitting || isLoading) ? (
-                    <div className="flex items-center justify-center space-x-2">
-                      <span className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
-                      <span>Verifying...</span>
+                <div className="p-8 space-y-6">
+                  <div className="text-center space-y-3">
+                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Mail className="w-8 h-8 text-blue-600" />
                     </div>
-                  ) : (
-                    'Verify Code'
-                  )}
-                </button>
+                    <h3 className="text-xl font-semibold text-gray-900">Enter Verification Code</h3>
+                    <p className="text-gray-600">
+                      {twoFactorMethod === 'sms'
+                        ? `We've sent a 6-digit code to ${maskedPhone || 'your phone'}`
+                        : `We've sent a 6-digit code to ${pendingEmail}`}
+                    </p>
+                  </div>
 
-                <div className="text-center space-y-3">
-                  <p className="text-sm text-gray-600">
-                    Didn't receive the code?
-                  </p>
+                  <OTPInput
+                    value={otpValue}
+                    onChange={handleOtpChange}
+                    error={errors.twoFactorCode?.message}
+                  />
+
+                  {devCode && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-center p-3 bg-yellow-50 border border-yellow-200 rounded-lg"
+                    >
+                      <p className="text-sm text-yellow-800">
+                        <span className="font-semibold">Dev Mode:</span> Use code <span className="font-mono font-bold">{devCode}</span>
+                      </p>
+                    </motion.div>
+                  )}
+
                   <button
-                    type="button"
-                    onClick={handleResendOtp}
-                    className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                    onClick={handleSubmit(onSubmit)}
+                    className="w-full bg-gradient-to-r from-green-600 to-blue-600 text-white py-3 rounded-lg font-semibold text-lg shadow hover:from-green-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-green-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isSubmitting || isLoading || otpValue.length < 6}
                   >
-                    Resend Verification Code
+                    {(isSubmitting || isLoading) ? (
+                      <div className="flex items-center justify-center space-x-2">
+                        <span className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
+                        <span>Verifying...</span>
+                      </div>
+                    ) : (
+                      'Verify Code'
+                    )}
                   </button>
-                  <button
-                    type="button"
-                    onClick={handleBackToLogin}
-                    className="block w-full text-gray-500 hover:text-gray-700 transition-colors"
-                  >
-                    Back to Login
-                  </button>
+
+                  <div className="text-center space-y-3">
+                    <p className="text-sm text-gray-600">
+                      Didn't receive the code?
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleResendOtp}
+                      className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                    >
+                      Resend Verification Code
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleBackToLogin}
+                      className="block w-full text-gray-500 hover:text-gray-700 transition-colors"
+                    >
+                      Back to Login
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-      {/* Toast Notifications */}
-      <AnimatePresence>
-        {toast && (
-          <Toast
-            message={toast.message}
-            type={toast.type}
-            onClose={() => setToast(null)}
-          />
-        )}
-      </AnimatePresence>
-    </div>
+        {/* Toast Notifications */}
+        <AnimatePresence>
+          {toast && (
+            <Toast
+              message={toast.message}
+              type={toast.type}
+              onClose={() => setToast(null)}
+            />
+          )}
+        </AnimatePresence>
+      </div>
+    </>
   );
 }
