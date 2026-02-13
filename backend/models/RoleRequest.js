@@ -8,7 +8,7 @@ const roleRequestSchema = new mongoose.Schema({
     ref: 'User',
     required: false
   },
-  
+
   // For registration requests, store user data directly
   name: { type: String },
   email: { type: String },
@@ -29,41 +29,45 @@ const roleRequestSchema = new mongoose.Schema({
     enum: ['student', 'admin', 'faculty', 'library', 'placement'],
     required: true
   },
-  
+
   currentRole: {
     type: String,
     enum: ['student', 'admin', 'faculty', 'library', 'placement', 'none'],
     required: true,
     default: 'none'
   },
-  
+
   reason: {
     type: String,
     required: false,
     default: 'New user registration request'
   },
-  
+
   status: {
     type: String,
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending'
   },
-  
+
   createdAt: {
     type: Date,
     default: Date.now
   },
-  
+
   reviewedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   },
-  
+
   reviewedAt: Date,
   remarks: String,
   program: {
     type: String,
     enum: ['B.Tech', 'M.Tech', 'B.Pharma', 'MCA', 'MBA']
+  },
+  adminType: {
+    type: String,
+    enum: ['head', 'program', 'branch'],
   }
 });
 

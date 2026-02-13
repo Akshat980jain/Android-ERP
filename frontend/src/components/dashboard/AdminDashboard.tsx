@@ -13,6 +13,8 @@ interface RequestUser {
   name: string;
   email: string;
   role: string;
+  branch?: string;
+  program?: string;
 }
 interface VerificationRequest {
   _id: string;
@@ -25,15 +27,25 @@ interface VerificationRequest {
   password?: string;
   reason?: string;
   program?: string;
-  // Add other known fields as needed
+  branch?: string;
+  adminType?: 'head' | 'program' | 'branch';
 }
 
-// Helper to check if user is a program admin
-function isProgramAdmin(user: AppUser | null): boolean {
-  return !!user && user.role === 'admin' && Array.isArray(user.adminPrograms) && (user.adminPrograms?.length ?? 0) > 0;
+// Helper to get admin type with fallback
+function getAdminType(user: AppUser | null): 'head' | 'program' | 'branch' | null {
+  if (!user || user.role !== 'admin') return null;
+  // Use explicit type if available
+  if (user.adminType) return user.adminType as any;
+  // Fallback logic for legacy users
+  if (Array.isArray(user.adminPrograms) && user.adminPrograms.length > 0) {
+    // If they have a branch, they might be a branch admin, but let's default to program for safety unless explicit
+    // Actually, in the old system, "Program Admin" was the only type other than Head.
+    return 'program';
+  }
+  return 'head';
 }
 
-// AdminVerificationPanel: visible only to super-admins and program-admins, but with different logic
+// AdminVerificationPanel: visible only to admins
 function AdminVerificationPanel() {
   const { user, token } = useAuth();
   const [requests, setRequests] = useState<VerificationRequest[]>([]);
@@ -55,15 +67,8 @@ function AdminVerificationPanel() {
     try {
       const data = await apiClient.getVerificationRequests(token || undefined) as { success: boolean; requests: VerificationRequest[]; message?: string };
       if (data.success) {
-        let filtered = data.requests;
-        if (user && isProgramAdmin(user)) {
-          // Program admin: only see requests for faculty for their program
-          filtered = filtered.filter((req: VerificationRequest) =>
-            req.requestedRole === 'faculty' &&
-            req.program && user.adminPrograms && user.adminPrograms.includes(req.program)
-          );
-        }
-        setRequests(filtered);
+        // Backend now handles all filtering based on admin type
+        setRequests(data.requests);
       } else {
         setError(data.message || 'Failed to fetch requests');
       }
@@ -95,11 +100,12 @@ function AdminVerificationPanel() {
   };
 
   if (!user || user.role !== 'admin') return null;
-  
-  // Show admin type
-  const isHeadAdmin = !isProgramAdmin(user);
-  const adminType = isHeadAdmin ? 'Head Admin' : 'Branch Admin';
-  
+
+  const adminType = getAdminType(user);
+  const typeLabel = adminType === 'head' ? 'Head Admin' :
+    adminType === 'program' ? 'Program Admin' :
+      adminType === 'branch' ? 'Branch Admin' : 'Admin';
+
   if (loading) return <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">Loading requests...</div>;
   if (requests.length === 0) return null;
 
@@ -110,45 +116,70 @@ function AdminVerificationPanel() {
           <Shield className="w-5 h-5 mr-2" />
           Pending Verification Requests ({requests.length})
         </div>
-        <div className="text-sm text-green-700">
-          {adminType}
+        <div className="text-sm text-green-700 font-medium px-2 py-1 bg-green-100 rounded">
+          {typeLabel}
         </div>
       </div>
       {success && <div className="text-green-700 text-sm mb-2">{success}</div>}
       {error && <div className="text-red-700 text-sm mb-2">{error}</div>}
-      <div className="space-y-2">
+      {/* Scrollable container for many requests */}
+      <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
         {requests
-          .filter(req => req.name && req.email && req.password && req.user && req.reason)
+          .filter(req => req.name && req.email && (req.user || req.password))
           .map(req => {
-            // Program admin: cannot approve admin requests
-            const canApprove = !isProgramAdmin(user) || req.requestedRole === 'faculty';
+            // Permission check for UI button state
+            let canApprove = false;
+            if (adminType === 'head') {
+              // Head approves Program Admin, Library, Placement
+              // Also unassigned requests
+              canApprove = true;
+            } else if (adminType === 'program') {
+              // Program Admin approves Branch Admin and Faculty
+              if (req.requestedRole === 'admin' && (req as any).adminType === 'branch') canApprove = true;
+              if (req.requestedRole === 'faculty') canApprove = true;
+            } else if (adminType === 'branch') {
+              // Branch Admin approves Students
+              if (req.requestedRole === 'student') canApprove = true;
+            }
+
             return (
-              <div key={req._id} className="flex items-center justify-between bg-white p-2 rounded border">
-                <div>
-                  <div className="font-medium">{req.user?.name || req.name} ({req.user?.email || req.email})</div>
-                  <div className="text-xs text-gray-600">Requested Role: <span className="font-semibold">{req.requestedRole}</span></div>
+              <div key={req._id} className="flex flex-col md:flex-row md:items-center justify-between bg-white p-3 rounded border shadow-sm">
+                <div className="mb-2 md:mb-0">
+                  <div className="font-medium flex items-center">
+                    {req.user?.name || req.name}
+                    <span className="text-gray-500 font-normal text-sm ml-2">({req.user?.email || req.email})</span>
+                  </div>
+                  <div className="text-xs text-gray-600 mt-1 flex flex-wrap gap-2">
+                    <span className="bg-gray-100 px-1.5 py-0.5 rounded">Role: <span className="font-semibold">{req.requestedRole}</span></span>
+                    {(req as any).adminType && (
+                      <span className="bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded">Type: {(req as any).adminType}</span>
+                    )}
+                    {req.program && <span className="bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">Prog: {req.program}</span>}
+                    {req.user?.branch && <span className="bg-orange-50 text-orange-700 px-1.5 py-0.5 rounded">Branch: {req.user.branch}</span>}
+                  </div>
                   <input
                     type="text"
                     placeholder="Remarks (optional)"
-                    className="mt-1 px-2 py-1 border rounded text-sm w-64"
+                    className="mt-2 px-2 py-1 border rounded text-sm w-full md:w-64"
                     value={remarksMap[req._id] || ''}
                     onChange={e => setRemarksMap(prev => ({ ...prev, [req._id]: e.target.value }))}
                   />
                 </div>
                 <div className="flex space-x-2">
                   <button
-                    className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 flex items-center disabled:opacity-50"
+                    className="px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 flex items-center disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
                     onClick={() => handleDecision(req._id, 'approved')}
                     disabled={!canApprove}
+                    title={!canApprove ? "You do not have permission to approve this role" : "Approve request"}
                   >
-                    <CheckCircle className="w-4 h-4 mr-1" />Approve
+                    <CheckCircle className="w-4 h-4 mr-1.5" />Approve
                   </button>
                   <button
-                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 flex items-center"
+                    className="px-3 py-1.5 bg-red-600 text-white rounded hover:bg-red-700 flex items-center disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
                     onClick={() => handleDecision(req._id, 'rejected')}
                     disabled={!canApprove}
                   >
-                    <XCircle className="w-4 h-4 mr-1" />Reject
+                    <XCircle className="w-4 h-4 mr-1.5" />Reject
                   </button>
                 </div>
               </div>
@@ -181,7 +212,7 @@ function ProgramAdminsPanel() {
     // eslint-disable-next-line
   }, [selectedProgram]);
 
-  if (!user || user.role !== 'admin' || isProgramAdmin(user)) return null;
+  if (!user || user.role !== 'admin' || getAdminType(user) !== 'head') return null;
 
   async function fetchAdmins(program: string) {
     setLoading(true);

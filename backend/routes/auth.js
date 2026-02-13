@@ -18,13 +18,13 @@ const generateToken = (id) => {
   try {
     const secret = process.env.JWT_SECRET || 'your-secret-key';
     const expiresIn = process.env.JWT_EXPIRES_IN || '30d';
-    
-    console.log('Generating token with:', { 
-      id, 
+
+    console.log('Generating token with:', {
+      id,
       secret: secret.substring(0, 10) + '...',
-      expiresIn 
+      expiresIn
     });
-    
+
     return jwt.sign({ id }, secret, {
       expiresIn,
     });
@@ -49,32 +49,32 @@ router.post('/dev-login', async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Email and password are required' 
+        message: 'Email and password are required'
       });
     }
 
     const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
-    
+
     if (!user) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Invalid credentials' 
+        message: 'Invalid credentials'
       });
     }
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Invalid credentials' 
+        message: 'Invalid credentials'
       });
     }
 
     // Generate token
     const token = generateToken(user._id);
-    
+
     // Prepare user response (split name into firstName and lastName for mobile app)
     const nameParts = user.name ? user.name.split(' ') : ['User', ''];
     const userResponse = {
@@ -91,16 +91,16 @@ router.post('/dev-login', async (req, res) => {
       updatedAt: user.updatedAt
     };
 
-    res.json({ 
-      success: true, 
-      token, 
-      user: userResponse 
+    res.json({
+      success: true,
+      token,
+      user: userResponse
     });
   } catch (error) {
     console.error('Dev login error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error' 
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
     });
   }
 });
@@ -110,7 +110,7 @@ router.post('/dev-login', async (req, res) => {
 // @access  Public
 router.post('/register', async (req, res) => {
   try {
-    const { name, firstName, lastName, email, password, role, profile, department, course, branch, phone, confirmPassword, program } = req.body;
+    const { name, firstName, lastName, email, password, role, profile, department, course, branch, phone, confirmPassword, program, adminType } = req.body;
 
     // Handle name from firstName+lastName or name field
     let fullName = name;
@@ -120,47 +120,47 @@ router.post('/register', async (req, res) => {
 
     // Input validation
     if (!fullName || !email || !password) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Name, email, and password are required' 
+      return res.status(400).json({
+        success: false,
+        message: 'Name, email, and password are required'
       });
     }
 
     // Password confirmation validation (if provided)
     if (confirmPassword && password !== confirmPassword) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Passwords do not match' 
+      return res.status(400).json({
+        success: false,
+        message: 'Passwords do not match'
       });
     }
 
     // Email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Please enter a valid email address' 
+      return res.status(400).json({
+        success: false,
+        message: 'Please enter a valid email address'
       });
     }
 
     // Check if user already exists
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'User already exists' 
+      return res.status(400).json({
+        success: false,
+        message: 'User already exists'
       });
     }
 
     // Check if there's already a pending request for this email
-    const existingRequest = await RoleRequest.findOne({ 
-      email: email.toLowerCase(), 
-      status: 'pending' 
+    const existingRequest = await RoleRequest.findOne({
+      email: email.toLowerCase(),
+      status: 'pending'
     });
     if (existingRequest) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Registration request already submitted. Please wait for admin approval.' 
+      return res.status(400).json({
+        success: false,
+        message: 'Registration request already submitted. Please wait for admin approval.'
       });
     }
 
@@ -184,6 +184,7 @@ router.post('/register', async (req, res) => {
       program: requestProgram,
       course: course,
       phone: phone || profile?.phone,
+      adminType: requestedRole === 'admin' ? (adminType || 'head') : undefined,
       status: 'pending',
       reason: 'New user registration request',
       createdAt: new Date()
@@ -199,16 +200,16 @@ router.post('/register', async (req, res) => {
       branch: branch
     });
 
-    res.status(201).json({ 
-      success: true, 
+    res.status(201).json({
+      success: true,
       message: 'Registration request submitted. Please wait for admin approval before you can login.',
       requestId: roleRequest._id
     });
   } catch (error) {
     console.error('Registration request error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error' 
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
     });
   }
 });
@@ -219,38 +220,38 @@ router.post('/register', async (req, res) => {
 router.post('/request-registration', async (req, res) => {
   console.log('Received registration request with body:', req.body);
   try {
-    const { name, email, password, confirmPassword, requestedRole, branch, course, program } = req.body;
-    
+    const { name, email, password, confirmPassword, requestedRole, branch, course, program, adminType } = req.body;
+
     // Base field validation
     if (!name || !email || !password || !confirmPassword || !requestedRole) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'All required fields must be provided' 
+      return res.status(400).json({
+        success: false,
+        message: 'All required fields must be provided'
       });
     }
 
     // Email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Please enter a valid email address' 
+      return res.status(400).json({
+        success: false,
+        message: 'Please enter a valid email address'
       });
     }
 
     // Password confirmation validation
     if (password !== confirmPassword) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Passwords do not match' 
+      return res.status(400).json({
+        success: false,
+        message: 'Passwords do not match'
       });
     }
 
     // Password strength validation
     if (password.length < 6) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Password must be at least 6 characters long' 
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters long'
       });
     }
 
@@ -276,40 +277,40 @@ router.post('/request-registration', async (req, res) => {
     // Check for existing user
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'User with this email already exists' 
+      return res.status(400).json({
+        success: false,
+        message: 'User with this email already exists'
       });
     }
 
     // Check for existing pending request
-    const existingPendingRequest = await RoleRequest.findOne({ 
-      email: email.toLowerCase(), 
-      status: 'pending' 
+    const existingPendingRequest = await RoleRequest.findOne({
+      email: email.toLowerCase(),
+      status: 'pending'
     });
     if (existingPendingRequest) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Registration request already pending for this email' 
+      return res.status(400).json({
+        success: false,
+        message: 'Registration request already pending for this email'
       });
     }
 
     // Check for existing approved request
-    const existingApprovedRequest = await RoleRequest.findOne({ 
-      email: email.toLowerCase(), 
-      status: 'approved' 
+    const existingApprovedRequest = await RoleRequest.findOne({
+      email: email.toLowerCase(),
+      status: 'approved'
     });
     if (existingApprovedRequest) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Registration request already approved for this email. You can now login.' 
+      return res.status(400).json({
+        success: false,
+        message: 'Registration request already approved for this email. You can now login.'
       });
     }
 
     // Check for existing rejected request - allow resubmission
-    const existingRejectedRequest = await RoleRequest.findOne({ 
-      email: email.toLowerCase(), 
-      status: 'rejected' 
+    const existingRejectedRequest = await RoleRequest.findOne({
+      email: email.toLowerCase(),
+      status: 'rejected'
     });
     if (existingRejectedRequest) {
       // Update the rejected request instead of creating a new one
@@ -323,18 +324,18 @@ router.post('/request-registration', async (req, res) => {
       existingRejectedRequest.reviewedBy = null;
       existingRejectedRequest.reviewedAt = null;
       existingRejectedRequest.remarks = null;
-      
+
       await existingRejectedRequest.save();
-      
+
       console.log('✅ Rejected request updated and resubmitted:', {
         name: existingRejectedRequest.name,
         email: existingRejectedRequest.email,
         requestedRole: existingRejectedRequest.requestedRole
       });
-      
-      res.json({ 
-        success: true, 
-        message: 'Registration request resubmitted successfully. Please wait for admin approval.' 
+
+      res.json({
+        success: true,
+        message: 'Registration request resubmitted successfully. Please wait for admin approval.'
       });
       return;
     }
@@ -345,33 +346,34 @@ router.post('/request-registration', async (req, res) => {
       email: email.toLowerCase().trim(),
       password: password, // Store plain password
       requestedRole,
-      // Only include branch for B.Tech/M.Tech
-      branch: (course && ['B.Tech', 'M.Tech'].includes(course)) && branch ? branch.trim() : null,
+      // Only include branch for B.Tech/M.Tech (or Branch Admin)
+      branch: branch ? branch.trim() : ((course && ['B.Tech', 'M.Tech'].includes(course)) ? null : null),
       course: course ? course.trim() : null,
       program: program ? program.trim() : (course ? course.trim() : null),
+      adminType: requestedRole === 'admin' ? (adminType || 'head') : undefined,
       currentRole: 'none',
       reason: 'New user registration request'
     };
 
     const roleRequest = new RoleRequest(roleRequestData);
     await roleRequest.save();
-    
+
     console.log('✅ Registration request created successfully:', {
       name: roleRequest.name,
       email: roleRequest.email,
       requestedRole: roleRequest.requestedRole,
       hasPassword: !!roleRequest.password
     });
-    
-    res.json({ 
-      success: true, 
-      message: 'Registration request submitted successfully. Please wait for admin approval.' 
+
+    res.json({
+      success: true,
+      message: 'Registration request submitted successfully. Please wait for admin approval.'
     });
   } catch (error) {
     console.error('Registration request error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Internal server error' 
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
     });
   }
 });
@@ -379,9 +381,9 @@ router.post('/request-registration', async (req, res) => {
 // @route   POST /api/auth/login
 router.post('/login', async (req, res) => {
   try {
-    console.log('Login request received:', { 
-      body: req.body, 
-      headers: req.headers['content-type'] 
+    console.log('Login request received:', {
+      body: req.body,
+      headers: req.headers['content-type']
     });
 
     const { email, password } = req.body;
@@ -389,9 +391,9 @@ router.post('/login', async (req, res) => {
     // Validate input
     if (!email || !password) {
       console.log('Missing email or password');
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Email and password are required' 
+        message: 'Email and password are required'
       });
     }
 
@@ -399,9 +401,9 @@ router.post('/login', async (req, res) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       console.log('Invalid email format:', email);
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Please enter a valid email address' 
+        message: 'Please enter a valid email address'
       });
     }
 
@@ -409,12 +411,12 @@ router.post('/login', async (req, res) => {
 
     // Find user by email (case-insensitive) and include password field
     const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
-    
+
     if (!user) {
       console.log('User not found for email:', email);
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Invalid credentials' 
+        message: 'Invalid credentials'
       });
     }
 
@@ -429,9 +431,9 @@ router.post('/login', async (req, res) => {
     // Check if user is verified
     if (!user.isVerified) {
       console.log('User not verified:', email);
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Account not verified. Please contact administrator.' 
+        message: 'Account not verified. Please contact administrator.'
       });
     }
 
@@ -441,9 +443,9 @@ router.post('/login', async (req, res) => {
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       console.log('Password mismatch for user:', email);
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Invalid credentials' 
+        message: 'Invalid credentials'
       });
     }
 
@@ -479,9 +481,9 @@ router.post('/login', async (req, res) => {
   } catch (error) {
     console.error('Login error details:', error);
     console.error('Error stack:', error.stack);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: 'Server error. Please try again later.' 
+      message: 'Server error. Please try again later.'
     });
   }
 });
@@ -724,17 +726,17 @@ router.get('/me', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).populate('courses').select('-password');
     if (!user) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'User not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
       });
     }
     res.json({ success: true, user });
   } catch (error) {
     console.error('Get user profile error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error' 
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
     });
   }
 });
@@ -757,9 +759,9 @@ router.put('/profile', auth, async (req, res) => {
 
     const user = await User.findById(req.user.id);
     if (!user) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'User not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
       });
     }
 
@@ -770,30 +772,30 @@ router.put('/profile', auth, async (req, res) => {
     if (name && name.trim()) {
       user.name = name.trim();
     }
-    
+
     // Handle email update with proper validation
     if (email && email !== user.email) {
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Please enter a valid email address' 
+        return res.status(400).json({
+          success: false,
+          message: 'Please enter a valid email address'
         });
       }
 
       console.log('Email is being changed from', user.email, 'to', email);
-      
+
       // Check if email is already taken by another user
-      const existingUser = await User.findOne({ 
+      const existingUser = await User.findOne({
         email: email.toLowerCase(),
-        _id: { $ne: req.user.id } 
+        _id: { $ne: req.user.id }
       });
-      
+
       if (existingUser) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Email already exists' 
+        return res.status(400).json({
+          success: false,
+          message: 'Email already exists'
         });
       }
       user.email = email.toLowerCase().trim();
@@ -820,26 +822,26 @@ router.put('/profile', auth, async (req, res) => {
     const updatedUser = await User.findById(req.user.id)
       .populate('courses')
       .select('-password');
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       message: 'Profile updated successfully',
-      user: updatedUser 
+      user: updatedUser
     });
   } catch (error) {
     console.error('Profile update error:', error);
-    
+
     // Handle MongoDB duplicate key error specifically
     if (error.code === 11000 && error.keyPattern && error.keyPattern.email) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Email already exists' 
+      return res.status(400).json({
+        success: false,
+        message: 'Email already exists'
       });
     }
-    
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to update profile' 
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update profile'
     });
   }
 });
@@ -850,31 +852,31 @@ router.put('/profile', auth, async (req, res) => {
 router.post('/request-verification', auth, async (req, res) => {
   try {
     const { requestedRole, reason, program } = req.body;
-    
+
     if (!requestedRole || !reason) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Requested role and reason are required' 
+      return res.status(400).json({
+        success: false,
+        message: 'Requested role and reason are required'
       });
     }
 
     if (req.user.role === requestedRole) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'You already have this role' 
+      return res.status(400).json({
+        success: false,
+        message: 'You already have this role'
       });
     }
 
     // Check for existing pending request
-    const existing = await RoleRequest.findOne({ 
-      user: req.user._id, 
-      status: 'pending' 
+    const existing = await RoleRequest.findOne({
+      user: req.user._id,
+      status: 'pending'
     });
-    
+
     if (existing) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'You already have a pending role change request' 
+      return res.status(400).json({
+        success: false,
+        message: 'You already have a pending role change request'
       });
     }
 
@@ -885,19 +887,19 @@ router.post('/request-verification', auth, async (req, res) => {
       reason: reason.trim(),
       program: program ? program.trim() : null
     });
-    
+
     await request.save();
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       message: 'Role change request submitted successfully',
-      request 
+      request
     });
   } catch (error) {
     console.error('Role change request error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error' 
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
     });
   }
 });
@@ -908,70 +910,80 @@ router.post('/request-verification', auth, async (req, res) => {
 router.get('/verification-requests', auth, authorize('admin', 'faculty'), async (req, res) => {
   try {
     let query = { status: 'pending' };
-    const { role, adminPrograms, program: userProgram } = req.user;
+    const { role, adminPrograms, adminType, program: userProgram } = req.user;
 
-    const isProgramAdmin = role === 'admin' && Array.isArray(adminPrograms) && adminPrograms.length > 0;
-    const isSuperAdmin = role === 'admin' && (!adminPrograms || adminPrograms.length === 0);
+    // Determine admin type if not explicitly set (failed migration fallback)
+    const effectiveAdminType = adminType ||
+      (role === 'admin' ? (
+        (!adminPrograms || adminPrograms.length === 0) ? 'head' :
+          'program' // Default to program admin if has programs but no type
+      ) : null);
 
     if (role === 'faculty') {
-      // Faculty can only see student requests FROM THEIR PROGRAM
+      // Faculty can only see student requests FROM THEIR PROGRAM AND BRANCH
       query.requestedRole = 'student';
       if (userProgram) {
         query.program = userProgram;
+        // Also filter by branch if faculty has one
+        const facultyBranch = req.user.branch || req.user.profile?.branch;
+        if (facultyBranch) {
+          query.branch = { $regex: new RegExp(`^${facultyBranch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') };
+        }
       } else {
-        // If faculty has no program set, return none to avoid cross-program leakage
         query.program = '__none__';
       }
-    } else if (isProgramAdmin) {
-      // Branch Admins see student and faculty requests for their program AND branch
-      const adminBranch = req.user.branch || req.user.profile?.branch;
-      
-      query.$and = [
-        { requestedRole: { $in: ['student', 'faculty'] } },
-        { program: { $in: adminPrograms } }
-      ];
-      
-      // If branch admin has a branch, filter by branch too (case-insensitive)
-      if (adminBranch) {
-        const normalizedAdminBranch = adminBranch.trim();
-        // Use case-insensitive regex for branch matching
-        query.$and.push({
-          branch: { $regex: new RegExp(`^${normalizedAdminBranch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
-        });
-      }
-    } else if (isSuperAdmin) {
-      // Head Admins see:
-      // 1. All admin role requests (head admin, branch admin)
-      // 2. Library and placement role requests
-      // 3. Student/faculty requests WITHOUT a specific program (or if no branch admin exists for that program)
+    } else if (effectiveAdminType === 'head') {
+      // Head Admin sees:
+      // 1. Program Admin requests
+      // 2. Library/Placement requests
+      // 3. Unassigned Student/Faculty requests (no program)
       query.$or = [
-        { requestedRole: { $in: ['admin', 'library', 'placement'] } }, // Admin, library, placement requests
-        { 
+        { requestedRole: 'admin', adminType: 'program' },
+        { requestedRole: { $in: ['library', 'placement'] } },
+        {
           requestedRole: { $in: ['student', 'faculty'] },
-          $or: [
-            { program: { $in: [null, ''] } },
-            { program: { $exists: false } }
-          ]
+          $or: [{ program: null }, { program: '' }, { program: { $exists: false } }]
         }
       ];
+    } else if (effectiveAdminType === 'program') {
+      // Program Admin sees:
+      // 1. Branch Admin requests (for their program)
+      // 2. Faculty requests (for their program)
+      // 3. Student requests are handled by Branch Admin, but Program Admin can see them if NO Branch Admin exists (optional fallback)
+      //    For now, adhering to strict chain: Program Admin manages Staff (Branch Admin + Faculty)
+      query.program = { $in: adminPrograms };
+      query.$or = [
+        { requestedRole: 'admin', adminType: 'branch' },
+        { requestedRole: 'faculty' }
+      ];
+    } else if (effectiveAdminType === 'branch') {
+      // Branch Admin sees:
+      // 1. Student requests (for their program AND branch)
+      query.requestedRole = 'student';
+      query.program = { $in: adminPrograms };
+
+      const adminBranch = req.user.branch || req.user.profile?.branch;
+      if (adminBranch) {
+        query.branch = { $regex: new RegExp(`^${adminBranch.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') };
+      }
     }
 
     const requests = await RoleRequest.find(query)
       .populate('user', 'name email role')
       .populate('reviewedBy', 'name email')
       .sort({ createdAt: -1 });
-    
+
     // Return in format expected by frontend (both 'requests' and 'data' for compatibility)
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       requests,
       data: requests // Also include as 'data' for Android compatibility
     });
   } catch (error) {
     console.error('Get verification requests error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error' 
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
     });
   }
 });
@@ -982,27 +994,27 @@ router.get('/verification-requests', auth, authorize('admin', 'faculty'), async 
 router.post('/verification-requests/:id/decision', auth, authorize('admin', 'faculty'), async (req, res) => {
   try {
     const { status, remarks } = req.body;
-    
+
     console.log(`\n🔄 Processing verification request decision:`, {
       requestId: req.params.id,
       status,
       reviewer: req.user.email,
       reviewerRole: req.user.role
     });
-    
+
     if (!['approved', 'rejected'].includes(status)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Invalid status. Must be "approved" or "rejected"' 
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status. Must be "approved" or "rejected"'
       });
     }
 
     const request = await RoleRequest.findById(req.params.id).populate('user');
     if (!request) {
       console.log('❌ Request not found:', req.params.id);
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Request not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'Request not found'
       });
     }
 
@@ -1016,32 +1028,78 @@ router.post('/verification-requests/:id/decision', auth, authorize('admin', 'fac
 
     if (request.status !== 'pending') {
       console.log('❌ Request already processed:', request.status);
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Request already processed' 
+      return res.status(400).json({
+        success: false,
+        message: 'Request already processed'
       });
     }
 
-    // Authorization check for faculty
-    if (req.user.role === 'faculty' && request.requestedRole !== 'student') {
-      console.log('❌ Faculty cannot approve non-student requests');
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Faculty can only approve student requests' 
-      });
+    // Authorization Check
+    const { role, adminPrograms, adminType } = req.user;
+    const effectiveAdminType = adminType || (role === 'admin' ? ((!adminPrograms || !adminPrograms.length) ? 'head' : 'program') : null);
+
+    if (role === 'faculty') {
+      if (request.requestedRole !== 'student') {
+        return res.status(403).json({ success: false, message: 'Faculty can only approve student requests' });
+      }
+      // Check program/branch match
+      const userProgram = req.user.program;
+      const userBranch = req.user.branch;
+      if (userProgram && request.program !== userProgram) {
+        return res.status(403).json({ success: false, message: 'Cross-program approval denied' });
+      }
+      if (userBranch && request.branch && request.branch.toLowerCase() !== userBranch.toLowerCase()) {
+        return res.status(403).json({ success: false, message: 'Cross-branch approval denied' });
+      }
+    } else if (role === 'admin') {
+      if (effectiveAdminType === 'head') {
+        // Head Admin approves: Program Admin, Library, Placement
+        // Cannot approve Branch Admin or Faculty (delegated to Program Admin)
+        // Cannot approve Students (delegated to Branch Admin)
+        const allowed = ['admin', 'library', 'placement'];
+        if (!allowed.includes(request.requestedRole) || (request.requestedRole === 'admin' && request.adminType !== 'program')) {
+          // Allow approving unassigned/generic requests as fallback
+          if (request.program) {
+            return res.status(403).json({ success: false, message: 'Head Admin approves Program Admins. Branch Admins/Faculty are handled by Program Admins.' });
+          }
+        }
+      } else if (effectiveAdminType === 'program') {
+        // Program Admin approves: Branch Admin, Faculty (for their program)
+        if (!adminPrograms.includes(request.program)) {
+          return res.status(403).json({ success: false, message: 'Cross-program approval denied' });
+        }
+        if (!['admin', 'faculty'].includes(request.requestedRole)) {
+          return res.status(403).json({ success: false, message: 'Program Admin approves Branch Admins and Faculty only.' });
+        }
+        if (request.requestedRole === 'admin' && request.adminType !== 'branch') {
+          return res.status(403).json({ success: false, message: 'Program Admin can only approve Branch Admins.' });
+        }
+      } else if (effectiveAdminType === 'branch') {
+        // Branch Admin approves: Students (for their program + branch)
+        if (!adminPrograms.includes(request.program)) {
+          return res.status(403).json({ success: false, message: 'Cross-program approval denied' });
+        }
+        const adminBranch = req.user.branch;
+        if (adminBranch && request.branch && request.branch.toLowerCase() !== adminBranch.toLowerCase()) {
+          return res.status(403).json({ success: false, message: 'Cross-branch approval denied' });
+        }
+        if (request.requestedRole !== 'student') {
+          return res.status(403).json({ success: false, message: 'Branch Admin can only approve Student requests.' });
+        }
+      }
     }
 
     // Process approval with guaranteed user creation
     if (status === 'approved') {
       console.log('✅ Processing approval...');
-      
+
       if (request.user) {
         // Existing user role change
         console.log('🔄 Updating existing user role...');
         const updateData = {
           role: request.requestedRole
         };
-        
+
         // Use $set for fields and $addToSet for arrays
         if (request.requestedRole === 'admin') {
           updateData.$set = updateData.$set || {};
@@ -1053,13 +1111,13 @@ router.post('/verification-requests/:id/decision', auth, authorize('admin', 'fac
             updateData.$set['profile.branch'] = request.branch.trim();
           }
         }
-        
+
         await User.findByIdAndUpdate(request.user._id, updateData, { new: true });
         console.log('✅ Existing user updated successfully');
       } else {
         // New user registration - GUARANTEED CREATION
         console.log('🆕 Creating new user from approved request...');
-        
+
         // Validate required data
         if (!request.name || !request.email || !request.password) {
           console.log('❌ Missing required user data:', {
@@ -1067,9 +1125,9 @@ router.post('/verification-requests/:id/decision', auth, authorize('admin', 'fac
             hasEmail: !!request.email,
             hasPassword: !!request.password
           });
-          return res.status(400).json({ 
-            success: false, 
-            message: 'Cannot approve request: missing required user data' 
+          return res.status(400).json({
+            success: false,
+            message: 'Cannot approve request: missing required user data'
           });
         }
 
@@ -1080,27 +1138,33 @@ router.post('/verification-requests/:id/decision', auth, authorize('admin', 'fac
           existingUser.role = request.requestedRole;
           existingUser.isVerified = true;
           existingUser.branch = request.branch;
-          existingUser.program = request.program;
+          existingUser.program = request.program || request.course || existingUser.program;
           existingUser.profile = {
             course: request.course,
             branch: request.branch
           };
-          
-          if (request.requestedRole === 'admin' && request.program) {
-            existingUser.adminPrograms = [request.program];
+
+          // Set admin type and programs
+          if (request.requestedRole === 'admin') {
+            existingUser.adminType = request.adminType || 'head';
+            if (request.program) {
+              existingUser.adminPrograms = [request.program];
+            } else {
+              existingUser.adminPrograms = [];
+            }
           }
-          
+
           await existingUser.save();
           request.user = existingUser._id;
           console.log('✅ Existing user updated successfully');
         } else {
           // Create new user with comprehensive data
           console.log('🆕 Creating new user with data:', {
-          name: request.name,
-          email: request.email,
+            name: request.name,
+            email: request.email,
             requestedRole: request.requestedRole,
-          branch: request.branch,
-          program: request.program,
+            branch: request.branch,
+            program: request.program,
             course: request.course
           });
 
@@ -1110,19 +1174,24 @@ router.post('/verification-requests/:id/decision', auth, authorize('admin', 'fac
             password: request.password, // Will be hashed by pre-save middleware
             role: request.requestedRole,
             branch: request.branch ? request.branch.trim() : null,
-            program: request.program ? request.program.trim() : null,
-          profile: {
+            program: request.program ? request.program.trim() : (request.course ? request.course.trim() : null),
+            profile: {
               course: request.course ? request.course.trim() : null,
               branch: request.branch ? request.branch.trim() : null
-          },
-          isVerified: true,
+            },
+            isVerified: true,
             createdBy: req.user._id,
             createdAt: new Date()
           });
 
-          // Add adminPrograms if needed
-        if (request.requestedRole === 'admin' && request.program) {
-            newUser.adminPrograms = [request.program];
+          // Set admin type and programs
+          if (request.requestedRole === 'admin') {
+            newUser.adminType = request.adminType || 'head';
+            if (request.program) {
+              newUser.adminPrograms = [request.program];
+            } else {
+              newUser.adminPrograms = [];
+            }
           }
 
           // GUARANTEED USER CREATION with retry logic
@@ -1132,32 +1201,32 @@ router.post('/verification-requests/:id/decision', auth, authorize('admin', 'fac
 
           while (!userCreated && retryCount < maxRetries) {
             try {
-        await newUser.save();
+              await newUser.save();
               userCreated = true;
               console.log('✅ New user created successfully:', newUser.email);
-              
+
               // Update the request to reference the new user
-        request.user = newUser._id;
-              
+              request.user = newUser._id;
+
               // Verify user was actually created
               const verifyUser = await User.findById(newUser._id);
               if (!verifyUser) {
                 throw new Error('User creation verification failed');
               }
               console.log('✅ User creation verified in database');
-              
+
             } catch (error) {
               retryCount++;
               console.error(`❌ User creation attempt ${retryCount} failed:`, error.message);
-              
+
               if (retryCount >= maxRetries) {
                 console.error('❌ All user creation attempts failed');
-                return res.status(500).json({ 
-                  success: false, 
-                  message: 'Failed to create user after multiple attempts. Please try again.' 
+                return res.status(500).json({
+                  success: false,
+                  message: 'Failed to create user after multiple attempts. Please try again.'
                 });
               }
-              
+
               // Wait before retry
               await new Promise(resolve => setTimeout(resolve, 1000));
             }
@@ -1174,35 +1243,35 @@ router.post('/verification-requests/:id/decision', auth, authorize('admin', 'fac
     if (remarks) {
       request.remarks = remarks.trim();
     }
-    
+
     await request.save();
     console.log('✅ Request status updated successfully');
-    
+
     // Final verification - ensure user exists if approved
     if (status === 'approved' && request.user) {
       const finalUserCheck = await User.findById(request.user);
       if (!finalUserCheck) {
         console.error('❌ CRITICAL: User not found after approval process');
-        return res.status(500).json({ 
-          success: false, 
-          message: 'User creation verification failed. Please contact administrator.' 
+        return res.status(500).json({
+          success: false,
+          message: 'User creation verification failed. Please contact administrator.'
         });
       }
       console.log('✅ Final user verification passed');
     }
-    
+
     console.log('🎉 Verification process completed successfully');
-    
-    res.json({ 
-      success: true, 
-      message: `Request ${status} successfully. ${status === 'approved' ? 'User has been created and can now login.' : ''}`, 
-      request 
+
+    res.json({
+      success: true,
+      message: `Request ${status} successfully. ${status === 'approved' ? 'User has been created and can now login.' : ''}`,
+      request
     });
   } catch (error) {
     console.error('❌ Error processing verification request:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: error.message || 'Server error during verification process' 
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Server error during verification process'
     });
   }
 });
@@ -1213,17 +1282,17 @@ router.post('/verification-requests/:id/decision', auth, authorize('admin', 'fac
 router.get('/verification-status', auth, authorize('admin'), async (req, res) => {
   try {
     console.log('🔍 Checking verification status...');
-    
+
     // Get all approved requests
     const approvedRequests = await RoleRequest.find({ status: 'approved' });
     console.log(`Found ${approvedRequests.length} approved requests`);
-    
+
     const verificationResults = [];
-    
+
     for (const request of approvedRequests) {
       const user = await User.findOne({ email: request.email });
       const status = user ? '✅ User Created' : '❌ User Missing';
-      
+
       verificationResults.push({
         requestId: request._id,
         name: request.name,
@@ -1235,18 +1304,18 @@ router.get('/verification-status', auth, authorize('admin'), async (req, res) =>
         createdAt: request.createdAt,
         reviewedAt: request.reviewedAt
       });
-      
+
       console.log(`${status} - ${request.email} (${request.requestedRole})`);
     }
-    
+
     // Get all pending requests
     const pendingRequests = await RoleRequest.find({ status: 'pending' });
     console.log(`Found ${pendingRequests.length} pending requests`);
-    
+
     // Get all rejected requests
     const rejectedRequests = await RoleRequest.find({ status: 'rejected' });
     console.log(`Found ${rejectedRequests.length} rejected requests`);
-    
+
     res.json({
       success: true,
       summary: {
@@ -1275,9 +1344,9 @@ router.get('/verification-status', auth, authorize('admin'), async (req, res) =>
     });
   } catch (error) {
     console.error('Error checking verification status:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error' 
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
     });
   }
 });
@@ -1288,18 +1357,18 @@ router.get('/verification-status', auth, authorize('admin'), async (req, res) =>
 router.post('/fix-missing-users', auth, authorize('admin'), async (req, res) => {
   try {
     console.log('🔧 Fixing missing users...');
-    
+
     const approvedRequests = await RoleRequest.find({ status: 'approved' });
     const fixedUsers = [];
     const errors = [];
-    
+
     for (const request of approvedRequests) {
       const existingUser = await User.findOne({ email: request.email });
-      
+
       if (!existingUser) {
         try {
           console.log(`🔄 Creating missing user for ${request.email}...`);
-          
+
           const newUser = new User({
             name: request.name.trim(),
             email: request.email.toLowerCase().trim(),
@@ -1316,24 +1385,29 @@ router.post('/fix-missing-users', auth, authorize('admin'), async (req, res) => 
             createdAt: new Date()
           });
 
-          if (request.requestedRole === 'admin' && request.program) {
-            newUser.adminPrograms = [request.program];
+          if (request.requestedRole === 'admin') {
+            newUser.adminType = request.adminType || 'head';
+            if (request.program) {
+              newUser.adminPrograms = [request.program];
+            } else {
+              newUser.adminPrograms = [];
+            }
           }
 
           await newUser.save();
-          
+
           // Update request to reference the new user
           request.user = newUser._id;
           await request.save();
-          
+
           fixedUsers.push({
             email: request.email,
             name: request.name,
             role: request.requestedRole
           });
-          
+
           console.log(`✅ Fixed user for ${request.email}`);
-          
+
         } catch (error) {
           console.error(`❌ Failed to fix user for ${request.email}:`, error.message);
           errors.push({
@@ -1343,19 +1417,19 @@ router.post('/fix-missing-users', auth, authorize('admin'), async (req, res) => 
         }
       }
     }
-    
+
     res.json({
       success: true,
       message: `Fixed ${fixedUsers.length} missing users`,
       fixedUsers,
       errors
     });
-    
+
   } catch (error) {
     console.error('Error fixing missing users:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error' 
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
     });
   }
 });
@@ -1366,13 +1440,13 @@ router.post('/fix-missing-users', auth, authorize('admin'), async (req, res) => 
 router.get('/all-users', auth, authorize('admin'), async (req, res) => {
   try {
     console.log('🔍 Admin requesting all users...');
-    
+
     const users = await User.find({})
       .select('-password') // Don't send passwords
       .sort({ createdAt: -1 });
-    
+
     console.log(`Found ${users.length} users`);
-    
+
     res.json({
       success: true,
       totalUsers: users.length,
@@ -1392,9 +1466,9 @@ router.get('/all-users', auth, authorize('admin'), async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching users:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error' 
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
     });
   }
 });
@@ -1419,13 +1493,13 @@ router.get('/users-by-role/:role', auth, authorize('admin'), async (req, res) =>
   try {
     const { role } = req.params;
     console.log(`🔍 Admin requesting users with role: ${role}`);
-    
+
     const users = await User.find({ role })
       .select('-password')
       .sort({ createdAt: -1 });
-    
+
     console.log(`Found ${users.length} users with role: ${role}`);
-    
+
     res.json({
       success: true,
       role: role,
@@ -1444,9 +1518,9 @@ router.get('/users-by-role/:role', auth, authorize('admin'), async (req, res) =>
     });
   } catch (error) {
     console.error('Error fetching users by role:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error' 
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
     });
   }
 });
@@ -1459,7 +1533,7 @@ router.get('/admin-stats', auth, authorize('admin'), async (req, res) => {
     const [totalStudents, totalFaculty, activePrograms, totalRevenue] = await Promise.all([
       User.countDocuments({ role: 'student' }),
       User.countDocuments({ role: 'faculty' }),
-      User.distinct('program', { 
+      User.distinct('program', {
         program: { $ne: null, $ne: '', $exists: true },
         role: { $in: ['student', 'faculty'] }
       }),
@@ -1483,9 +1557,9 @@ router.get('/admin-stats', auth, authorize('admin'), async (req, res) => {
     });
   } catch (error) {
     console.error('Admin stats error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error' 
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
     });
   }
 });
@@ -1497,25 +1571,29 @@ router.get('/department-enrollment', auth, authorize('admin'), async (req, res) 
   try {
     const pipeline = [
       { $match: { role: 'student' } },
-      { $group: { 
-        _id: '$branch', 
-        students: { $sum: 1 } 
-      }},
-      { $project: { 
-        department: { $ifNull: ['$_id', 'Unknown'] }, 
-        students: 1, 
-        _id: 0 
-      }},
+      {
+        $group: {
+          _id: '$branch',
+          students: { $sum: 1 }
+        }
+      },
+      {
+        $project: {
+          department: { $ifNull: ['$_id', 'Unknown'] },
+          students: 1,
+          _id: 0
+        }
+      },
       { $sort: { students: -1 } }
     ];
-    
+
     const departments = await User.aggregate(pipeline);
     res.json({ success: true, departments });
   } catch (error) {
     console.error('Department enrollment error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error' 
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
     });
   }
 });
@@ -1526,29 +1604,35 @@ router.get('/department-enrollment', auth, authorize('admin'), async (req, res) 
 router.get('/monthly-revenue', auth, authorize('admin'), async (req, res) => {
   try {
     const pipeline = [
-      { $match: { 
-        status: 'paid',
-        paidDate: { $exists: true, $ne: null }
-      }},
-      { $group: {
-        _id: { $dateToString: { format: '%Y-%m', date: '$paidDate' } },
-        amount: { $sum: '$amount' }
-      }},
+      {
+        $match: {
+          status: 'paid',
+          paidDate: { $exists: true, $ne: null }
+        }
+      },
+      {
+        $group: {
+          _id: { $dateToString: { format: '%Y-%m', date: '$paidDate' } },
+          amount: { $sum: '$amount' }
+        }
+      },
       { $sort: { '_id': 1 } },
-      { $project: {
-        month: '$_id',
-        amount: 1,
-        _id: 0
-      }}
+      {
+        $project: {
+          month: '$_id',
+          amount: 1,
+          _id: 0
+        }
+      }
     ];
-    
+
     const revenue = await Fee.aggregate(pipeline);
     res.json({ success: true, revenue });
   } catch (error) {
     console.error('Monthly revenue error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error' 
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
     });
   }
 });
@@ -1559,25 +1643,25 @@ router.get('/monthly-revenue', auth, authorize('admin'), async (req, res) => {
 router.get('/admins-by-program', auth, authorize('admin'), async (req, res) => {
   try {
     const { program } = req.query;
-    
+
     if (!program) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Program parameter is required' 
+      return res.status(400).json({
+        success: false,
+        message: 'Program parameter is required'
       });
     }
 
-    const admins = await User.find({ 
-      role: 'admin', 
-      adminPrograms: program 
+    const admins = await User.find({
+      role: 'admin',
+      adminPrograms: program
     }).select('-password');
-    
+
     res.json({ success: true, admins });
   } catch (error) {
     console.error('Get admins by program error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error' 
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
     });
   }
 });
@@ -1590,17 +1674,17 @@ router.post('/forgot-password', async (req, res) => {
     const { email } = req.body;
 
     if (!email) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Email is required' 
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
       });
     }
 
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'User not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
       });
     }
 
@@ -1614,22 +1698,22 @@ router.post('/forgot-password', async (req, res) => {
     // Send password reset email
     try {
       await emailService.sendPasswordResetEmail(user, resetToken);
-      res.json({ 
-        success: true, 
-        message: 'Password reset email sent successfully' 
+      res.json({
+        success: true,
+        message: 'Password reset email sent successfully'
       });
     } catch (emailError) {
       console.error('Password reset email error:', emailError);
-      res.status(500).json({ 
-        success: false, 
-        message: 'Failed to send password reset email' 
+      res.status(500).json({
+        success: false,
+        message: 'Failed to send password reset email'
       });
     }
   } catch (error) {
     console.error('Forgot password error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error' 
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
     });
   }
 });
@@ -1642,27 +1726,27 @@ router.post('/reset-password', async (req, res) => {
     const { token, newPassword } = req.body;
 
     if (!token || !newPassword) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Token and new password are required' 
+      return res.status(400).json({
+        success: false,
+        message: 'Token and new password are required'
       });
     }
 
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    
+
     if (decoded.type !== 'password-reset') {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Invalid token type' 
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid token type'
       });
     }
 
     const user = await User.findById(decoded.id);
     if (!user) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'User not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
       });
     }
 
@@ -1670,21 +1754,21 @@ router.post('/reset-password', async (req, res) => {
     user.password = newPassword;
     await user.save();
 
-    res.json({ 
-      success: true, 
-      message: 'Password reset successfully' 
+    res.json({
+      success: true,
+      message: 'Password reset successfully'
     });
   } catch (error) {
     console.error('Reset password error:', error);
     if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Invalid or expired token' 
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired token'
       });
     }
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error' 
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
     });
   }
 });
@@ -1697,32 +1781,32 @@ router.post('/test-email', auth, authorize('admin'), async (req, res) => {
     const { email } = req.body;
 
     if (!email) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Email address is required' 
+      return res.status(400).json({
+        success: false,
+        message: 'Email address is required'
       });
     }
 
     const testResult = await emailService.testEmailService();
-    
+
     if (testResult.success) {
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         message: 'Email service test completed successfully',
         details: testResult
       });
     } else {
-      res.status(500).json({ 
-        success: false, 
+      res.status(500).json({
+        success: false,
         message: 'Email service test failed',
         details: testResult
       });
     }
   } catch (error) {
     console.error('Test email error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error' 
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
     });
   }
 });
@@ -1782,7 +1866,7 @@ router.post('/request-otp', async (req, res) => {
 // @access  Public
 router.post('/verify-otp', async (req, res) => {
   try {
-    console.log('Verify OTP request received:', { 
+    console.log('Verify OTP request received:', {
       body: req.body,
       hasEmail: !!req.body?.email,
       hasOtp: !!req.body?.otp

@@ -26,6 +26,12 @@ const programs = [
   { value: 'MBA', label: 'MBA' }
 ];
 
+const adminTypes = [
+  { value: 'head', label: 'Head Admin (all programs)' },
+  { value: 'program', label: 'Program Admin (one program, all branches)' },
+  { value: 'branch', label: 'Branch Admin (one program + one branch)' }
+];
+
 export default function RequestVerificationPage() {
   const API_URL = import.meta.env.VITE_API_URL || '';
   const [form, setForm] = useState({
@@ -36,36 +42,51 @@ export default function RequestVerificationPage() {
     branch: '',
     course: '',
     requestedRole: 'student',
-    program: ''
+    program: '',
+    adminType: '' as '' | 'head' | 'program' | 'branch'
   });
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm(prev => {
+      const updated = { ...prev, [name]: value };
+      // Reset dependent fields when role changes
+      if (name === 'requestedRole') {
+        updated.adminType = '' as '' | 'head' | 'program' | 'branch';
+        updated.program = '';
+        updated.course = '';
+        updated.branch = '';
+      }
+      // Reset program/branch when admin type changes
+      if (name === 'adminType') {
+        updated.program = '';
+        updated.branch = '';
+      }
+      // Reset branch when course/program changes
+      if (name === 'course' || name === 'program') {
+        updated.branch = '';
+      }
+      return updated;
+    });
   };
 
   const validateForm = () => {
-    // Check if passwords match
     if (form.password !== form.confirmPassword) {
       setError('Passwords do not match');
       return false;
     }
-
-    // Check password strength
     if (form.password.length < 6) {
       setError('Password must be at least 6 characters long');
       return false;
     }
-
-    // Check required fields
     if (!form.name.trim() || !form.email.trim()) {
       setError('Name and email are required');
       return false;
     }
 
-    // Check course and branch requirements per role and course type
     const showCourseFields = ['student', 'faculty', 'placement'].includes(form.requestedRole);
     const branchEligibleCourses = new Set(['B.Tech', 'M.Tech']);
 
@@ -73,10 +94,31 @@ export default function RequestVerificationPage() {
       setError('Course is required for the selected role');
       return false;
     }
-
     if (showCourseFields && branchEligibleCourses.has(form.course) && !form.branch.trim()) {
       setError('Branch is required for B.Tech and M.Tech');
       return false;
+    }
+
+    // Admin type validation
+    if (form.requestedRole === 'admin') {
+      if (!form.adminType) {
+        setError('Please select an admin type');
+        return false;
+      }
+      if (form.adminType === 'program' && !form.program) {
+        setError('Please select a program for Program Admin');
+        return false;
+      }
+      if (form.adminType === 'branch') {
+        if (!form.program) {
+          setError('Please select a program for Branch Admin');
+          return false;
+        }
+        if (branchEligibleCourses.has(form.program) && !form.branch.trim()) {
+          setError('Branch is required for B.Tech/M.Tech Branch Admin');
+          return false;
+        }
+      }
     }
 
     return true;
@@ -88,34 +130,45 @@ export default function RequestVerificationPage() {
     setError('');
     setStatus('');
 
-    // Validate form before submitting
     if (!validateForm()) {
       setLoading(false);
       return;
     }
 
-    // Check if course/branch are needed for this role
     const showCourseFields = ['student', 'faculty', 'placement'].includes(form.requestedRole);
     const branchEligibleCourses = new Set(['B.Tech', 'M.Tech']);
     const showBranchField = showCourseFields && branchEligibleCourses.has(form.course);
 
     try {
-      // Create payload with ALL necessary fields including confirmPassword
-      const payload = {
+      const payload: Record<string, string> = {
         name: form.name.trim(),
         email: form.email.trim(),
         password: form.password,
-        confirmPassword: form.confirmPassword, // Add this field
+        confirmPassword: form.confirmPassword,
         requestedRole: form.requestedRole,
-        // Include course for relevant roles
-        ...(showCourseFields && { course: form.course.trim() }),
-        // Include branch only when applicable (B.Tech/M.Tech)
-        ...(showBranchField && { branch: form.branch.trim() }),
-        // Only include program if it's selected
-        ...(form.requestedRole === 'admin' && form.program && { program: form.program })
       };
 
-      console.log('Sending payload:', payload); // Debug log
+      // Student/Faculty/Placement fields
+      if (showCourseFields) {
+        payload.course = form.course.trim();
+        payload.program = form.course.trim();
+      }
+      if (showBranchField) {
+        payload.branch = form.branch.trim();
+      }
+
+      // Admin fields
+      if (form.requestedRole === 'admin') {
+        payload.adminType = form.adminType;
+        if (form.adminType === 'program' || form.adminType === 'branch') {
+          payload.program = form.program;
+        }
+        if (form.adminType === 'branch' && form.branch.trim()) {
+          payload.branch = form.branch.trim();
+        }
+      }
+
+      console.log('Sending payload:', payload);
 
       const res = await fetch(`${API_URL}/api/auth/request-registration`, {
         method: 'POST',
@@ -124,19 +177,14 @@ export default function RequestVerificationPage() {
       });
 
       const data = await res.json();
-      console.log('Response:', data); // Debug log
+      console.log('Response:', data);
 
       if (res.ok && data.success) {
         setStatus('Request submitted successfully! Awaiting admin approval.');
         setForm({
-          name: '',
-          email: '',
-          password: '',
-          confirmPassword: '',
-          branch: '',
-          course: '',
-          requestedRole: 'student',
-          program: ''
+          name: '', email: '', password: '', confirmPassword: '',
+          branch: '', course: '', requestedRole: 'student', program: '',
+          adminType: '' as '' | 'head' | 'program' | 'branch'
         });
       } else {
         setError(data.message || 'Request failed. Please try again.');
@@ -149,11 +197,13 @@ export default function RequestVerificationPage() {
     }
   };
 
-  // Determine visibility for course and branch fields
+  // Visibility flags
   const showCourseFields = ['student', 'faculty', 'placement'].includes(form.requestedRole);
   const branchEligibleCourses = new Set(['B.Tech', 'M.Tech']);
   const showBranchField = showCourseFields && branchEligibleCourses.has(form.course);
-  const showProgram = form.requestedRole === 'admin';
+  const isAdmin = form.requestedRole === 'admin';
+  const showAdminProgram = isAdmin && (form.adminType === 'program' || form.adminType === 'branch');
+  const showAdminBranch = isAdmin && form.adminType === 'branch' && branchEligibleCourses.has(form.program);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 px-2">
@@ -165,72 +215,38 @@ export default function RequestVerificationPage() {
           </div>
 
           <form className="p-8 space-y-5" onSubmit={handleSubmit}>
-            <input
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              placeholder="Full Name"
+            <input name="name" value={form.name} onChange={handleChange} placeholder="Full Name"
               className="border border-gray-300 rounded-lg px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-              required
-              disabled={loading}
-            />
+              required disabled={loading} />
 
-            <input
-              name="email"
-              type="email"
-              value={form.email}
-              onChange={handleChange}
-              placeholder="Email"
+            <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="Email"
               className="border border-gray-300 rounded-lg px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-              required
-              disabled={loading}
-            />
+              required disabled={loading} />
 
-            <input
-              name="password"
-              type="password"
-              value={form.password}
-              onChange={handleChange}
+            <input name="password" type="password" value={form.password} onChange={handleChange}
               placeholder="Password (min. 6 characters)"
               className="border border-gray-300 rounded-lg px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-              required
-              minLength={6}
-              disabled={loading}
-            />
+              required minLength={6} disabled={loading} />
 
-            <input
-              name="confirmPassword"
-              type="password"
-              value={form.confirmPassword}
-              onChange={handleChange}
+            <input name="confirmPassword" type="password" value={form.confirmPassword} onChange={handleChange}
               placeholder="Confirm Password"
               className="border border-gray-300 rounded-lg px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-              required
-              disabled={loading}
-            />
+              required disabled={loading} />
 
-            <select
-              name="requestedRole"
-              value={form.requestedRole}
-              onChange={handleChange}
+            <select name="requestedRole" value={form.requestedRole} onChange={handleChange}
               className="border border-gray-300 rounded-lg px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-              disabled={loading}
-            >
+              disabled={loading}>
               {roles.map(role => (
                 <option key={role.value} value={role.value}>{role.label}</option>
               ))}
             </select>
 
+            {/* Course + Branch for Student/Faculty/Placement */}
             {showCourseFields && (
               <>
-                <select
-                  name="course"
-                  value={form.course}
-                  onChange={handleChange}
+                <select name="course" value={form.course} onChange={handleChange}
                   className="border border-gray-300 rounded-lg px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-                  required={showCourseFields}
-                  disabled={loading}
-                >
+                  required={showCourseFields} disabled={loading}>
                   <option value="" disabled>Select a course</option>
                   {courses.map(course => (
                     <option key={course.value} value={course.value}>{course.label}</option>
@@ -238,38 +254,49 @@ export default function RequestVerificationPage() {
                 </select>
 
                 {showBranchField && (
-                  <input
-                    name="branch"
-                    value={form.branch}
-                    onChange={handleChange}
+                  <input name="branch" value={form.branch} onChange={handleChange}
                     placeholder="Branch (e.g., Computer Science, Mechanical)"
                     className="border border-gray-300 rounded-lg px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-                    required={showBranchField}
-                    disabled={loading}
-                  />
+                    required={showBranchField} disabled={loading} />
                 )}
               </>
             )}
-            {showProgram && (
-              <select
-                name="program"
-                value={form.program}
-                onChange={handleChange}
+
+            {/* Admin Type Selector */}
+            {isAdmin && (
+              <select name="adminType" value={form.adminType} onChange={handleChange}
                 className="border border-gray-300 rounded-lg px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-                disabled={loading}
-              >
-                <option value="">Head Admin (No specific program)</option>
-                {programs.map(program => (
-                  <option key={program.value} value={program.value}>{program.label}</option>
+                required disabled={loading}>
+                <option value="" disabled>Select Admin Type</option>
+                {adminTypes.map(at => (
+                  <option key={at.value} value={at.value}>{at.label}</option>
                 ))}
               </select>
             )}
 
-            <button
-              type="submit"
+            {/* Program for Program Admin / Branch Admin */}
+            {showAdminProgram && (
+              <select name="program" value={form.program} onChange={handleChange}
+                className="border border-gray-300 rounded-lg px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+                required disabled={loading}>
+                <option value="" disabled>Select Program</option>
+                {programs.map(p => (
+                  <option key={p.value} value={p.value}>{p.label}</option>
+                ))}
+              </select>
+            )}
+
+            {/* Branch for Branch Admin (B.Tech / M.Tech only) */}
+            {showAdminBranch && (
+              <input name="branch" value={form.branch} onChange={handleChange}
+                placeholder="Branch (e.g., Computer Science, Mechanical)"
+                className="border border-gray-300 rounded-lg px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+                required disabled={loading} />
+            )}
+
+            <button type="submit"
               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2.5 rounded-lg font-semibold text-lg shadow hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={loading}
-            >
+              disabled={loading}>
               {loading ? 'Submitting...' : 'Submit Request'}
             </button>
 

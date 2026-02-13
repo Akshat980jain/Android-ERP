@@ -9,16 +9,49 @@ const { auth } = require('../middleware/auth'); // Adjust path as needed
 router.get('/', auth, async (req, res) => {
   try {
     console.log('GET /courses - User:', { id: req.user._id, role: req.user.role, email: req.user.email });
-    
+
     let courses;
-    
+
     switch (req.user.role) {
       case 'admin':
-        // Admin can see all courses
-        console.log('Fetching all courses for admin');
-        courses = await Course.find()
-          .populate('faculty', 'name email')
-          .populate('students', 'name email');
+        // Filter based on admin type
+        const { adminType, adminPrograms } = req.user;
+        const effectiveAdminType = adminType || ((!adminPrograms || !adminPrograms.length) ? 'head' : 'program');
+
+        if (effectiveAdminType === 'head') {
+          console.log('Fetching all courses for head admin');
+          courses = await Course.find()
+            .populate('faculty', 'name email')
+            .populate('students', 'name email');
+        } else if (effectiveAdminType === 'program') {
+          console.log('Fetching courses for program admin:', adminPrograms);
+          courses = await Course.find({
+            $or: [
+              { department: { $in: adminPrograms } },
+              { program: { $in: adminPrograms } }
+            ]
+          })
+            .populate('faculty', 'name email')
+            .populate('students', 'name email');
+        } else if (effectiveAdminType === 'branch') {
+          console.log('Fetching courses for branch admin:', adminPrograms, req.user.branch);
+          const query = {
+            $or: [
+              { department: { $in: adminPrograms } },
+              { program: { $in: adminPrograms } }
+            ]
+          };
+          if (req.user.branch) {
+            // Precise branch matching not always possible if courses just have 'department', 
+            // but assuming department/program covers it or title contains branch.
+            // For now, Branch Admin sees all courses in their program to simplify management of the program's curriculum
+            // OR strict filtering:
+            // query.branch = req.user.branch; // Course model might not have strict branch field, usually 'department'
+          }
+          courses = await Course.find(query)
+            .populate('faculty', 'name email')
+            .populate('students', 'name email');
+        }
         break;
       case 'faculty':
         // Faculty can see courses they teach
@@ -37,7 +70,7 @@ router.get('/', auth, async (req, res) => {
         console.log('Unknown role:', req.user.role);
         courses = [];
     }
-    
+
     console.log(`Found ${courses.length} courses for user ${req.user.role}`);
     res.json({ success: true, courses });
   } catch (error) {
@@ -52,11 +85,11 @@ router.get('/faculty-courses', auth, async (req, res) => {
     if (req.user.role !== 'faculty' && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
-    
+
     const courses = await Course.find({ faculty: req.user._id })
       .populate('faculty', 'name email')
       .populate('students', 'name email rollNumber');
-    
+
     res.json({ success: true, courses });
   } catch (error) {
     console.error('Error fetching faculty courses:', error);
@@ -70,11 +103,11 @@ router.get('/my-courses', auth, async (req, res) => {
     if (req.user.role !== 'student') {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
-    
+
     const courses = await Course.find({ students: req.user._id })
       .populate('faculty', 'name email')
       .select('-students'); // Don't send all student data to individual student
-    
+
     res.json({ success: true, courses });
   } catch (error) {
     console.error('Error fetching student courses:', error);
@@ -88,21 +121,21 @@ router.get('/:id', auth, async (req, res) => {
     const course = await Course.findById(req.params.id)
       .populate('faculty', 'name email')
       .populate('students', 'name email rollNumber');
-    
+
     if (!course) {
       return res.status(404).json({ success: false, message: 'Course not found' });
     }
-    
+
     // Check if user has access to this course
-    const hasAccess = 
+    const hasAccess =
       req.user.role === 'admin' ||
       course.faculty._id.toString() === req.user._id ||
       course.students.some(student => student._id.toString() === req.user._id);
-    
+
     if (!hasAccess) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
-    
+
     res.json({ success: true, course });
   } catch (error) {
     console.error('Error fetching course:', error);
@@ -116,7 +149,7 @@ router.post('/', auth, async (req, res) => {
     if (req.user.role !== 'faculty' && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
-    
+
     const {
       name,
       code,
@@ -128,24 +161,24 @@ router.post('/', auth, async (req, res) => {
       year,
       maxStudents
     } = req.body;
-    
+
     // Validate required fields
     if (!name || !code || !department || !credits) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Name, code, department, and credits are required' 
+      return res.status(400).json({
+        success: false,
+        message: 'Name, code, department, and credits are required'
       });
     }
-    
+
     // Check if course code already exists
     const existingCourse = await Course.findOne({ code });
     if (existingCourse) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Course code already exists' 
+      return res.status(400).json({
+        success: false,
+        message: 'Course code already exists'
       });
     }
-    
+
     const course = new Course({
       name,
       code: code.toUpperCase(),
@@ -160,12 +193,12 @@ router.post('/', auth, async (req, res) => {
       students: [],
       status: 'active'
     });
-    
+
     await course.save();
-    
+
     // Populate faculty info before sending response
     await course.populate('faculty', 'name email');
-    
+
     res.status(201).json({ success: true, course });
   } catch (error) {
     console.error('Error creating course:', error);
@@ -180,7 +213,7 @@ router.put('/:id', auth, async (req, res) => {
     if (!course) {
       return res.status(404).json({ success: false, message: 'Course not found' });
     }
-    
+
     // Debug logging
     console.log('UPDATE Course - User:', {
       userId: req.user._id,
@@ -188,27 +221,36 @@ router.put('/:id', auth, async (req, res) => {
       courseFaculty: course.faculty.toString(),
       courseId: course._id
     });
-    
-    // Allow if admin, course faculty, or any faculty (for testing)
+
+    // Check permissions
     const isAdmin = req.user.role === 'admin';
     const isCourseFaculty = course.faculty.toString() === req.user._id.toString();
     const isAnyFaculty = req.user.role === 'faculty';
-    const adminPrograms = Array.isArray(req.user.adminPrograms) ? req.user.adminPrograms : [];
-    const courseProgram = course.program || course.department;
-    const isProgramAdmin = isAdmin && adminPrograms.some(p => p === course.department || p === courseProgram);
-    
-    console.log('Authorization check:', {
-      isAdmin,
-      isCourseFaculty,
-      isAnyFaculty,
-      isProgramAdmin,
-      allowed: isAdmin || isCourseFaculty || isAnyFaculty || isProgramAdmin
-    });
-    
-    if (!(isAdmin || isCourseFaculty || isAnyFaculty || isProgramAdmin)) {
+
+    let hasAdminPermission = false;
+    if (isAdmin) {
+      const { adminType, adminPrograms } = req.user;
+      const effectiveAdminType = adminType || ((!adminPrograms || !adminPrograms.length) ? 'head' : 'program');
+
+      if (effectiveAdminType === 'head') {
+        hasAdminPermission = true;
+      } else {
+        const courseProgram = course.program || course.department;
+        const programMatch = adminPrograms && adminPrograms.some(p => p === course.department || p === courseProgram);
+
+        if (effectiveAdminType === 'program') {
+          hasAdminPermission = programMatch;
+        } else if (effectiveAdminType === 'branch') {
+          // Branch Admin restricted to their branch/department
+          hasAdminPermission = programMatch;
+        }
+      }
+    }
+
+    if (!(hasAdminPermission || isCourseFaculty || isAnyFaculty)) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
-    
+
     const {
       name,
       code,
@@ -220,21 +262,21 @@ router.put('/:id', auth, async (req, res) => {
       year,
       maxStudents
     } = req.body;
-    
+
     // Check if new code conflicts with existing courses (excluding current course)
     if (code && code !== course.code) {
-      const existingCourse = await Course.findOne({ 
-        code: code.toUpperCase(), 
-        _id: { $ne: req.params.id } 
+      const existingCourse = await Course.findOne({
+        code: code.toUpperCase(),
+        _id: { $ne: req.params.id }
       });
       if (existingCourse) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Course code already exists' 
+        return res.status(400).json({
+          success: false,
+          message: 'Course code already exists'
         });
       }
     }
-    
+
     // Update course fields
     if (name) course.name = name;
     if (code) course.code = code.toUpperCase();
@@ -245,12 +287,12 @@ router.put('/:id', auth, async (req, res) => {
     if (semester) course.semester = semester;
     if (year) course.year = year;
     if (maxStudents) course.maxStudents = maxStudents;
-    
+
     await course.save();
-    
+
     // Populate faculty info before sending response
     await course.populate('faculty', 'name email');
-    
+
     res.json({ success: true, course });
   } catch (error) {
     console.error('Error updating course:', error);
@@ -265,7 +307,7 @@ router.delete('/:id', auth, async (req, res) => {
     if (!course) {
       return res.status(404).json({ success: false, message: 'Course not found' });
     }
-    
+
     // Debug logging
     console.log('DELETE Course - User:', {
       userId: req.user._id,
@@ -274,42 +316,51 @@ router.delete('/:id', auth, async (req, res) => {
       courseId: course._id,
       enrolledStudents: course.students?.length || 0
     });
-    
-    // Allow if admin, course faculty, or any faculty (for testing)
+
+    // Check permissions
     const isAdmin = req.user.role === 'admin';
     const isCourseFaculty = course.faculty.toString() === req.user._id.toString();
     const isAnyFaculty = req.user.role === 'faculty';
-    const adminPrograms = Array.isArray(req.user.adminPrograms) ? req.user.adminPrograms : [];
-    const courseProgram = course.program || course.department;
-    const isProgramAdmin = isAdmin && adminPrograms.some(p => p === course.department || p === courseProgram);
-    
-    console.log('Authorization check:', {
-      isAdmin,
-      isCourseFaculty,
-      isAnyFaculty,
-      isProgramAdmin,
-      allowed: isAdmin || isCourseFaculty || isAnyFaculty || isProgramAdmin
-    });
-    
-    if (!(isAdmin || isCourseFaculty || isAnyFaculty || isProgramAdmin)) {
+
+    let hasAdminPermission = false;
+    if (isAdmin) {
+      const { adminType, adminPrograms } = req.user;
+      const effectiveAdminType = adminType || ((!adminPrograms || !adminPrograms.length) ? 'head' : 'program');
+
+      if (effectiveAdminType === 'head') {
+        hasAdminPermission = true;
+      } else {
+        const courseProgram = course.program || course.department;
+        const programMatch = adminPrograms && adminPrograms.some(p => p === course.department || p === courseProgram);
+
+        if (effectiveAdminType === 'program') {
+          hasAdminPermission = programMatch;
+        } else if (effectiveAdminType === 'branch') {
+          // Branch Admin restricted to their branch/department
+          hasAdminPermission = programMatch;
+        }
+      }
+    }
+
+    if (!(hasAdminPermission || isCourseFaculty || isAnyFaculty)) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
-    
+
     // Check if course has enrolled students - only prevent deletion for non-faculty users
     if (course.students && course.students.length > 0 && !isAnyFaculty && !isCourseFaculty) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Cannot delete course with enrolled students' 
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot delete course with enrolled students'
       });
     }
-    
+
     // If faculty is deleting and there are enrolled students, log it but allow deletion
     if (course.students && course.students.length > 0 && (isAnyFaculty || isCourseFaculty)) {
       console.log(`Faculty ${req.user._id} is deleting course ${course._id} with ${course.students.length} enrolled students`);
     }
-    
+
     await Course.findByIdAndDelete(req.params.id);
-    
+
     res.json({ success: true, message: 'Course deleted successfully' });
   } catch (error) {
     console.error('Error deleting course:', error);
@@ -317,8 +368,8 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
-  // POST enroll student in course
-  router.post('/:id/enroll', auth, async (req, res) => {
+// POST enroll student in course
+router.post('/:id/enroll', auth, async (req, res) => {
   try {
     const course = await Course.findById(req.params.id);
     if (!course) {
@@ -330,32 +381,32 @@ router.delete('/:id', auth, async (req, res) => {
     if (!(isAdmin || isStudent || isFaculty)) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
-    
+
     const studentId = req.body.studentId || req.user._id;
-    
+
     // Check if student is already enrolled in this specific course
     if (course.students.some(id => id.toString() === studentId.toString())) {
-      return res.status(200).json({ 
+      return res.status(200).json({
         success: true,
         message: `Student is already enrolled in ${course.name} (${course.code})`,
         alreadyEnrolled: true
       });
     }
-    
+
     // Check if course is full
     if (course.maxStudents && course.students.length >= course.maxStudents) {
-      return res.status(400).json({ 
-        success: false, 
+      return res.status(400).json({
+        success: false,
         message: `Course ${course.name} is full (${course.students.length}/${course.maxStudents} students)`,
         courseFull: true
       });
     }
-    
+
     course.students.push(studentId);
     await course.save();
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       message: `Successfully enrolled in ${course.name} (${course.code})`,
       course: {
         id: course._id,
@@ -376,16 +427,16 @@ router.get('/student/:studentId/enrolled', auth, async (req, res) => {
     const isAdmin = req.user.role === 'admin';
     const isStudent = req.user.role === 'student' && req.user._id.toString() === studentId;
     const isFaculty = req.user.role === 'faculty';
-    
+
     if (!(isAdmin || isStudent || isFaculty)) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
-    
+
     // Find all courses where this student is enrolled
     const enrolledCourses = await Course.find({
       students: studentId
     }).select('name code department credits faculty status');
-    
+
     res.json({
       success: true,
       enrolledCourses,
@@ -403,25 +454,25 @@ router.delete('/:id/unenroll', auth, async (req, res) => {
     if (req.user.role !== 'student' && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
-    
+
     const course = await Course.findById(req.params.id);
     if (!course) {
       return res.status(404).json({ success: false, message: 'Course not found' });
     }
-    
+
     const studentId = req.body.studentId || req.user._id;
-    
+
     // Check if student is enrolled
     if (!course.students.includes(studentId)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Student not enrolled in this course' 
+      return res.status(400).json({
+        success: false,
+        message: 'Student not enrolled in this course'
       });
     }
-    
+
     course.students = course.students.filter(id => id.toString() !== studentId);
     await course.save();
-    
+
     res.json({ success: true, message: 'Successfully unenrolled from course' });
   } catch (error) {
     console.error('Error unenrolling student:', error);
@@ -434,29 +485,29 @@ router.get('/:id/stats', auth, async (req, res) => {
   try {
     const course = await Course.findById(req.params.id)
       .populate('students', 'name email');
-    
+
     if (!course) {
       return res.status(404).json({ success: false, message: 'Course not found' });
     }
-    
+
     // Check access permissions
-    const hasAccess = 
+    const hasAccess =
       req.user.role === 'admin' ||
       course.faculty.toString() === req.user._id;
-    
+
     if (!hasAccess) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
-    
+
     const stats = {
       totalStudents: course.students.length,
       maxStudents: course.maxStudents,
-      enrollmentRate: course.maxStudents ? 
+      enrollmentRate: course.maxStudents ?
         ((course.students.length / course.maxStudents) * 100).toFixed(1) : 0,
-      availableSlots: course.maxStudents ? 
+      availableSlots: course.maxStudents ?
         course.maxStudents - course.students.length : 'Unlimited'
     };
-    
+
     res.json({ success: true, stats });
   } catch (error) {
     console.error('Error fetching course stats:', error);
@@ -492,33 +543,47 @@ router.get('/students', auth, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
     const query = { role: 'student' };
-    if (req.user.role === 'faculty') {
-      const facultyProgram = req.user.program || null;
-      const facultyBranch = req.user.branch || null;
-      const facultyDepartment = req.user.department || null;
-      if (facultyProgram || facultyBranch || facultyDepartment) {
-        query.$or = [];
-        if (facultyProgram) {
-          query.$or.push(
-            { program: facultyProgram },
-            { 'profile.course': facultyProgram }
-          );
+    if (req.user.role === 'faculty' || req.user.role === 'admin') {
+      const { role, adminPrograms, adminType } = req.user;
+      // Default filtering for faculty or admin with specific scope
+      let limitProgram = null;
+      let limitBranch = null;
+
+      if (role === 'faculty') {
+        limitProgram = req.user.program;
+        limitBranch = req.user.branch || req.user.department;
+      } else if (role === 'admin') {
+        const effectiveAdminType = adminType || ((!adminPrograms || !adminPrograms.length) ? 'head' : 'program');
+        if (effectiveAdminType === 'program') {
+          // Program admin sees all branches in their program
+          limitProgram = adminPrograms[0]; // Assuming single program for now
+        } else if (effectiveAdminType === 'branch') {
+          limitProgram = adminPrograms[0];
+          limitBranch = req.user.branch;
         }
-        if (facultyBranch) {
-          query.$or.push(
-            { branch: facultyBranch },
-            { department: facultyBranch },
-            { 'profile.branch': facultyBranch }
-          );
-        }
-        if (facultyDepartment) {
-          query.$or.push(
-            { branch: facultyDepartment },
-            { department: facultyDepartment },
-            { 'profile.branch': facultyDepartment }
-          );
-        }
-        if (query.$or.length === 0) delete query.$or;
+        // Head admin has no limits (null)
+      }
+
+      const conditions = [];
+      if (limitProgram) {
+        conditions.push({
+          $or: [
+            { program: limitProgram },
+            { 'profile.course': limitProgram }
+          ]
+        });
+      }
+      if (limitBranch) {
+        conditions.push({
+          $or: [
+            { branch: { $regex: new RegExp(`^${limitBranch.trim()}$`, 'i') } },
+            { department: { $regex: new RegExp(`^${limitBranch.trim()}$`, 'i') } },
+            { 'profile.branch': { $regex: new RegExp(`^${limitBranch.trim()}$`, 'i') } }
+          ]
+        });
+      }
+      if (conditions.length > 0) {
+        query.$and = conditions;
       }
     }
 

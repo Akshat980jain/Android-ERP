@@ -14,7 +14,7 @@ const router = express.Router();
 router.get('/student/:studentId?', auth, checkVerification, async (req, res) => {
   try {
     const studentId = req.params.studentId || req.user._id;
-    
+
     // Students can only view their own analytics
     if (req.user.role === 'student' && studentId !== req.user._id.toString()) {
       return res.status(403).json({ message: 'Access denied' });
@@ -32,6 +32,15 @@ router.get('/student/:studentId?', auth, checkVerification, async (req, res) => 
 router.get('/department/:department', auth, authorize('admin', 'faculty'), async (req, res) => {
   try {
     const { department } = req.params;
+
+    // Faculty can only view their own department's analytics
+    if (req.user.role === 'faculty') {
+      const facultyDept = req.user.department || req.user.branch;
+      if (!facultyDept || department !== facultyDept) {
+        return res.status(403).json({ message: 'Access denied - not your department' });
+      }
+    }
+
     const { academicYear, semester } = req.query;
 
     const analytics = await generateDepartmentAnalytics(department, academicYear, semester);
@@ -107,9 +116,9 @@ async function generateStudentAnalytics(studentId) {
   // Calculate academic performance
   const academicStats = {
     totalAssessments: marks.length,
-    averagePercentage: marks.length > 0 ? 
+    averagePercentage: marks.length > 0 ?
       Math.round(marks.reduce((sum, mark) => sum + mark.percentage, 0) / marks.length) : 0,
-    cgpa: marks.length > 0 ? 
+    cgpa: marks.length > 0 ?
       (marks.reduce((sum, mark) => sum + mark.percentage, 0) / marks.length / 10).toFixed(2) : 0
   };
 
@@ -122,7 +131,7 @@ async function generateStudentAnalytics(studentId) {
 
   // Generate predictions
   const dropoutRisk = calculateDropoutRisk(attendanceStats.percentage, academicStats.averagePercentage);
-  
+
   return {
     student: {
       name: `${student.firstName} ${student.lastName}`,
@@ -143,7 +152,7 @@ async function generateStudentAnalytics(studentId) {
 
 async function generateDepartmentAnalytics(department, academicYear, semester) {
   let query = { department, role: 'student' };
-  
+
   const students = await User.find(query);
   const studentIds = students.map(s => s._id);
 
@@ -164,7 +173,7 @@ async function generateDepartmentAnalytics(department, academicYear, semester) {
   return {
     totalStudents: students.length,
     averageAttendance: deptTotals.total > 0 ? Math.round((deptTotals.present / deptTotals.total) * 100) : 0,
-    averageMarks: marks.length > 0 ? 
+    averageMarks: marks.length > 0 ?
       Math.round(marks.reduce((sum, mark) => sum + mark.percentage, 0) / marks.length) : 0,
     feeCollection: {
       total: fees.reduce((sum, fee) => sum + fee.amount, 0),
@@ -193,9 +202,9 @@ async function generateCourseAnalytics(courseId) {
   return {
     enrolledStudents: course.enrolledStudents.length,
     averageAttendance: courseTotals.total > 0 ? Math.round((courseTotals.present / courseTotals.total) * 100) : 0,
-    averageMarks: marks.length > 0 ? 
+    averageMarks: marks.length > 0 ?
       Math.round(marks.reduce((sum, mark) => sum + mark.percentage, 0) / marks.length) : 0,
-    passRate: marks.length > 0 ? 
+    passRate: marks.length > 0 ?
       Math.round((marks.filter(m => m.percentage >= 40).length / marks.length) * 100) : 0
   };
 }

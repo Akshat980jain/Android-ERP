@@ -11,6 +11,7 @@ export interface User {
   createdAt: string;
   adminPrograms?: string[];
   program?: string;
+  adminType?: 'head' | 'program' | 'branch';
   twoFactorEnabled?: boolean;
 }
 

@@ -13,6 +13,7 @@ const MobileRegister: React.FC = () => {
   const [course, setCourse] = useState('');
   const [branch, setBranch] = useState('');
   const [program, setProgram] = useState('');
+  const [adminType, setAdminType] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -58,18 +59,31 @@ const MobileRegister: React.FC = () => {
 
     try {
       setSubmitting(true);
+      const payload: Record<string, string> = {
+        name, email, password, confirmPassword,
+        requestedRole: role,
+      };
+      // Student/Faculty/Placement fields
+      if (showCourseFields) {
+        payload.course = course;
+        payload.program = course;
+      }
+      if (showBranchField) {
+        payload.branch = branch;
+      }
+      // Admin fields
+      if (role === 'admin' && adminType) {
+        payload.adminType = adminType;
+        if ((adminType === 'program' || adminType === 'branch') && program) {
+          payload.program = program;
+        }
+        if (adminType === 'branch' && branch) {
+          payload.branch = branch;
+        }
+      }
       await apiClient.request('/auth/request-registration', {
         method: 'POST',
-        body: JSON.stringify({
-          name,
-          email,
-          password,
-          confirmPassword,
-          requestedRole: role,
-          ...(showCourseFields && { course }),
-          ...(showBranchField && { branch }),
-          ...(role === 'admin' && program && { program })
-        }),
+        body: JSON.stringify(payload),
       });
       setSuccess('Registration request submitted. Please wait for admin approval.');
       setTimeout(() => navigate('/mobile/login'), 1200);
@@ -178,7 +192,7 @@ const MobileRegister: React.FC = () => {
           </div>
 
           {/* Course selection for Student/Faculty/Placement */}
-          {(['student','faculty','placement'] as const).includes(role as any) && (
+          {(['student', 'faculty', 'placement'] as const).includes(role as any) && (
             <div className="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
               <label className="flex flex-col min-w-40 flex-1">
                 <p className="text-white text-base font-medium leading-normal pb-2">Course</p>
@@ -207,7 +221,7 @@ const MobileRegister: React.FC = () => {
           )}
 
           {/* Branch appears for B.Tech / M.Tech only */}
-          {(['student','faculty','placement'] as const).includes(role as any) && (course === 'B.Tech' || course === 'M.Tech') && (
+          {(['student', 'faculty', 'placement'] as const).includes(role as any) && (course === 'B.Tech' || course === 'M.Tech') && (
             <div className="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
               <label className="flex flex-col min-w-40 flex-1">
                 <p className="text-white text-base font-medium leading-normal pb-2">Branch</p>
@@ -221,18 +235,44 @@ const MobileRegister: React.FC = () => {
             </div>
           )}
 
-          {/* Program for Admin only */}
+          {/* Admin Type Selector */}
           {role === 'admin' && (
             <div className="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
               <label className="flex flex-col min-w-40 flex-1">
-                <p className="text-white text-base font-medium leading-normal pb-2">Admin Program</p>
+                <p className="text-white text-base font-medium leading-normal pb-2">Admin Type</p>
+                <div className="relative">
+                  <select
+                    className="appearance-none form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-white focus:outline-0 focus:ring-0 border-none bg-[#283039] focus:border-none h-14 placeholder:text-[#9cabba] p-4 pr-12 text-base font-normal leading-normal"
+                    value={adminType}
+                    onChange={(e) => { setAdminType(e.target.value); setProgram(''); setBranch(''); }}
+                  >
+                    <option value="">Select Admin Type</option>
+                    <option value="head">Head Admin (all programs)</option>
+                    <option value="program">Program Admin (one program)</option>
+                    <option value="branch">Branch Admin (one program + branch)</option>
+                  </select>
+                  <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-[#9cabba]">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 256 256" fill="currentColor">
+                      <path d="M181.66,170.34a8,8,0,0,1,0,11.32l-48,48a8,8,0,0,1-11.32,0l-48-48a8,8,0,0,1,11.32-11.32L128,212.69l42.34-42.35A8,8,0,0,1,181.66,170.34ZM85.66,85.66,128,43.31l42.34,42.35a8,8,0,0,0,11.32-11.32l-48-48a8,8,0,0,0-11.32,0l-48,48A8,8,0,0,0,85.66,85.66Z" />
+                    </svg>
+                  </span>
+                </div>
+              </label>
+            </div>
+          )}
+
+          {/* Program for Program Admin / Branch Admin */}
+          {role === 'admin' && (adminType === 'program' || adminType === 'branch') && (
+            <div className="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+              <label className="flex flex-col min-w-40 flex-1">
+                <p className="text-white text-base font-medium leading-normal pb-2">Program</p>
                 <div className="relative">
                   <select
                     className="appearance-none form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-white focus:outline-0 focus:ring-0 border-none bg-[#283039] focus:border-none h-14 placeholder:text-[#9cabba] p-4 pr-12 text-base font-normal leading-normal"
                     value={program}
-                    onChange={(e) => setProgram(e.target.value)}
+                    onChange={(e) => { setProgram(e.target.value); setBranch(''); }}
                   >
-                    <option value="">Head Admin (No specific program)</option>
+                    <option value="">Select Program</option>
                     <option value="B.Tech">B.Tech</option>
                     <option value="M.Tech">M.Tech</option>
                     <option value="B.Pharma">B.Pharma</option>
@@ -245,6 +285,21 @@ const MobileRegister: React.FC = () => {
                     </svg>
                   </span>
                 </div>
+              </label>
+            </div>
+          )}
+
+          {/* Branch for Branch Admin (B.Tech / M.Tech) */}
+          {role === 'admin' && adminType === 'branch' && (program === 'B.Tech' || program === 'M.Tech') && (
+            <div className="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+              <label className="flex flex-col min-w-40 flex-1">
+                <p className="text-white text-base font-medium leading-normal pb-2">Branch</p>
+                <input
+                  placeholder="Branch (e.g., Computer Science, Mechanical)"
+                  className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-white focus:outline-0 focus:ring-0 border-none bg-[#283039] focus:border-none h-14 placeholder:text-[#9cabba] p-4 text-base font-normal leading-normal"
+                  value={branch}
+                  onChange={(e) => setBranch(e.target.value)}
+                />
               </label>
             </div>
           )}

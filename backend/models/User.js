@@ -107,6 +107,10 @@ const userSchema = new mongoose.Schema({
     semester: String,
     section: String
   },
+  adminType: {
+    type: String,
+    enum: ['head', 'program', 'branch'],
+  },
   adminPrograms: [{
     type: String,
     enum: ['B.Tech', 'M.Tech', 'B.Pharma', 'MCA', 'MBA']
@@ -120,7 +124,7 @@ userSchema.add({
 });
 
 // Password hashing middleware
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function (next) {
   // Only hash the password if it has been modified (or is new)
   if (!this.isModified('password')) return next();
 
@@ -135,7 +139,7 @@ userSchema.pre('save', async function(next) {
 });
 
 // Method to compare password
-userSchema.methods.comparePassword = async function(candidatePassword) {
+userSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
