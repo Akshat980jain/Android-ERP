@@ -12,6 +12,8 @@ export function ProfileModule() {
   const [activeTab, setActiveTab] = useState('personal');
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -41,22 +43,59 @@ export function ProfileModule() {
   const [devCode, setDevCode] = useState<string | null>(null);
   const [devDisableCode, setDevDisableCode] = useState<string | null>(null);
 
-  // Initialize form data when user data changes
+  // Password change auth state
+  const [passwordVerifyMethod, setPasswordVerifyMethod] = useState<'password' | 'otp'>('password');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [otpValue, setOtpValue] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpVerifyLoading, setOtpVerifyLoading] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+
+  // Fetch full profile from backend on mount
   useEffect(() => {
-    if (user) {
-      setFormData({
-        name: user.name || '',
-        email: user.email || '',
-        phone: user.profile?.phone || '',
-        address: user.profile?.address || '',
-        studentId: user.profile?.studentId || '',
-        employeeId: user.profile?.employeeId || '',
-        semester: user.profile?.semester || '',
-        section: user.profile?.section || '',
-        department: user.department || '',
-      });
+    const fetchProfile = async () => {
+      try {
+        setProfileLoading(true);
+        setProfileError(null);
+        const data = await apiClient.getCurrentUser() as { success: boolean; user: UserType };
+        if (data.success && data.user) {
+          updateUser(data.user);
+          populateFormData(data.user);
+        }
+      } catch (error: any) {
+        console.error('Failed to fetch profile:', error);
+        setProfileError('Failed to load profile data. Please try again.');
+        // Fall back to context data
+        if (user) populateFormData(user);
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const populateFormData = (userData: UserType) => {
+    setFormData({
+      name: userData.name || '',
+      email: userData.email || '',
+      phone: userData.profile?.phone || '',
+      address: userData.profile?.address || '',
+      studentId: userData.profile?.studentId || '',
+      employeeId: userData.profile?.employeeId || '',
+      semester: userData.profile?.semester || '',
+      section: userData.profile?.section || '',
+      department: userData.department || '',
+    });
+  };
+
+  // Re-populate form data when user context updates (e.g. after profile save)
+  useEffect(() => {
+    if (user && !profileLoading) {
+      populateFormData(user);
     }
-  }, [user]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -74,9 +113,9 @@ export function ProfileModule() {
       if (updateData.email === user?.email) {
         delete updateData.email; // Don't send email if it hasn't changed
       }
-      
+
       console.log('Sending profile update data:', updateData);
-      
+
       const response = await apiClient.updateProfile(updateData) as { success: boolean; user: UserType; message: string };
       if (response.success) {
         // Update the user context with new data
@@ -94,17 +133,88 @@ export function ProfileModule() {
     }
   };
 
-  const handlePasswordUpdate = () => {
+  const handleSendOtp = async () => {
+    try {
+      setOtpLoading(true);
+      setPasswordMessage(null);
+      setOtpVerified(false);
+      const resp = await apiClient.sendPasswordOtp() as { success: boolean; maskedEmail?: string; devOtp?: string; message?: string };
+      if (resp.success) {
+        setOtpSent(true);
+        setPasswordMessage({ type: 'success', text: `OTP sent to ${resp.maskedEmail || 'your email'}` });
+        if (resp.devOtp) {
+          setPasswordMessage({ type: 'success', text: `OTP sent! Dev code: ${resp.devOtp}` });
+        }
+      }
+    } catch (error: any) {
+      setPasswordMessage({ type: 'error', text: error?.message || 'Failed to send OTP' });
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otpValue.trim()) {
+      setPasswordMessage({ type: 'error', text: 'Please enter the OTP' });
+      return;
+    }
+    try {
+      setOtpVerifyLoading(true);
+      setPasswordMessage(null);
+      const resp = await apiClient.verifyPasswordOtp(otpValue.trim()) as { success: boolean; message?: string };
+      if (resp.success) {
+        setOtpVerified(true);
+        setPasswordMessage({ type: 'success', text: resp.message || 'OTP verified! Now set your new password.' });
+      }
+    } catch (error: any) {
+      setPasswordMessage({ type: 'error', text: error?.message || 'OTP verification failed' });
+    } finally {
+      setOtpVerifyLoading(false);
+    }
+  };
+
+  const handlePasswordUpdate = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert('New passwords do not match!');
+      setPasswordMessage({ type: 'error', text: 'New passwords do not match!' });
       return;
     }
     if (passwordData.newPassword.length < 6) {
-      alert('Password must be at least 6 characters long!');
+      setPasswordMessage({ type: 'error', text: 'Password must be at least 6 characters long!' });
       return;
     }
-    alert('Password updated successfully!');
-    setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    if (passwordVerifyMethod === 'password' && !passwordData.currentPassword) {
+      setPasswordMessage({ type: 'error', text: 'Please enter your current password' });
+      return;
+    }
+    if (passwordVerifyMethod === 'otp' && !otpValue) {
+      setPasswordMessage({ type: 'error', text: 'Please enter the OTP sent to your email' });
+      return;
+    }
+
+    try {
+      setPasswordLoading(true);
+      setPasswordMessage(null);
+      const payload: any = {
+        newPassword: passwordData.newPassword,
+        confirmPassword: passwordData.confirmPassword,
+      };
+      if (passwordVerifyMethod === 'password') {
+        payload.currentPassword = passwordData.currentPassword;
+      } else {
+        payload.otp = otpValue;
+      }
+      const resp = await apiClient.changePassword(payload) as { success: boolean; message?: string };
+      if (resp.success) {
+        setPasswordMessage({ type: 'success', text: resp.message || 'Password changed successfully!' });
+        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        setOtpValue('');
+        setOtpSent(false);
+      }
+    } catch (error: any) {
+      setPasswordMessage({ type: 'error', text: error?.message || 'Failed to change password' });
+    } finally {
+      setPasswordLoading(false);
+    }
   };
 
   // 2FA actions
@@ -114,9 +224,9 @@ export function ProfileModule() {
       setTwoFactorMessage(null);
       const resp = await apiClient.initiate2FASetup(
         twoFactorMethod === 'sms' ? { method: 'sms', phone: phoneInput } : { method: 'totp' }
-      );
+      ) as { method?: string; qrDataUrl?: string; devCode?: string };
       if (resp.method === 'totp') {
-        setQrDataUrl(resp.qrDataUrl);
+        setQrDataUrl(resp.qrDataUrl || null);
       } else {
         setQrDataUrl(null);
       }
@@ -218,11 +328,10 @@ export function ProfileModule() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === tab.id
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
             >
               {tab.label}
             </button>
@@ -230,7 +339,24 @@ export function ProfileModule() {
         </nav>
       </div>
 
-      {activeTab === 'personal' && (
+      {profileLoading && (
+        <div className="flex items-center justify-center py-12">
+          <svg className="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span className="ml-3 text-gray-600">Loading profile...</span>
+        </div>
+      )}
+
+      {profileError && !profileLoading && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          {profileError}
+          <button onClick={() => window.location.reload()} className="ml-2 underline font-medium">Retry</button>
+        </div>
+      )}
+
+      {!profileLoading && activeTab === 'personal' && (
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -267,9 +393,9 @@ export function ProfileModule() {
                   <div className="relative">
                     <div className="w-24 h-24 bg-gray-300 rounded-full flex items-center justify-center">
                       {user?.profile?.avatar ? (
-                        <img 
-                          src={user.profile.avatar} 
-                          alt="Profile" 
+                        <img
+                          src={user.profile.avatar}
+                          alt="Profile"
                           className="w-24 h-24 rounded-full object-cover"
                         />
                       ) : (
@@ -347,8 +473,8 @@ export function ProfileModule() {
                         </>
                       )}
                     </Button>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       onClick={() => {
                         setIsEditing(false);
                         // Reset form data
@@ -377,7 +503,7 @@ export function ProfileModule() {
         </div>
       )}
 
-      {activeTab === 'academic' && (
+      {!profileLoading && activeTab === 'academic' && (
         <Card>
           <CardHeader>
             <CardTitle>Academic Details</CardTitle>
@@ -452,7 +578,7 @@ export function ProfileModule() {
         </Card>
       )}
 
-      {activeTab === 'security' && (
+      {!profileLoading && activeTab === 'security' && (
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -460,29 +586,132 @@ export function ProfileModule() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <Input
-                  label="Current Password"
-                  type="password"
-                  value={passwordData.currentPassword}
-                  onChange={(e) => handlePasswordChange('currentPassword', e.target.value)}
-                  icon={<Key className="w-4 h-4 text-gray-400" />}
-                />
-                <Input
-                  label="New Password"
-                  type="password"
-                  value={passwordData.newPassword}
-                  onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
-                  icon={<Key className="w-4 h-4 text-gray-400" />}
-                />
-                <Input
-                  label="Confirm New Password"
-                  type="password"
-                  value={passwordData.confirmPassword}
-                  onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
-                  icon={<Key className="w-4 h-4 text-gray-400" />}
-                />
-                <Button onClick={handlePasswordUpdate}>
-                  Update Password
+                {/* Verification method toggle */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Verify your identity using:</label>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => { setPasswordVerifyMethod('password'); setOtpSent(false); setOtpVerified(false); setOtpValue(''); setPasswordMessage(null); }}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${passwordVerifyMethod === 'password'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                    >
+                      <Key className="w-4 h-4 inline mr-1" />
+                      Current Password
+                    </button>
+                    <button
+                      onClick={() => { setPasswordVerifyMethod('otp'); setPasswordMessage(null); }}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${passwordVerifyMethod === 'otp'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                    >
+                      <Mail className="w-4 h-4 inline mr-1" />
+                      Email OTP
+                    </button>
+                  </div>
+                </div>
+
+                {/* Current password field — shows password fields immediately */}
+                {passwordVerifyMethod === 'password' && (
+                  <>
+                    <Input
+                      label="Current Password"
+                      type="password"
+                      value={passwordData.currentPassword}
+                      onChange={(e) => handlePasswordChange('currentPassword', e.target.value)}
+                      icon={<Key className="w-4 h-4 text-gray-400" />}
+                    />
+                    <Input
+                      label="New Password"
+                      type="password"
+                      value={passwordData.newPassword}
+                      onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
+                      icon={<Key className="w-4 h-4 text-gray-400" />}
+                    />
+                    <Input
+                      label="Confirm New Password"
+                      type="password"
+                      value={passwordData.confirmPassword}
+                      onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
+                      icon={<Key className="w-4 h-4 text-gray-400" />}
+                    />
+                  </>
+                )}
+
+                {/* Email OTP flow — two-step: validate OTP first, then show password fields */}
+                {passwordVerifyMethod === 'otp' && (
+                  <div className="space-y-3">
+                    {!otpSent ? (
+                      <div className="p-4 bg-blue-50 rounded-lg">
+                        <p className="text-sm text-gray-700 mb-3">We'll send a 6-digit verification code to your registered email address.</p>
+                        <Button onClick={handleSendOtp} disabled={otpLoading} variant="outline" size="sm">
+                          {otpLoading ? 'Sending...' : 'Send OTP to Email'}
+                        </Button>
+                      </div>
+                    ) : !otpVerified ? (
+                      /* Step 1: Enter and validate OTP */
+                      <div className="space-y-3">
+                        <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+                          OTP sent! Check your email.
+                        </div>
+                        <Input
+                          label="Enter OTP"
+                          value={otpValue}
+                          onChange={(e) => setOtpValue(e.target.value)}
+                          icon={<Shield className="w-4 h-4 text-gray-400" />}
+                        />
+                        <div className="flex items-center space-x-3">
+                          <Button onClick={handleVerifyOtp} disabled={otpVerifyLoading || !otpValue.trim()} size="sm">
+                            {otpVerifyLoading ? 'Validating...' : 'Validate OTP'}
+                          </Button>
+                          <button onClick={handleSendOtp} disabled={otpLoading} className="text-sm text-blue-600 hover:underline">
+                            {otpLoading ? 'Resending...' : 'Resend OTP'}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Step 2: OTP verified — now enter new password */
+                      <div className="space-y-3">
+                        <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 flex items-center">
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          OTP verified successfully! Enter your new password below.
+                        </div>
+                        <Input
+                          label="New Password"
+                          type="password"
+                          value={passwordData.newPassword}
+                          onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
+                          icon={<Key className="w-4 h-4 text-gray-400" />}
+                        />
+                        <Input
+                          label="Confirm New Password"
+                          type="password"
+                          value={passwordData.confirmPassword}
+                          onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
+                          icon={<Key className="w-4 h-4 text-gray-400" />}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Status message */}
+                {passwordMessage && (
+                  <div className={`p-3 rounded-lg text-sm ${passwordMessage.type === 'success'
+                    ? 'bg-green-50 border border-green-200 text-green-700'
+                    : 'bg-red-50 border border-red-200 text-red-700'
+                    }`}>
+                    {passwordMessage.text}
+                  </div>
+                )}
+
+                <Button
+                  onClick={handlePasswordUpdate}
+                  disabled={passwordLoading || (passwordVerifyMethod === 'otp' && !otpVerified)}
+                >
+                  {passwordLoading ? 'Updating...' : 'Update Password'}
                 </Button>
               </div>
             </CardContent>

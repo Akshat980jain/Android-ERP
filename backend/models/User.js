@@ -114,7 +114,16 @@ const userSchema = new mongoose.Schema({
   adminPrograms: [{
     type: String,
     enum: ['B.Tech', 'M.Tech', 'B.Pharma', 'MCA', 'MBA']
-  }]
+  }],
+  // Password change OTP fields
+  passwordOtp: String,
+  passwordOtpExpiresAt: Date,
+  // Public password reset token fields
+  passwordResetToken: {
+    type: String,
+    select: false
+  },
+  passwordResetExpiresAt: Date
 });
 
 // Optional relations for parent/student linkage

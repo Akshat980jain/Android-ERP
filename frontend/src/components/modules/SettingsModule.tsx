@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Building, GraduationCap, Bell, Shield, Database, Download, TestTube, Save, QrCode, CheckCircle, XCircle } from 'lucide-react';
+import { Settings, Building, GraduationCap, Bell, Shield, Database, Download, TestTube, Save, QrCode, CheckCircle, XCircle, User as UserIcon, Mail, Phone, MapPin, Edit } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -118,9 +118,22 @@ export function SettingsModule() {
   const [twoFactorLoading, setTwoFactorLoading] = useState(false);
   const [twoFactorMessage, setTwoFactorMessage] = useState<string | null>(null);
 
+  // Admin personal info state
+  const [personalInfo, setPersonalInfo] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
+    phone: '',
+    department: '',
+    designation: '',
+    address: '',
+  });
+  const [personalInfoLoading, setPersonalInfoLoading] = useState(false);
+  const [editingPersonalInfo, setEditingPersonalInfo] = useState(false);
+
   useEffect(() => {
     if (isAdmin && activeTab === 'system') {
       fetchSystemSettings();
+      fetchPersonalInfo();
     } else if (activeTab === 'preferences') {
       fetchUserPreferences();
     } else if (activeTab === 'notifications') {
@@ -139,6 +152,53 @@ export function SettingsModule() {
       }
     } catch (error) {
       setError('Failed to fetch system settings');
+    }
+  };
+
+  // Fetch admin personal info
+  const fetchPersonalInfo = async () => {
+    try {
+      setPersonalInfoLoading(true);
+      const resp = await apiClient.getCurrentUser() as any;
+      if (resp?.user) {
+        const u = resp.user;
+        setPersonalInfo({
+          name: u.name || '',
+          email: u.email || '',
+          phone: u.profile?.phone || u.phone || '',
+          department: u.profile?.department || u.department || '',
+          designation: u.profile?.designation || u.designation || '',
+          address: u.profile?.address || u.address || '',
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch personal info:', error);
+    } finally {
+      setPersonalInfoLoading(false);
+    }
+  };
+
+  const handleSavePersonalInfo = async () => {
+    try {
+      setPersonalInfoLoading(true);
+      setError('');
+      const resp = await apiClient.updateProfile({
+        name: personalInfo.name,
+        phone: personalInfo.phone,
+        designation: personalInfo.designation,
+        address: personalInfo.address,
+      }) as any;
+      if (resp.success) {
+        setSuccess('Personal information updated successfully');
+        setEditingPersonalInfo(false);
+        if (resp.user) updateUser(resp.user);
+      } else {
+        setError('Failed to update personal information');
+      }
+    } catch (error) {
+      setError('Failed to update personal information');
+    } finally {
+      setPersonalInfoLoading(false);
     }
   };
 
@@ -366,7 +426,95 @@ export function SettingsModule() {
 
     return (
       <div className="space-y-6">
-        {/* Institution Settings */}
+        {/* Admin Personal Information */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center">
+                <UserIcon className="w-5 h-5 mr-2" />
+                Personal Information
+              </CardTitle>
+              <button
+                onClick={() => setEditingPersonalInfo(!editingPersonalInfo)}
+                className="flex items-center text-sm text-blue-600 hover:text-blue-800"
+              >
+                <Edit className="w-4 h-4 mr-1" />
+                {editingPersonalInfo ? 'Cancel' : 'Edit'}
+              </button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {personalInfoLoading ? (
+              <div className="text-sm text-gray-500">Loading personal info...</div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <UserIcon className="w-3.5 h-3.5 inline mr-1" />Full Name
+                    </label>
+                    <Input
+                      value={personalInfo.name}
+                      onChange={(e) => setPersonalInfo(prev => ({ ...prev, name: e.target.value }))}
+                      disabled={!editingPersonalInfo}
+                      placeholder="Your full name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <Mail className="w-3.5 h-3.5 inline mr-1" />Email Address
+                    </label>
+                    <Input
+                      value={personalInfo.email}
+                      disabled={true}
+                      placeholder="Email (cannot be changed here)"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <Phone className="w-3.5 h-3.5 inline mr-1" />Phone Number
+                    </label>
+                    <Input
+                      value={personalInfo.phone}
+                      onChange={(e) => setPersonalInfo(prev => ({ ...prev, phone: e.target.value }))}
+                      disabled={!editingPersonalInfo}
+                      placeholder="Your phone number"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Designation</label>
+                    <Input
+                      value={personalInfo.designation}
+                      onChange={(e) => setPersonalInfo(prev => ({ ...prev, designation: e.target.value }))}
+                      disabled={!editingPersonalInfo}
+                      placeholder="e.g. Head Admin, Director"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <MapPin className="w-3.5 h-3.5 inline mr-1" />Address
+                  </label>
+                  <Input
+                    value={personalInfo.address}
+                    onChange={(e) => setPersonalInfo(prev => ({ ...prev, address: e.target.value }))}
+                    disabled={!editingPersonalInfo}
+                    placeholder="Your address"
+                  />
+                </div>
+                {editingPersonalInfo && (
+                  <div className="flex justify-end">
+                    <Button onClick={handleSavePersonalInfo} disabled={personalInfoLoading}>
+                      <Save className="w-4 h-4 mr-2" />
+                      {personalInfoLoading ? 'Saving...' : 'Save Personal Info'}
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -432,13 +580,18 @@ export function SettingsModule() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year</label>
-                <Input
-                  type="number"
+                <label className="block text-sm font-medium text-gray-700 mb-1">Academic Session</label>
+                <select
                   value={systemSettings.academic.currentAcademicYear}
                   onChange={(e) => handleSystemSettingChange('academic', 'currentAcademicYear', e.target.value)}
-                  placeholder="2024"
-                />
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                >
+                  {[2023, 2024, 2025, 2026, 2027, 2028].map(year => (
+                    <option key={year} value={`${year}-${(year + 1).toString().slice(-2)}`}>
+                      {year}-{(year + 1).toString().slice(-2)}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Current Semester</label>
@@ -835,8 +988,8 @@ export function SettingsModule() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
             >
               <tab.icon className="w-4 h-4 inline mr-2" />

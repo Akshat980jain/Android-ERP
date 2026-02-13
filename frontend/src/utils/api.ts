@@ -188,6 +188,55 @@ class ApiClient {
     });
   }
 
+  async sendPasswordOtp() {
+    return this.request('/auth/send-password-otp', {
+      method: 'POST'
+    });
+  }
+
+  async verifyPasswordOtp(otp: string) {
+    return this.request('/auth/verify-password-otp', {
+      method: 'POST',
+      body: JSON.stringify({ otp })
+    });
+  }
+
+  async changePassword(data: {
+    currentPassword?: string;
+    otp?: string;
+    newPassword: string;
+    confirmPassword: string;
+  }) {
+    return this.request('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  // Leave management
+  async getLeaves() {
+    return this.request('/leaves');
+  }
+
+  async applyForLeave(data: {
+    type: string;
+    reason: string;
+    startDate: string;
+    endDate: string;
+  }) {
+    return this.request('/leaves', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async updateLeaveDecision(id: string, status: 'approved' | 'rejected') {
+    return this.request(`/leaves/${id}/decision`, {
+      method: 'PUT',
+      body: JSON.stringify({ status })
+    });
+  }
+
   // Admin endpoints
   async getVerificationRequests(token?: string) {
     return this.request('/auth/verification-requests', {}, token);

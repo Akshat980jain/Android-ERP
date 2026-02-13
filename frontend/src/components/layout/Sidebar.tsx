@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Book, 
-  Calendar, 
-  FileText, 
-  GraduationCap, 
-  Home, 
-  Library, 
-  Settings, 
+import {
+  Book,
+  Calendar,
+  FileText,
+  GraduationCap,
+  Home,
+  Library,
+  Settings,
   Users,
   CreditCard,
   Briefcase,
@@ -32,9 +32,9 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { useBackground } from '../../contexts/BackgroundContext';
 import { clsx } from 'clsx';
-import { 
-  sidebarItemVariants, 
-  staggerContainer, 
+import {
+  sidebarItemVariants,
+  staggerContainer,
   staggerItem,
   buttonVariants
 } from '../../utils/animations';
@@ -67,18 +67,18 @@ interface MenuItem {
   isExperimental?: boolean;
 }
 
-export function Sidebar({ 
-  activeTab, 
-  onTabChange, 
-  collapsed = false, 
+export function Sidebar({
+  activeTab,
+  onTabChange,
+  collapsed = false,
   onCollapseChange,
   theme = 'light',
-  onThemeChange 
+  onThemeChange
 }: SidebarProps) {
   const { user, logout, theme: ctxTheme, toggleTheme } = useAuth();
   const { variant, intensity, colorScheme } = useBackground();
   const effectiveTheme = (theme as 'light' | 'dark') || ctxTheme;
-  
+
   // Dynamic background color based on current theme and background context
   const getSidebarBackground = () => {
     const colorSchemes = {
@@ -95,29 +95,29 @@ export function Sidebar({
       warm: 'from-orange-500/20 via-red-400/15 to-yellow-500/20',
       cool: 'from-cyan-500/20 via-blue-400/15 to-teal-500/20'
     };
-    
+
     const gradientColors = colorSchemes[colorScheme] || colorSchemes.dynamic;
-    
+
     if (effectiveTheme === 'dark') {
       return `bg-gradient-to-br ${gradientColors} bg-gray-900/95 bg-glass-dark`;
     } else {
       return `bg-gradient-to-br ${gradientColors} bg-white/95 bg-glass backdrop-blur-md`;
     }
   };
-  
+
   const sidebarBgColor = getSidebarBackground();
-  
+
   // Dynamic sidebar effects based on background context
   const sidebarEffects = {
     subtle: 'opacity-90 shadow-glow',
     medium: 'opacity-95 shadow-glow-purple',
     intense: 'opacity-100 shadow-glow-green'
   };
-  
-  const sidebarVariant = variant === 'floating-orbs' ? 'shadow-glow' : 
-                         variant === 'gradient-mesh' ? 'shadow-glow-purple' : 
-                         'shadow-glow-green';
-  
+
+  const sidebarVariant = variant === 'floating-orbs' ? 'shadow-glow' :
+    variant === 'gradient-mesh' ? 'shadow-glow-purple' :
+      'shadow-glow-green';
+
   // Enhanced state management
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['main']);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -130,7 +130,7 @@ export function Sidebar({
   useEffect(() => {
     const savedExpanded = localStorage.getItem('sidebar-expanded');
     const savedAccessStats = localStorage.getItem('sidebar-access-stats');
-    
+
     if (savedExpanded) setExpandedCategories(JSON.parse(savedExpanded));
     if (savedAccessStats) setAccessStats(JSON.parse(savedAccessStats));
   }, []);
@@ -139,10 +139,10 @@ export function Sidebar({
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
-    
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-    
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
@@ -152,27 +152,27 @@ export function Sidebar({
   // Enhanced menu items with modern design
   const getMenuItems = React.useCallback((): MenuItem[] => {
     const commonItems: MenuItem[] = [
-      { 
-        id: 'dashboard', 
-        label: 'Dashboard', 
-        icon: Home, 
+      {
+        id: 'dashboard',
+        label: 'Dashboard',
+        icon: Home,
         category: 'main',
         description: 'Overview and analytics',
         color: 'blue',
         gradient: true,
         priority: 'high'
       },
-      { 
-        id: 'notifications', 
-        label: 'Notifications', 
+      {
+        id: 'notifications',
+        label: 'Notifications',
         icon: Bell,
         category: 'main',
         description: 'Stay updated with alerts',
         color: 'orange'
       },
-      { 
-        id: 'background-showcase', 
-        label: 'Background Showcase', 
+      {
+        id: 'background-showcase',
+        label: 'Background Showcase',
         icon: Palette,
         category: 'main',
         description: 'Explore beautiful backgrounds',
@@ -186,9 +186,9 @@ export function Sidebar({
       switch (user?.role) {
         case 'student':
           return [
-            { 
-              id: 'academic', 
-              label: 'Academic', 
+            {
+              id: 'academic',
+              label: 'Academic',
               icon: GraduationCap,
               category: 'academics',
               description: 'Courses, grades & progress',
@@ -196,26 +196,26 @@ export function Sidebar({
               gradient: true,
               priority: 'high',
             },
-            { 
-              id: 'schedule', 
-              label: 'Schedule', 
+            {
+              id: 'schedule',
+              label: 'Schedule',
               icon: Calendar,
               category: 'academics',
               description: 'Class schedules',
               color: 'indigo'
             },
-            { 
-              id: 'exams', 
-              label: 'Exams', 
+            {
+              id: 'exams',
+              label: 'Exams',
               icon: FileCheck,
               category: 'academics',
               description: 'View and take scheduled exams',
               color: 'red',
               priority: 'high'
             },
-            { 
-              id: 'assignments', 
-              label: 'Assignments', 
+            {
+              id: 'assignments',
+              label: 'Assignments',
               icon: FileText,
               category: 'academics',
               description: 'Submit and track assignments',
@@ -224,26 +224,26 @@ export function Sidebar({
               badge: 'New',
               badgeType: 'info'
             },
-            { 
-              id: 'finance', 
-              label: 'Finance', 
+            {
+              id: 'finance',
+              label: 'Finance',
               icon: CreditCard,
               category: 'services',
               description: 'Fee payments & receipts',
               color: 'green',
               priority: 'medium'
             },
-            { 
-              id: 'library', 
-              label: 'Library', 
+            {
+              id: 'library',
+              label: 'Library',
               icon: Library,
               category: 'services',
               description: 'Books & digital resources',
               color: 'teal'
             },
-            { 
-              id: 'placement', 
-              label: 'Placement', 
+            {
+              id: 'placement',
+              label: 'Placement',
               icon: Briefcase,
               category: 'career',
               isNew: true,
@@ -252,29 +252,37 @@ export function Sidebar({
               gradient: true,
               isExperimental: true
             },
-            { 
-              id: 'services', 
-              label: 'Services', 
+            {
+              id: 'services',
+              label: 'Services',
               icon: FileCheck,
               category: 'services',
               description: 'Student support services',
               color: 'cyan'
             },
-            { 
-              id: 'transport', 
-              label: 'Transport', 
+            {
+              id: 'transport',
+              label: 'Transport',
               icon: Bus,
               category: 'services',
               description: 'Routes & subscriptions',
               color: 'blue'
             },
+            {
+              id: 'leaves',
+              label: 'Leaves',
+              icon: FileText,
+              category: 'services',
+              description: 'Apply for leave',
+              color: 'rose'
+            },
           ];
-        
+
         case 'faculty':
           return [
-            { 
-              id: 'courses', 
-              label: 'My Courses', 
+            {
+              id: 'courses',
+              label: 'My Courses',
               icon: Book,
               category: 'teaching',
               description: 'Course management',
@@ -283,33 +291,33 @@ export function Sidebar({
               badge: 4,
               badgeType: 'info'
             },
-            { 
-              id: 'exams', 
-              label: 'Exams', 
+            {
+              id: 'exams',
+              label: 'Exams',
               icon: FileCheck,
               category: 'teaching',
               description: 'Create and conduct exams',
               color: 'red'
             },
-            { 
-              id: 'feedback', 
-              label: 'Feedback', 
+            {
+              id: 'feedback',
+              label: 'Feedback',
               icon: MessageCircle,
               category: 'management',
               description: 'Course feedback summary',
               color: 'purple'
             },
-            { 
-              id: 'calendar', 
-              label: 'Calendar', 
+            {
+              id: 'calendar',
+              label: 'Calendar',
               icon: Calendar,
               category: 'management',
               description: 'Academic calendar',
               color: 'indigo'
             },
-            { 
-              id: 'assignments', 
-              label: 'Assignments', 
+            {
+              id: 'assignments',
+              label: 'Assignments',
               icon: FileText,
               category: 'teaching',
               description: 'Create and grade assignments',
@@ -318,17 +326,17 @@ export function Sidebar({
               badge: 'Active',
               badgeType: 'success'
             },
-            { 
-              id: 'attendance', 
-              label: 'Attendance', 
+            {
+              id: 'attendance',
+              label: 'Attendance',
               icon: UserCheck,
               category: 'teaching',
               description: 'Track student attendance',
               color: 'green'
             },
-            { 
-              id: 'marks', 
-              label: 'Marks & Grades', 
+            {
+              id: 'marks',
+              label: 'Marks & Grades',
               icon: Award,
               category: 'teaching',
               description: 'Grade submissions',
@@ -336,9 +344,9 @@ export function Sidebar({
               badge: 'Pending',
               badgeType: 'warning'
             },
-            { 
-              id: 'students', 
-              label: 'Students', 
+            {
+              id: 'students',
+              label: 'Students',
               icon: Users,
               category: 'management',
               description: 'Student management',
@@ -346,21 +354,29 @@ export function Sidebar({
               badge: 156,
               badgeType: 'default'
             },
-            { 
-              id: 'schedule', 
-              label: 'Schedule', 
+            {
+              id: 'schedule',
+              label: 'Schedule',
               icon: Calendar,
               category: 'management',
               description: 'Class schedules',
               color: 'indigo'
             },
+            {
+              id: 'leaves',
+              label: 'Leaves',
+              icon: FileText,
+              category: 'management',
+              description: 'Manage leave requests',
+              color: 'rose'
+            },
           ];
-        
+
         case 'admin':
           return [
-            { 
-              id: 'analytics', 
-              label: 'Analytics', 
+            {
+              id: 'analytics',
+              label: 'Analytics',
               icon: BarChart3,
               category: 'management',
               description: 'System insights',
@@ -369,9 +385,9 @@ export function Sidebar({
               priority: 'high',
               isExperimental: true
             },
-            { 
-              id: 'users', 
-              label: 'Users', 
+            {
+              id: 'users',
+              label: 'Users',
               icon: Users,
               category: 'management',
               description: 'User management',
@@ -379,74 +395,74 @@ export function Sidebar({
               badge: 1250,
               badgeType: 'info'
             },
-            { 
-              id: 'request-approval', 
-              label: 'Approvals', 
-              icon: Shield, 
+            {
+              id: 'request-approval',
+              label: 'Approvals',
+              icon: Shield,
               category: 'management',
               description: 'Review verification requests',
               color: 'green',
             },
-            { 
-              id: 'courses', 
-              label: 'Courses', 
+            {
+              id: 'courses',
+              label: 'Courses',
               icon: Book,
               category: 'academics',
               description: 'Course administration',
               color: 'indigo'
             },
-            { 
-              id: 'finance', 
-              label: 'Finance', 
+            {
+              id: 'finance',
+              label: 'Finance',
               icon: CreditCard,
               category: 'financial',
               description: 'Financial oversight',
               color: 'green',
               gradient: true
             },
-            { 
-              id: 'reports', 
-              label: 'Reports', 
+            {
+              id: 'reports',
+              label: 'Reports',
               icon: FileText,
               category: 'reports',
               description: 'System reports',
               color: 'gray'
             },
-            { 
-              id: 'settings', 
-              label: 'Settings', 
+            {
+              id: 'settings',
+              label: 'Settings',
               icon: Settings,
               category: 'system',
               description: 'System configuration',
               color: 'slate',
               priority: 'medium'
             },
-            { 
-              id: 'security', 
-              label: 'Security', 
+            {
+              id: 'security',
+              label: 'Security',
               icon: Shield,
               category: 'system',
               description: 'Security settings',
               color: 'red'
             },
-            { 
-              id: 'hostel', 
-              label: 'Hostel', 
+            {
+              id: 'hostel',
+              label: 'Hostel',
               icon: Building2,
               category: 'management',
               description: 'Rooms & allocations',
               color: 'purple'
             },
-            { 
-              id: 'transport', 
-              label: 'Transport', 
+            {
+              id: 'transport',
+              label: 'Transport',
               icon: Bus,
               category: 'management',
               description: 'Routes & GPS',
               color: 'blue'
             },
           ];
-        
+
         default:
           return [];
       }
@@ -477,14 +493,14 @@ export function Sidebar({
   const filteredMenuItems = useMemo(() => {
     const role = user?.role;
     const allowed = new Set<string>([
-      'dashboard','notifications','background-showcase','profile'
+      'dashboard', 'notifications', 'background-showcase', 'profile'
     ]);
     if (role === 'student') {
-      ['academic','schedule','exams','assignments','finance','library','placement','services','transport'].forEach(id=>allowed.add(id));
+      ['academic', 'schedule', 'exams', 'assignments', 'finance', 'library', 'placement', 'services', 'transport'].forEach(id => allowed.add(id));
     } else if (role === 'faculty') {
-      ['courses','exams','feedback','calendar','assignments','attendance','marks','students','schedule'].forEach(id=>allowed.add(id));
+      ['courses', 'exams', 'feedback', 'calendar', 'assignments', 'attendance', 'marks', 'students', 'schedule'].forEach(id => allowed.add(id));
     } else if (role === 'admin') {
-      ['analytics','users','request-approval','courses','finance','reports','settings','security','hostel','transport'].forEach(id=>allowed.add(id));
+      ['analytics', 'users', 'request-approval', 'courses', 'finance', 'reports', 'settings', 'security', 'hostel', 'transport'].forEach(id => allowed.add(id));
     }
     return menuItems.filter(mi => allowed.has(mi.id));
   }, [menuItems, user]);
@@ -492,7 +508,7 @@ export function Sidebar({
   // Group items by category with enhanced sorting
   const groupedMenuItems = useMemo(() => {
     const grouped: Record<string, MenuItem[]> = {};
-    
+
     filteredMenuItems.forEach(item => {
       const category = item.category || 'other';
       if (!grouped[category]) grouped[category] = [];
@@ -506,7 +522,7 @@ export function Sidebar({
         const priorityOrder = { high: 3, medium: 2, low: 1 };
         const aPriority = priorityOrder[a.priority || 'low'];
         const bPriority = priorityOrder[b.priority || 'low'];
-        
+
         if (aPriority !== bPriority) return bPriority - aPriority;
         if ((a.accessCount || 0) !== (b.accessCount || 0)) {
           return (b.accessCount || 0) - (a.accessCount || 0);
@@ -587,8 +603,8 @@ export function Sidebar({
     const isHovered = hoveredItem === item.id;
 
     return (
-      <motion.div 
-        key={item.id} 
+      <motion.div
+        key={item.id}
         className="relative"
         variants={sidebarItemVariants}
         whileHover="hover"
@@ -649,7 +665,7 @@ export function Sidebar({
                     [`text-${item.color}-600 dark:text-${item.color}-400`]: !isActive && item.color
                   })} />
                 </div>
-                
+
                 {/* Badge for collapsed state */}
                 {item.badge && (
                   <div className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 rounded-full flex items-center justify-center">
@@ -658,7 +674,7 @@ export function Sidebar({
                     </span>
                   </div>
                 )}
-                
+
                 {/* Status indicators for collapsed state */}
                 {item.isNew && !item.badge && (
                   <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
@@ -685,21 +701,21 @@ export function Sidebar({
                       [`text-${item.color}-600 dark:text-${item.color}-400`]: !isActive && item.color
                     })} />
                   </div>
-                  
+
                   {/* Status indicators */}
                   {item.isNew && (
                     <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
                       <div className="w-1.5 h-1.5 bg-white rounded-full" />
                     </div>
                   )}
-                  
+
                   {item.isExperimental && (
                     <span className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full flex items-center justify-center text-white text-xs">
                       Beta
                     </span>
                   )}
                 </div>
-                
+
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center space-x-2">
                     <span className="font-semibold truncate">{item.label}</span>
@@ -715,7 +731,7 @@ export function Sidebar({
                     </p>
                   )}
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   {/* Badge */}
                   {item.badge && (
@@ -742,7 +758,7 @@ export function Sidebar({
 
           {/* Tooltip for collapsed state */}
           {collapsed && isHovered && (
-            <motion.div 
+            <motion.div
               className="fixed left-20 bg-gray-900 text-white px-3 py-2 rounded-lg text-sm z-50 pointer-events-none whitespace-nowrap"
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
@@ -762,7 +778,7 @@ export function Sidebar({
         {/* Children */}
         <AnimatePresence>
           {hasChildren && isExpanded && !collapsed && (
-            <motion.div 
+            <motion.div
               className="ml-6 mt-2 space-y-1 border-l-2 border-gray-200 dark:border-gray-800 pl-4"
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
@@ -777,7 +793,7 @@ export function Sidebar({
         {/* Context menu */}
         <AnimatePresence>
           {showContextMenu === item.id && (
-            <motion.div 
+            <motion.div
               className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-xl border z-50"
               initial={{ opacity: 0, y: -10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -822,7 +838,7 @@ export function Sidebar({
     const newExpanded = expandedCategories.includes(category)
       ? expandedCategories.filter(cat => cat !== category)
       : [...expandedCategories, category];
-    
+
     setExpandedCategories(newExpanded);
     localStorage.setItem('sidebar-expanded', JSON.stringify(newExpanded));
   };
@@ -845,7 +861,7 @@ export function Sidebar({
   return (
     <>
       {/* Responsive sidebar container */}
-      <motion.div 
+      <motion.div
         className={clsx(
           'h-full border-r border-gray-200 dark:border-gray-800 flex flex-col shadow-xl relative',
           'backdrop-blur-sm',
@@ -864,14 +880,14 @@ export function Sidebar({
         <div className={`flex-shrink-0 p-6 border-b border-gray-200/50 dark:border-gray-700/50 relative overflow-hidden ${getSidebarBackground()}`}>
           {/* Dynamic gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-r from-blue-600/80 via-purple-600/80 to-blue-600/80 dark:from-blue-700/90 dark:via-purple-700/90 dark:to-blue-700/90" />
-          
+
           {/* Animated background elements */}
           <div className="absolute inset-0 opacity-30">
             <div className="absolute top-0 left-0 w-32 h-32 bg-white/10 rounded-full blur-xl animate-pulse" />
             <div className="absolute bottom-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-lg animate-pulse" style={{ animationDelay: '1s' }} />
             <div className="absolute top-1/2 left-1/2 w-16 h-16 bg-white/10 rounded-full blur-md animate-pulse" style={{ animationDelay: '2s' }} />
           </div>
-          
+
           <div className="flex items-center justify-between relative z-10">
             <div className="flex items-center space-x-3">
               <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center backdrop-blur">
@@ -893,7 +909,7 @@ export function Sidebar({
                 </div>
               )}
             </div>
-            
+
             <div className="flex items-center space-x-2">
               {!collapsed && (
                 <button
@@ -904,7 +920,7 @@ export function Sidebar({
                   {effectiveTheme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
                 </button>
               )}
-              
+
               {/* Toggle button - always visible and prominent when collapsed */}
               <button
                 onClick={() => onCollapseChange?.(!collapsed)}
@@ -938,7 +954,7 @@ export function Sidebar({
         )}
 
         {/* Enhanced Navigation - Flexible height with proper scrolling */}
-        <motion.nav 
+        <motion.nav
           className="flex-1 p-4 space-y-3 overflow-y-auto custom-scrollbar min-h-0 text-gray-800 dark:text-gray-100 relative"
           variants={staggerContainer}
           initial="initial"
@@ -949,15 +965,15 @@ export function Sidebar({
           <div className="absolute inset-0 opacity-5 pointer-events-none">
             <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-current via-transparent to-current" />
           </div>
-          
+
           {/* Grouped Menu Items */}
           <div className="relative z-10">
             {Object.entries(groupedMenuItems).map(([category, items], categoryIndex) => {
               const isExpanded = expandedCategories.includes(category);
-              
+
               return (
-                <motion.div 
-                  key={category} 
+                <motion.div
+                  key={category}
                   className="space-y-2"
                   variants={staggerItem}
                   custom={categoryIndex}
@@ -976,7 +992,7 @@ export function Sidebar({
                           {getCategoryDisplayName(category)}
                         </span>
                       </div>
-                      <motion.div 
+                      <motion.div
                         className="transition-transform duration-200 text-gray-500 dark:text-gray-400"
                         animate={{ rotate: isExpanded ? 90 : 0 }}
                         transition={{ duration: 0.2 }}
@@ -985,10 +1001,10 @@ export function Sidebar({
                       </motion.div>
                     </motion.button>
                   )}
-                  
+
                   <AnimatePresence>
                     {(collapsed || isExpanded) && (
-                      <motion.div 
+                      <motion.div
                         className={clsx('space-y-2', {
                           'space-y-3': collapsed // More spacing when collapsed
                         })}
@@ -1023,9 +1039,9 @@ export function Sidebar({
         <div className={`flex-shrink-0 border-t border-gray-200/50 dark:border-gray-700/50 relative overflow-hidden ${getSidebarBackground()}`}>
           {/* Subtle gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-gray-50/50 via-transparent to-transparent dark:from-gray-800/50" />
-          
+
           {/* User Profile */}
-          <div className={clsx('p-4 relative z-10', {'px-2': collapsed})}>
+          <div className={clsx('p-4 relative z-10', { 'px-2': collapsed })}>
             <div className={clsx('flex items-center space-x-3', {
               'justify-center': collapsed
             })}>
@@ -1125,7 +1141,7 @@ export function Sidebar({
 
       {/* Mobile overlay */}
       {!collapsed && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
           onClick={() => onCollapseChange?.(true)}
         />

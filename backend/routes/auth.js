@@ -846,6 +846,155 @@ router.put('/profile', auth, async (req, res) => {
   }
 });
 
+// @route   POST /api/auth/send-password-otp
+// @desc    Send OTP to user's email for password change verification
+// @access  Private
+router.post('/send-password-otp', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Generate 6-digit OTP
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    user.passwordOtp = otp;
+    user.passwordOtpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    await user.save();
+
+    // Send OTP via email (use emailService if configured, otherwise log)
+    try {
+      const emailService = require('../services/emailService');
+      await emailService.sendEmail(
+        user.email,
+        'Password Change Verification - EduConnect',
+        'email-otp',
+        {
+          name: user.name || 'User',
+          purpose: 'verify your password change request',
+          otp: otp,
+          expiryMinutes: '10'
+        }
+      );
+    } catch (emailError) {
+      console.log('Email service not configured. Password OTP:', otp);
+    }
+
+    // Mask email for response
+    const maskedEmail = user.email.replace(/(.{2})(.*)(@.*)/, '$1***$3');
+
+    res.json({
+      success: true,
+      message: 'OTP sent to your email',
+      maskedEmail,
+      // In dev mode, return the OTP for testing
+      devOtp: (process.env.NODE_ENV || 'development') !== 'production' ? otp : undefined
+    });
+  } catch (error) {
+    console.error('Send password OTP error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   POST /api/auth/verify-password-otp
+// @desc    Verify OTP without consuming it (step 1 of 2-step password change)
+// @access  Private
+router.post('/verify-password-otp', auth, async (req, res) => {
+  try {
+    const { otp } = req.body;
+    if (!otp) {
+      return res.status(400).json({ success: false, message: 'OTP is required' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (!user.passwordOtp || !user.passwordOtpExpiresAt) {
+      return res.status(400).json({ success: false, message: 'No OTP was requested. Please request a new OTP first.' });
+    }
+    if (new Date() > user.passwordOtpExpiresAt) {
+      user.passwordOtp = undefined;
+      user.passwordOtpExpiresAt = undefined;
+      await user.save();
+      return res.status(400).json({ success: false, message: 'OTP has expired. Please request a new one.' });
+    }
+    if (user.passwordOtp !== otp.trim()) {
+      return res.status(400).json({ success: false, message: 'Invalid OTP. Please try again.' });
+    }
+
+    // OTP is valid — don't consume it yet, will be consumed when password is actually changed
+    res.json({ success: true, message: 'OTP verified successfully. You can now set your new password.' });
+  } catch (error) {
+    console.error('Verify password OTP error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   POST /api/auth/change-password
+// @desc    Change password with current password OR email OTP verification
+// @access  Private
+router.post('/change-password', auth, async (req, res) => {
+  try {
+    const { currentPassword, otp, newPassword, confirmPassword } = req.body;
+
+    if (!newPassword || !confirmPassword) {
+      return res.status(400).json({ success: false, message: 'New password and confirmation are required' });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ success: false, message: 'New passwords do not match' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters long' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Verify identity: either current password or OTP
+    if (otp) {
+      // OTP verification
+      if (!user.passwordOtp || !user.passwordOtpExpiresAt) {
+        return res.status(400).json({ success: false, message: 'No OTP was requested. Please request a new OTP first.' });
+      }
+      if (new Date() > user.passwordOtpExpiresAt) {
+        user.passwordOtp = undefined;
+        user.passwordOtpExpiresAt = undefined;
+        await user.save();
+        return res.status(400).json({ success: false, message: 'OTP has expired. Please request a new one.' });
+      }
+      if (user.passwordOtp !== otp.trim()) {
+        return res.status(400).json({ success: false, message: 'Invalid OTP. Please try again.' });
+      }
+      // Clear OTP after successful verification
+      user.passwordOtp = undefined;
+      user.passwordOtpExpiresAt = undefined;
+    } else if (currentPassword) {
+      // Current password verification
+      const isMatch = await bcrypt.compare(currentPassword, user.password);
+      if (!isMatch) {
+        return res.status(400).json({ success: false, message: 'Current password is incorrect' });
+      }
+    } else {
+      return res.status(400).json({ success: false, message: 'Either current password or OTP is required for verification' });
+    }
+
+    // Update password (pre-save hook will hash it)
+    user.password = newPassword;
+    await user.save();
+
+    res.json({ success: true, message: 'Password changed successfully' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 // @route   POST /api/auth/request-verification
 // @desc    Request role change for existing users
 // @access  Private
@@ -1917,6 +2066,100 @@ router.post('/verify-otp', async (req, res) => {
   } catch (error) {
     console.error('Verify OTP error:', error);
     return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// @route   POST /api/auth/forgot-password
+// @desc    Send password reset email (public — no auth required)
+// @access  Public
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
+    // Always return success to prevent email enumeration
+    if (!user) {
+      return res.json({ success: true, message: 'If an account exists with that email, a reset link has been sent.' });
+    }
+
+    // Generate a secure reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    // Store hash in DB with 1-hour expiry
+    user.passwordResetToken = hashedToken;
+    user.passwordResetExpiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await user.save({ validateBeforeSave: false });
+
+    // Build the reset URL (frontend page)
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    const resetUrl = `${clientUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(user.email)}`;
+
+    // Send email using the existing password-reset template
+    const emailService = require('../services/emailService');
+    await emailService.sendEmail(
+      user.email,
+      'Password Reset Request - EduConnect',
+      'password-reset',
+      {
+        name: user.name,
+        resetUrl: resetUrl,
+        expiryHours: '1',
+        institutionName: 'EduConnect',
+        currentYear: new Date().getFullYear().toString()
+      }
+    );
+
+    console.log(`Password reset email sent to ${user.email}`);
+    res.json({ success: true, message: 'If an account exists with that email, a reset link has been sent.' });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ success: false, message: 'Failed to process password reset request' });
+  }
+});
+
+// @route   POST /api/auth/reset-password
+// @desc    Reset password using token from email link
+// @access  Public
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, email, newPassword } = req.body;
+
+    if (!token || !email || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Token, email, and new password are required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters long' });
+    }
+
+    // Hash the received token and look up the user
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const user = await User.findOne({
+      email: email.trim().toLowerCase(),
+      passwordResetToken: hashedToken,
+      passwordResetExpiresAt: { $gt: Date.now() }
+    }).select('+passwordResetToken');
+
+    if (!user) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired reset link. Please request a new one.' });
+    }
+
+    // Update password (pre-save hook will hash it)
+    user.password = newPassword;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpiresAt = undefined;
+    await user.save();
+
+    console.log(`Password reset successfully for ${user.email}`);
+    res.json({ success: true, message: 'Password has been reset successfully. You can now log in with your new password.' });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ success: false, message: 'Failed to reset password' });
   }
 });
 

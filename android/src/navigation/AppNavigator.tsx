@@ -40,6 +40,12 @@ import PlacementScreen from '../screens/modules/PlacementScreen';
 import TransportScreen from '../screens/modules/TransportScreen';
 import HostelScreen from '../screens/modules/HostelScreen';
 import LeavesScreen from '../screens/modules/LeavesScreen';
+import StudentServicesScreen from '../screens/modules/StudentServicesScreen';
+import ParentPortalScreen from '../screens/modules/ParentPortalScreen';
+import FeedbackScreen from '../screens/modules/FeedbackScreen';
+import AnalyticsScreen from '../screens/modules/AnalyticsScreen';
+import StudentManagementScreen from '../screens/modules/StudentManagementScreen';
+import UserManagementScreen from '../screens/admin/UserManagementScreen';
 
 // Common Screens
 import LoadingScreen from '../screens/common/LoadingScreen';
@@ -314,6 +320,12 @@ function AppNavigator() {
         <Stack.Screen name="Transport" component={TransportScreen} />
         <Stack.Screen name="Hostel" component={HostelScreen} />
         <Stack.Screen name="Leaves" component={LeavesScreen} />
+        <Stack.Screen name="StudentServices" component={StudentServicesScreen} />
+        <Stack.Screen name="ParentPortal" component={ParentPortalScreen} />
+        <Stack.Screen name="Feedback" component={FeedbackScreen} />
+        <Stack.Screen name="Analytics" component={AnalyticsScreen} />
+        <Stack.Screen name="StudentManagement" component={StudentManagementScreen} />
+        <Stack.Screen name="UserManagement" component={UserManagementScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
