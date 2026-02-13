@@ -52,7 +52,7 @@ const UserManagement: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`${API_URL}/api/auth/verification-requests`, {
+      const res = await fetch(`${API_URL}/api/auth/verification-requests?status=all`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();

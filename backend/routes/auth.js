@@ -1058,7 +1058,12 @@ router.post('/request-verification', auth, async (req, res) => {
 // @access  Private (admin/faculty)
 router.get('/verification-requests', auth, authorize('admin', 'faculty'), async (req, res) => {
   try {
-    let query = { status: 'pending' };
+    // Accept optional ?status= query param. Default: 'pending'. Use 'all' to get all statuses.
+    const statusParam = req.query.status || 'pending';
+    let query = {};
+    if (statusParam !== 'all') {
+      query.status = statusParam;
+    }
     const { role, adminPrograms, adminType, program: userProgram } = req.user;
 
     // Determine admin type if not explicitly set (failed migration fallback)
