@@ -63,7 +63,8 @@ router.get('/', auth, async (req, res) => {
         students = await User.find(query).select('name email program profile department branch createdAt');
       }
     } else if (req.user.role === 'faculty') {
-      // Faculty sees only students enrolled in courses they teach AND matching their department
+      // Faculty sees students enrolled in courses they teach,
+      // OR students matching their program + branch (fallback when no courses assigned)
       const facultyProgram = req.user.program || null;
       const facultyBranch = req.user.branch || req.user.department || null;
 
@@ -80,7 +81,6 @@ router.get('/', auth, async (req, res) => {
           if (course.students && Array.isArray(course.students)) {
             course.students.forEach(student => {
               if (student && student._id) {
-                // Add course information to student data
                 const studentData = student.toObject();
                 if (!studentData.enrolledCourses) {
                   studentData.enrolledCourses = [];
@@ -91,7 +91,6 @@ router.get('/', auth, async (req, res) => {
                   courseCode: course.code
                 });
 
-                // If student already exists, merge course information
                 if (studentMap.has(student._id.toString())) {
                   const existingStudent = studentMap.get(student._id.toString());
                   existingStudent.enrolledCourses.push({
@@ -107,30 +106,10 @@ router.get('/', auth, async (req, res) => {
           }
         });
 
-        // Convert map to array
         students = Array.from(studentMap.values());
 
-        // Filter students by faculty's program and branch
-        if (facultyProgram) {
-          students = students.filter(s => {
-            const studentProgram = s.program || s.profile?.course || '';
-            const studentBranch = s.branch || s.department || s.profile?.branch || '';
-            const programMatch = studentProgram === facultyProgram;
-            const branchMatch = !facultyBranch || studentBranch === facultyBranch;
-            return programMatch && branchMatch;
-          });
-        }
-
-        // Sort students by name for better organization
-        students.sort((a, b) => a.name.localeCompare(b.name));
-      } catch (courseError) {
-        console.error('Error fetching faculty courses:', courseError);
-        // Fallback to department-based filtering if course fetching fails
-        const facultyProgram = req.user.program || null;
-        const facultyBranch = req.user.branch || req.user.department || null;
-
-        if (facultyProgram) {
-          // Use $and to require BOTH program AND branch match
+        // If no students found via courses, fall back to program+branch matching
+        if (students.length === 0 && facultyProgram) {
           const conditions = [
             {
               $or: [
@@ -140,7 +119,43 @@ router.get('/', auth, async (req, res) => {
             }
           ];
 
-          // Always require branch match when faculty has a branch
+          if (facultyBranch) {
+            conditions.push({
+              $or: [
+                { branch: { $regex: new RegExp(`^${facultyBranch.trim()}$`, 'i') } },
+                { department: { $regex: new RegExp(`^${facultyBranch.trim()}$`, 'i') } },
+                { 'profile.branch': { $regex: new RegExp(`^${facultyBranch.trim()}$`, 'i') } }
+              ]
+            });
+          }
+
+          students = await User.find({ role: 'student', $and: conditions })
+            .select('name email program profile department branch createdAt');
+        } else if (students.length > 0 && facultyProgram) {
+          // Filter course-enrolled students by faculty's program/branch
+          students = students.filter(s => {
+            const studentProgram = s.program || s.profile?.course || '';
+            const studentBranch = s.branch || s.department || s.profile?.branch || '';
+            const programMatch = studentProgram === facultyProgram;
+            const branchMatch = !facultyBranch || studentBranch.toLowerCase() === facultyBranch.toLowerCase();
+            return programMatch && branchMatch;
+          });
+        }
+
+        students.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      } catch (courseError) {
+        console.error('Error fetching faculty courses:', courseError);
+        // Fallback to department-based filtering if course fetching fails
+        if (facultyProgram) {
+          const conditions = [
+            {
+              $or: [
+                { program: facultyProgram },
+                { 'profile.course': facultyProgram }
+              ]
+            }
+          ];
+
           if (facultyBranch) {
             conditions.push({
               $or: [
@@ -151,8 +166,7 @@ router.get('/', auth, async (req, res) => {
             });
           }
 
-          const baseQuery = { role: 'student', $and: conditions };
-          students = await User.find(baseQuery)
+          students = await User.find({ role: 'student', $and: conditions })
             .select('name email profile department branch createdAt');
         }
       }
