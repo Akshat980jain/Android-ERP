@@ -723,7 +723,7 @@ export function AssignmentModule() {
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">{assignment.title}</h3>
-                    <p className="text-sm text-blue-600 mb-2 font-medium">{assignment.course.name} ({assignment.course.code})</p>
+                    <p className="text-sm text-blue-600 mb-2 font-medium">{assignment.course?.name || 'Unknown Course'} ({assignment.course?.code || 'N/A'})</p>
                     <p className="text-sm text-gray-700 line-clamp-3">{assignment.description}</p>
                   </div>
                   <div className="ml-2 flex flex-col items-center">
@@ -1040,8 +1040,8 @@ export function AssignmentModule() {
                         </div>
                         <div className="text-right">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${submission.status === 'graded'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-blue-100 text-blue-800'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-blue-100 text-blue-800'
                             }`}>
                             {submission.status === 'graded' ? 'Graded' : 'Submitted'}
                           </span>

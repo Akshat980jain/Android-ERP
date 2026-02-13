@@ -25,8 +25,8 @@ interface ScheduleItem {
 
 const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const TIME_SLOTS = [
-  '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', 
-  '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', 
+  '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+  '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30',
   '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30'
 ];
 
@@ -54,12 +54,12 @@ const getDuration = (startTime: string, endTime: string) => {
   const startMinutes = timeToMinutes(startTime);
   const endMinutes = timeToMinutes(endTime);
   const durationMinutes = endMinutes - startMinutes;
-  
+
   if (durationMinutes <= 0) return '0 min';
-  
+
   const hours = Math.floor(durationMinutes / 60);
   const minutes = durationMinutes % 60;
-  
+
   if (hours > 0 && minutes > 0) {
     return `${hours}h ${minutes}m`;
   } else if (hours > 0) {
@@ -135,13 +135,13 @@ export function ScheduleModule() {
 
   const addScheduleItem = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate time range
     if (!isValidTimeRange(newScheduleItem.startTime, newScheduleItem.endTime)) {
       setError('End time must be after start time');
       return;
     }
-    
+
     setLoading(true);
     setError('');
     setSuccess('');
@@ -155,7 +155,7 @@ export function ScheduleModule() {
         room: newScheduleItem.room,
         type: newScheduleItem.type
       };
-      
+
       const data = await apiClient.addScheduleItem(scheduleData) as { success: boolean; message?: string };
       if (data.success) {
         await fetchSchedule(); // Refresh the schedule
@@ -205,7 +205,7 @@ export function ScheduleModule() {
         originalDayOfWeek: editingItem.dayOfWeek,
         originalStartTime: editingItem.startTime,
       };
-      
+
       const data = await apiClient.updateScheduleItem(editingItem.course._id, scheduleData) as { success: boolean; message?: string };
       console.log('Update response:', data);
       if (data.success) {
@@ -240,7 +240,7 @@ export function ScheduleModule() {
         dayOfWeek: item.dayOfWeek,
         startTime: item.startTime
       };
-      
+
       const data = await apiClient.deleteScheduleItem(item.course._id, scheduleData) as { success: boolean; message?: string };
       if (data.success) {
         await fetchSchedule(); // Refresh the schedule
@@ -273,7 +273,7 @@ export function ScheduleModule() {
         // Convert time strings to minutes for proper numerical sorting
         const aMinutes = timeToMinutes(a.startTime);
         const bMinutes = timeToMinutes(b.startTime);
-        
+
         return aMinutes - bMinutes; // Sort in ascending order (earliest first)
       });
   };
@@ -281,16 +281,16 @@ export function ScheduleModule() {
   const getTotalDayDuration = (day: string) => {
     const daySchedule = getScheduleForDay(day);
     let totalMinutes = 0;
-    
+
     daySchedule.forEach(item => {
       totalMinutes += timeToMinutes(item.endTime) - timeToMinutes(item.startTime);
     });
-    
+
     if (totalMinutes <= 0) return '0 min';
-    
+
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
-    
+
     if (hours > 0 && minutes > 0) {
       return `${hours}h ${minutes}m`;
     } else if (hours > 0) {
@@ -397,14 +397,14 @@ export function ScheduleModule() {
                     value={newScheduleItem.startTime}
                     onChange={(e) => {
                       const newStartTime = e.target.value;
-                      setNewScheduleItem({ 
-                        ...newScheduleItem, 
+                      setNewScheduleItem({
+                        ...newScheduleItem,
                         startTime: newStartTime,
                         // Auto-adjust end time if it's now invalid
-                        endTime: newStartTime && newScheduleItem.endTime && 
-                                !isValidTimeRange(newStartTime, newScheduleItem.endTime)
-                                  ? getDefaultEndTime(newStartTime)
-                                  : newScheduleItem.endTime
+                        endTime: newStartTime && newScheduleItem.endTime &&
+                          !isValidTimeRange(newStartTime, newScheduleItem.endTime)
+                          ? getDefaultEndTime(newStartTime)
+                          : newScheduleItem.endTime
                       });
                     }}
                     className="flex-1 border rounded px-3 py-2"
@@ -415,14 +415,14 @@ export function ScheduleModule() {
                     onChange={(e) => {
                       const newStartTime = e.target.value;
                       if (newStartTime) {
-                        setNewScheduleItem({ 
-                          ...newScheduleItem, 
+                        setNewScheduleItem({
+                          ...newScheduleItem,
                           startTime: newStartTime,
                           // Auto-adjust end time if it's now invalid
-                          endTime: newScheduleItem.endTime && 
-                                  !isValidTimeRange(newStartTime, newScheduleItem.endTime)
-                                    ? getDefaultEndTime(newStartTime)
-                                    : newScheduleItem.endTime
+                          endTime: newScheduleItem.endTime &&
+                            !isValidTimeRange(newStartTime, newScheduleItem.endTime)
+                            ? getDefaultEndTime(newStartTime)
+                            : newScheduleItem.endTime
                         });
                       }
                     }}
@@ -443,11 +443,10 @@ export function ScheduleModule() {
                     type="time"
                     value={newScheduleItem.endTime}
                     onChange={(e) => setNewScheduleItem({ ...newScheduleItem, endTime: e.target.value })}
-                    className={`flex-1 border rounded px-3 py-2 ${
-                      newScheduleItem.startTime && newScheduleItem.endTime && 
-                      !isValidTimeRange(newScheduleItem.startTime, newScheduleItem.endTime)
+                    className={`flex-1 border rounded px-3 py-2 ${newScheduleItem.startTime && newScheduleItem.endTime &&
+                        !isValidTimeRange(newScheduleItem.startTime, newScheduleItem.endTime)
                         ? 'border-red-500' : ''
-                    }`}
+                      }`}
                     required
                   />
                   <select
@@ -462,8 +461,8 @@ export function ScheduleModule() {
                   </select>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  {newScheduleItem.startTime && newScheduleItem.endTime && 
-                   !isValidTimeRange(newScheduleItem.startTime, newScheduleItem.endTime)
+                  {newScheduleItem.startTime && newScheduleItem.endTime &&
+                    !isValidTimeRange(newScheduleItem.startTime, newScheduleItem.endTime)
                     ? '⚠️ End time must be after start time'
                     : 'Enter custom time or use quick select'
                   }
@@ -519,10 +518,10 @@ export function ScheduleModule() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="font-medium text-sm text-gray-900 mb-1">
-                          {item.course.name}
+                          {item.course?.name || 'Unknown Course'}
                         </div>
                         <div className="text-xs text-gray-600 mb-2">
-                          {item.course.code}
+                          {item.course?.code || 'N/A'}
                         </div>
                         <div className="flex items-center text-xs text-gray-500 mb-1">
                           <Clock className="w-3 h-3 mr-1" />

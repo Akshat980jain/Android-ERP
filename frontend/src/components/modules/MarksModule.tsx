@@ -733,7 +733,7 @@ export function MarksModule() {
                     <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">Assignment</span>
                   </div>
                   <div className="text-sm text-gray-600 space-y-1">
-                    <div>Course: {assignment.course.name}</div>
+                    <div>Course: {assignment.course?.name || 'Unknown Course'}</div>
                     <div>Max Marks: {assignment.maxMarks}</div>
                     <div>Due: {new Date(assignment.dueDate).toLocaleDateString()}</div>
                     <div>Status: <span className="capitalize">{assignment.status}</span></div>

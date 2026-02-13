@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { 
-  Calendar, 
-  BookOpen, 
-  TrendingUp, 
-  Award, 
-  Clock, 
+import {
+  Calendar,
+  BookOpen,
+  TrendingUp,
+  Award,
+  Clock,
   Search,
   Download,
   AlertTriangle,
@@ -84,10 +84,10 @@ export function AcademicModule() {
   // Memoized filtered and sorted data
   const filteredCourses = useMemo(() => {
     return courses
-      .filter(course => 
+      .filter(course =>
         course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         course.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        course.faculty.toLowerCase().includes(searchTerm.toLowerCase())
+        (course.faculty || '').toLowerCase().includes(searchTerm.toLowerCase())
       )
       .sort((a, b) => {
         switch (sortBy) {
@@ -103,7 +103,7 @@ export function AcademicModule() {
   }, [courses, searchTerm, sortBy]);
 
   const filteredMarks = useMemo(() => {
-    return marks.filter(mark => 
+    return marks.filter(mark =>
       selectedSemester === 'current' || mark.semester === selectedSemester
     );
   }, [marks, selectedSemester]);
@@ -126,11 +126,11 @@ export function AcademicModule() {
 
       // Process courses
       if (coursesRes.status === 'fulfilled' && coursesRes.value && typeof coursesRes.value === 'object' && 'courses' in coursesRes.value) {
-        const courseList = Array.isArray(coursesRes.value.courses) 
+        const courseList = Array.isArray(coursesRes.value.courses)
           ? coursesRes.value.courses.map((course: any) => ({
-              ...course,
-              status: course.status || 'active'
-            }))
+            ...course,
+            status: course.status || 'active'
+          }))
           : [];
         setCourses(courseList);
       }
@@ -139,10 +139,10 @@ export function AcademicModule() {
       if (marksRes.status === 'fulfilled' && marksRes.value && typeof marksRes.value === 'object' && 'marks' in marksRes.value) {
         const marksList = Array.isArray(marksRes.value.marks)
           ? marksRes.value.marks.map((mark: any) => ({
-              ...mark,
-              percentage: ((mark.marks / mark.total) * 100).toFixed(1),
-              grade: calculateGrade(mark.marks, mark.total)
-            }))
+            ...mark,
+            percentage: ((mark.marks / mark.total) * 100).toFixed(1),
+            grade: calculateGrade(mark.marks, mark.total)
+          }))
           : [];
         setMarks(marksList);
       }
@@ -151,7 +151,7 @@ export function AcademicModule() {
       if (attendanceRes.status === 'fulfilled' && attendanceRes.value && typeof attendanceRes.value === 'object' && 'stats' in attendanceRes.value) {
         console.log('Raw attendance response:', attendanceRes.value);
         console.log('Attendance stats:', attendanceRes.value.stats);
-        
+
         const attendanceList = (attendanceRes.value.stats as any[]).map((stat: any) => {
           console.log('Processing attendance stat:', stat);
           return {
@@ -164,22 +164,22 @@ export function AcademicModule() {
             lastUpdated: new Date().toISOString()
           };
         });
-        
+
         console.log('Processed attendance list:', attendanceList);
         setAttendanceRecords(attendanceList);
-        
+
         // Calculate overall attendance percentage
         if (attendanceList.length > 0) {
           const totalClasses = attendanceList.reduce((sum, record) => sum + record.totalClasses, 0);
           const totalAttended = attendanceList.reduce((sum, record) => sum + record.attendedClasses, 0);
           const overallPercentage = totalClasses > 0 ? Math.round((totalAttended / totalClasses) * 100) : 0;
-          
+
           console.log('Overall attendance calculation:', {
             totalClasses,
             totalAttended,
             overallPercentage
           });
-          
+
           setAcademicStats(prev => {
             if (!prev) {
               return {
@@ -321,11 +321,10 @@ export function AcademicModule() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                  activeTab === tab.id
+                className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${activeTab === tab.id
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                  }`}
               >
                 <Icon className="w-4 h-4" />
                 <span>{tab.label}</span>
@@ -471,12 +470,11 @@ export function AcademicModule() {
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-600">Attendance:</span>
-                          <span className={`font-bold ${
-                            record.status === 'good' ? 'text-green-600' : 
-                            record.status === 'warning' ? 'text-yellow-600' : 'text-red-600'
-                          }`}>
+                          <span className={`font-bold ${record.status === 'good' ? 'text-green-600' :
+                              record.status === 'warning' ? 'text-yellow-600' : 'text-red-600'
+                            }`}>
                             {record.percentage.toFixed(1)}%
-                            </span>
+                          </span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-600">Classes:</span>
@@ -484,17 +482,16 @@ export function AcademicModule() {
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
                           <div
-                            className={`h-2 rounded-full ${
-                              record.status === 'good' ? 'bg-green-500' : 
-                              record.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500'
-                            }`}
+                            className={`h-2 rounded-full ${record.status === 'good' ? 'bg-green-500' :
+                                record.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500'
+                              }`}
                             style={{ width: `${Math.min(record.percentage, 100)}%` }}
                           />
                         </div>
                       </div>
                     </div>
                   ))}
-              </div>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -522,19 +519,19 @@ export function AcademicModule() {
               {filteredMarks.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">No marks data available.</div>
               ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Course</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assessment</th>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Course</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assessment</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marks</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Percentage</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Percentage</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
                       {filteredMarks.map((mark, index) => (
                         <tr key={mark.id || index} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -546,12 +543,11 @@ export function AcademicModule() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{mark.percentage}%</td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              mark.grade === 'A+' || mark.grade === 'A' ? 'bg-green-100 text-green-800' :
-                              mark.grade === 'B+' || mark.grade === 'B' ? 'bg-blue-100 text-blue-800' :
-                              mark.grade === 'C' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-red-100 text-red-800'
-                            }`}>
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${mark.grade === 'A+' || mark.grade === 'A' ? 'bg-green-100 text-green-800' :
+                                mark.grade === 'B+' || mark.grade === 'B' ? 'bg-blue-100 text-blue-800' :
+                                  mark.grade === 'C' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-red-100 text-red-800'
+                              }`}>
                               {mark.grade}
                             </span>
                           </td>
@@ -560,9 +556,9 @@ export function AcademicModule() {
                           </td>
                         </tr>
                       ))}
-                  </tbody>
-                </table>
-              </div>
+                    </tbody>
+                  </table>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -613,48 +609,45 @@ export function AcademicModule() {
                           <div className="space-y-1 text-sm text-gray-600">
                             <p><span className="font-medium">Code:</span> {course.code}</p>
                             <p><span className="font-medium">Credits:</span> {course.credits}</p>
-                            <p><span className="font-medium">Faculty:</span> {course.faculty}</p>
+                            <p><span className="font-medium">Faculty:</span> {course.faculty || 'N/A'}</p>
                             <p><span className="font-medium">Department:</span> {course.department}</p>
                           </div>
                         </div>
                         <div className="ml-4">
                           <BookOpen className="w-8 h-8 text-blue-600" />
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full mt-2 ${
-                            course.status === 'active' ? 'bg-green-100 text-green-800' :
-                            course.status === 'completed' ? 'bg-blue-100 text-blue-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full mt-2 ${course.status === 'active' ? 'bg-green-100 text-green-800' :
+                              course.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                                'bg-gray-100 text-gray-800'
+                            }`}>
                             {course.status}
                           </span>
                         </div>
                       </div>
-                      
+
                       {attendanceRecord && (
                         <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-sm font-medium text-gray-700">Attendance</span>
                             <div className="flex items-center space-x-2">
                               {getStatusIcon(attendanceRecord.status)}
-                              <span className={`font-bold text-sm ${
-                                attendanceRecord.status === 'good' ? 'text-green-600' : 
-                                attendanceRecord.status === 'warning' ? 'text-yellow-600' : 'text-red-600'
-                              }`}>
+                              <span className={`font-bold text-sm ${attendanceRecord.status === 'good' ? 'text-green-600' :
+                                  attendanceRecord.status === 'warning' ? 'text-yellow-600' : 'text-red-600'
+                                }`}>
                                 {attendanceRecord.percentage.toFixed(1)}%
                               </span>
                             </div>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div
-                              className={`h-2 rounded-full ${
-                                attendanceRecord.status === 'good' ? 'bg-green-500' : 
-                                attendanceRecord.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500'
-                              }`}
+                              className={`h-2 rounded-full ${attendanceRecord.status === 'good' ? 'bg-green-500' :
+                                  attendanceRecord.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500'
+                                }`}
                               style={{ width: `${Math.min(attendanceRecord.percentage, 100)}%` }}
                             />
                           </div>
                         </div>
                       )}
-                      
+
                       {course.description && (
                         <div className="mt-4">
                           <p className="text-sm text-gray-600">{course.description}</p>

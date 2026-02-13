@@ -263,7 +263,7 @@ export function AttendanceModule() {
           <div className="space-y-6">
             <div className="bg-blue-50 p-4 rounded-lg">
               <h3 className="font-semibold text-blue-800 mb-2">
-                {scheduleAttendance.course.name} ({scheduleAttendance.course.code})
+                {scheduleAttendance.course?.name || 'Unknown Course'} ({scheduleAttendance.course?.code || 'N/A'})
               </h3>
               <p className="text-blue-600">
                 {new Date(scheduleAttendance.date).toLocaleDateString()} - {scheduleAttendance.dayOfWeek}
@@ -332,8 +332,8 @@ export function AttendanceModule() {
                               <button
                                 onClick={() => markAttendance(slotIndex, studentIndex, 'present')}
                                 className={`flex items-center px-3 py-1 rounded border ${record.status === 'present'
-                                    ? 'bg-green-600 text-white border-green-600'
-                                    : 'border-green-600 text-green-600 hover:bg-green-50'
+                                  ? 'bg-green-600 text-white border-green-600'
+                                  : 'border-green-600 text-green-600 hover:bg-green-50'
                                   }`}
                               >
                                 <CheckCircle className="w-4 h-4 mr-1" />
@@ -342,8 +342,8 @@ export function AttendanceModule() {
                               <button
                                 onClick={() => markAttendance(slotIndex, studentIndex, 'absent')}
                                 className={`flex items-center px-3 py-1 rounded border ${record.status === 'absent'
-                                    ? 'bg-red-600 text-white border-red-600'
-                                    : 'border-red-600 text-red-600 hover:bg-red-50'
+                                  ? 'bg-red-600 text-white border-red-600'
+                                  : 'border-red-600 text-red-600 hover:bg-red-50'
                                   }`}
                               >
                                 <XCircle className="w-4 h-4 mr-1" />
@@ -352,8 +352,8 @@ export function AttendanceModule() {
                               <button
                                 onClick={() => markAttendance(slotIndex, studentIndex, 'late')}
                                 className={`flex items-center px-3 py-1 rounded border ${record.status === 'late'
-                                    ? 'bg-yellow-600 text-white border-yellow-600'
-                                    : 'border-yellow-600 text-yellow-600 hover:bg-yellow-50'
+                                  ? 'bg-yellow-600 text-white border-yellow-600'
+                                  : 'border-yellow-600 text-yellow-600 hover:bg-yellow-50'
                                   }`}
                               >
                                 <Clock className="w-4 h-4 mr-1" />
