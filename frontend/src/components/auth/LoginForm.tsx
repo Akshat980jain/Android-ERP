@@ -1,6 +1,6 @@
 // src/components/auth/LoginForm.tsx
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, GraduationCap, Eye, EyeOff, AlertCircle, ArrowLeft, Shield } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useForm } from 'react-hook-form';
@@ -514,9 +514,9 @@ export function LoginForm() {
                   </button>
 
                   <div className="text-center space-y-3">
-                    <a href="/request-verification" className="block text-blue-600 hover:underline">
+                    <Link to="/request-verification" className="block text-blue-600 hover:underline">
                       Need an account? Request verification here
-                    </a>
+                    </Link>
 
                     {/* Debug button - remove in production */}
                     <button
