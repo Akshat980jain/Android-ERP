@@ -111,10 +111,7 @@ app.set('trust proxy', 1);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Static files (if needed)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-// Serve static files from the frontend build directory
-app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
 // ========== DATABASE CONNECTION ==========
 // Optimized connection with connection pooling for better scalability
@@ -136,15 +133,15 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://akshat980jain:zm3aHd1
 
 // ========== API ROUTES ==========
 // Root endpoint for basic connectivity test
-// Root endpoint for basic connectivity test - COMMENTED OUT to let frontend handle root
-// app.get('/', (req, res) => {
-//   res.json({
-//     success: true,
-//     message: 'EduConnect Backend Server',
-//     timestamp: new Date().toISOString(),
-//     version: '1.0.0'
-//   });
-// });
+// Root endpoint for basic connectivity test
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'EduConnect Backend Server',
+    timestamp: new Date().toISOString(),
+    version: '1.0.0'
+  });
+});
 
 // Test endpoint
 app.get('/api/test', (req, res) => {
@@ -190,11 +187,6 @@ app.use('/api/leaves', leavesRoutes);
 app.use('/api/hostel', hostelRoutes);
 app.use('/api/parents', parentRoutes);
 app.use('/api/email', emailRoutes);
-
-// Handle React routing, return all requests to React app
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
-});
 
 // ========== SERVER START ==========
 const PORT = process.env.PORT || 5000;
