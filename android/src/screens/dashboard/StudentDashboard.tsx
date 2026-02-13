@@ -39,37 +39,76 @@ export default function StudentDashboard({ navigation }: any) {
     notifications: 0,
   });
   const [attendanceData, setAttendanceData] = useState({
-    physical: 104,
-    placement: 38,
-    absent: 13,
-    total: 155,
+    physical: 0,
+    placement: 0,
+    absent: 0,
+    total: 0,
   });
+  const [courseStats, setCourseStats] = useState<Array<{
+    course: { name: string; code: string };
+    present: number;
+    late: number;
+    absent: number;
+    total: number;
+    percentage: number;
+  }>>([]);
+  const [todayRecords, setTodayRecords] = useState<Array<{
+    course: { name: string; code: string };
+    status: string;
+    date: string;
+  }>>([]);
   const [hasAttendance, setHasAttendance] = useState(false);
 
   const onRefresh = async () => {
     setRefreshing(true);
     setError(null);
     try {
-      const userId = user?._id as string | undefined;
-      const [meRes, attendanceProbe, assignmentsRes, notificationsRes, eventsRes, feesRes] = await Promise.all([
+      const [meRes, attendanceRes, assignmentsRes, notificationsRes, eventsRes, feesRes] = await Promise.all([
         apiService.getCurrentUser().then((u) => ({ success: true, user: u } as any)).catch(() => ({ success: false } as any)),
-        apiService.getAttendanceSummary(userId),
+        apiService.getStudentAttendance(),
         apiService.getStudentAssignments(),
         apiService.getNotifications(),
         apiService.getEvents(),
         apiService.getStudentFees(),
       ]);
 
-      const profile = (meRes as any)?.user || {};
-      const probedPct = (attendanceProbe as any)?.percentage;
-      const profileAttendance = (profile as any)?.attendance?.average || (profile as any)?.attendancePercentage;
-      const attendancePct = typeof probedPct === 'number'
-        ? probedPct
-        : typeof profileAttendance === 'number'
-          ? Math.round(profileAttendance)
-          : 0;
-      setHasAttendance(typeof probedPct === 'number' || typeof profileAttendance === 'number');
+      // --- Attendance breakdown ---
+      const attRes = attendanceRes as any;
+      const stats: any[] = attRes?.stats || [];
+      const rawRecords: any[] = attRes?.attendance || [];
+      const avgPct = typeof attRes?.averageAttendance === 'number' ? attRes.averageAttendance : 0;
 
+      // Aggregate across all courses
+      let totalPresent = 0, totalLate = 0, totalAbsent = 0, totalAll = 0;
+      stats.forEach((s: any) => {
+        totalPresent += s.present || 0;
+        totalLate += s.late || 0;
+        totalAbsent += s.absent || 0;
+        totalAll += s.total || 0;
+      });
+
+      setAttendanceData({
+        physical: totalPresent,
+        placement: totalLate,
+        absent: totalAbsent,
+        total: totalAll || 1, // avoid division by zero
+      });
+      setCourseStats(stats);
+      setHasAttendance(stats.length > 0);
+
+      // Filter today's records
+      const todayStr = new Date().toISOString().split('T')[0];
+      const todayRecs = rawRecords.filter((r: any) => {
+        const d = r.date ? new Date(r.date).toISOString().split('T')[0] : '';
+        return d === todayStr;
+      }).map((r: any) => ({
+        course: r.course || { name: 'Unknown', code: '—' },
+        status: r.status || 'unknown',
+        date: r.date,
+      }));
+      setTodayRecords(todayRecs);
+
+      // --- Other dashboard counts ---
       const assignmentsCount = Array.isArray((assignmentsRes as any)?.data)
         ? (assignmentsRes as any).data.length
         : Array.isArray((assignmentsRes as any)?.assignments)
@@ -95,7 +134,7 @@ export default function StudentDashboard({ navigation }: any) {
           : (feesRes as any)?.data?.pendingCount ?? 0;
 
       setDashboardData({
-        attendance: attendancePct,
+        attendance: avgPct,
         assignments: assignmentsCount,
         upcomingExams: upcomingExamsCount,
         fees: feesCount,
@@ -124,7 +163,7 @@ export default function StudentDashboard({ navigation }: any) {
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <StatusBar barStyle={theme.colors.statusBarStyle} backgroundColor={theme.colors.background} />
-      
+
       {/* Header */}
       <View style={[styles.header, { backgroundColor: theme.colors.background }]}>
         <View style={styles.headerTop}>
@@ -139,16 +178,16 @@ export default function StudentDashboard({ navigation }: any) {
 
         <View style={styles.userInfo}>
           <Text style={[styles.userName, { color: theme.colors.text }]}>{getDisplayName().toUpperCase()}</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.darkModeToggle, { backgroundColor: theme.colors.surface }]}
             onPress={toggleTheme}
             activeOpacity={0.7}
           >
             <View style={styles.toggleContainer}>
-              <Ionicons 
-                name={isDark ? "moon" : "sunny"} 
-                size={20} 
-                color={isDark ? "#FFA500" : "#F59E0B"} 
+              <Ionicons
+                name={isDark ? "moon" : "sunny"}
+                size={20}
+                color={isDark ? "#FFA500" : "#F59E0B"}
               />
             </View>
           </TouchableOpacity>
@@ -164,15 +203,15 @@ export default function StudentDashboard({ navigation }: any) {
         showsVerticalScrollIndicator={false}
       >
         {/* Attendance Chart Card */}
-        <Surface 
+        <Surface
           style={[
-            styles.chartCard, 
-            { 
+            styles.chartCard,
+            {
               backgroundColor: theme.colors.card,
               borderColor: theme.colors.border,
               borderWidth: theme.isDark ? 0 : 1,
             }
-          ]} 
+          ]}
           elevation={theme.isDark ? 4 : 2}
         >
           <TouchableOpacity style={[styles.infoButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, borderWidth: theme.isDark ? 0 : 1 }]}>
@@ -182,10 +221,10 @@ export default function StudentDashboard({ navigation }: any) {
         </Surface>
 
         {/* Expandable Sections */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[
-            styles.expandableCard, 
-            { 
+            styles.expandableCard,
+            {
               backgroundColor: theme.colors.card,
               borderColor: theme.colors.border,
               borderWidth: 1,
@@ -195,97 +234,165 @@ export default function StudentDashboard({ navigation }: any) {
           activeOpacity={0.7}
         >
           <Text style={[styles.expandableTitle, { color: theme.colors.text }]}>Attendance Details</Text>
-          <Ionicons 
-            name={attendanceExpanded ? "remove" : "add"} 
-            size={24} 
-            color={theme.colors.text} 
+          <Ionicons
+            name={attendanceExpanded ? "remove" : "add"}
+            size={24}
+            color={theme.colors.text}
           />
         </TouchableOpacity>
 
         {attendanceExpanded && (
-          <Surface 
+          <Surface
             style={[
-              styles.expandedContent, 
-              { 
-                backgroundColor: theme.colors.card, 
+              styles.expandedContent,
+              {
+                backgroundColor: theme.colors.card,
                 borderColor: theme.colors.border,
                 borderWidth: 1,
               }
-            ]} 
+            ]}
             elevation={theme.isDark ? 2 : 0}
           >
             {/* Attendance Details Table */}
             <View style={styles.attendanceTable}>
               <View style={[styles.tableHeader, { borderBottomColor: theme.colors.border }]}>
-                <Text style={[styles.tableHeaderText, { color: theme.colors.textSecondary }]}>ATTENDANCE TYPE</Text>
+                <Text style={[styles.tableHeaderText, { color: theme.colors.textSecondary }]}>COURSE / TYPE</Text>
                 <Text style={[styles.tableHeaderText, { color: theme.colors.textSecondary }]}>PERCENTAGE</Text>
                 <Text style={[styles.tableHeaderText, { color: theme.colors.textSecondary }]}>P/T</Text>
               </View>
 
-              <View style={[styles.tableRow, { borderBottomColor: theme.colors.border }]}>
-                <View style={styles.typeCell}>
-                  <View style={[styles.colorIndicator, { backgroundColor: '#10B981' }]} />
-                  <Text style={[styles.typeText, { color: '#10B981' }]}>PHYSICAL ATTENDANCE</Text>
-                </View>
-                <Text style={[styles.percentageText, { color: theme.colors.text }]}>67.1%</Text>
-                <Text style={[styles.countText, { color: theme.colors.text }]}>104/117</Text>
-              </View>
+              {courseStats.length > 0 ? (
+                <>
+                  {courseStats.map((cs, idx) => (
+                    <View key={idx} style={[styles.tableRow, { borderBottomColor: theme.colors.border }]}>
+                      <View style={styles.typeCell}>
+                        <View style={[styles.colorIndicator, { backgroundColor: '#10B981' }]} />
+                        <Text style={[styles.typeText, { color: '#10B981' }]} numberOfLines={1}>
+                          {cs.course?.code || cs.course?.name || `Course ${idx + 1}`}
+                        </Text>
+                      </View>
+                      <Text style={[styles.percentageText, { color: theme.colors.text }]}>
+                        {cs.percentage}%
+                      </Text>
+                      <Text style={[styles.countText, { color: theme.colors.text }]}>
+                        {cs.present + cs.late}/{cs.total}
+                      </Text>
+                    </View>
+                  ))}
 
-              <View style={[styles.tableRow, { borderBottomColor: theme.colors.border }]}>
-                <View style={styles.typeCell}>
-                  <View style={[styles.colorIndicator, { backgroundColor: '#3B82F6' }]} />
-                  <Text style={[styles.typeText, { color: '#3B82F6' }]}>PLACEMENT</Text>
-                </View>
-                <Text style={[styles.percentageText, { color: theme.colors.text }]}>24.52%</Text>
-                <Text style={[styles.countText, { color: theme.colors.text }]}>38/38</Text>
-              </View>
+                  {/* Aggregate rows */}
+                  <View style={[styles.tableRow, { borderBottomColor: theme.colors.border }]}>
+                    <View style={styles.typeCell}>
+                      <View style={[styles.colorIndicator, { backgroundColor: '#10B981' }]} />
+                      <Text style={[styles.typeText, { color: '#10B981' }]}>PRESENT</Text>
+                    </View>
+                    <Text style={[styles.percentageText, { color: theme.colors.text }]}>
+                      {attendanceData.total > 0 ? ((attendanceData.physical / attendanceData.total) * 100).toFixed(1) : 0}%
+                    </Text>
+                    <Text style={[styles.countText, { color: theme.colors.text }]}>
+                      {attendanceData.physical}/{attendanceData.total}
+                    </Text>
+                  </View>
 
-              <View style={[styles.tableRow, { borderBottomColor: theme.colors.border }]}>
-                <View style={styles.typeCell}>
-                  <View style={[styles.colorIndicator, { backgroundColor: '#EF4444' }]} />
-                  <Text style={[styles.typeText, { color: '#EF4444' }]}>ABSENT</Text>
-                </View>
-                <Text style={[styles.percentageText, { color: theme.colors.text }]}>8.39%</Text>
-                <Text style={[styles.countText, { color: theme.colors.text }]}>13/155</Text>
-              </View>
+                  <View style={[styles.tableRow, { borderBottomColor: theme.colors.border }]}>
+                    <View style={styles.typeCell}>
+                      <View style={[styles.colorIndicator, { backgroundColor: '#3B82F6' }]} />
+                      <Text style={[styles.typeText, { color: '#3B82F6' }]}>LATE</Text>
+                    </View>
+                    <Text style={[styles.percentageText, { color: theme.colors.text }]}>
+                      {attendanceData.total > 0 ? ((attendanceData.placement / attendanceData.total) * 100).toFixed(1) : 0}%
+                    </Text>
+                    <Text style={[styles.countText, { color: theme.colors.text }]}>
+                      {attendanceData.placement}/{attendanceData.total}
+                    </Text>
+                  </View>
 
-              <View style={[styles.tableRow, styles.totalRowTable, { borderTopColor: theme.colors.border }]}>
-                <Text style={[styles.totalTypeText, { color: theme.colors.text }]}>OVERALL</Text>
-                <Text style={[styles.totalPercentageText, { color: theme.colors.text }]}>92%</Text>
-                <Text style={[styles.totalCountText, { color: theme.colors.text }]}>142/155</Text>
-              </View>
+                  <View style={[styles.tableRow, { borderBottomColor: theme.colors.border }]}>
+                    <View style={styles.typeCell}>
+                      <View style={[styles.colorIndicator, { backgroundColor: '#EF4444' }]} />
+                      <Text style={[styles.typeText, { color: '#EF4444' }]}>ABSENT</Text>
+                    </View>
+                    <Text style={[styles.percentageText, { color: theme.colors.text }]}>
+                      {attendanceData.total > 0 ? ((attendanceData.absent / attendanceData.total) * 100).toFixed(1) : 0}%
+                    </Text>
+                    <Text style={[styles.countText, { color: theme.colors.text }]}>
+                      {attendanceData.absent}/{attendanceData.total}
+                    </Text>
+                  </View>
+
+                  <View style={[styles.tableRow, styles.totalRowTable, { borderTopColor: theme.colors.border }]}>
+                    <Text style={[styles.totalTypeText, { color: theme.colors.text }]}>OVERALL</Text>
+                    <Text style={[styles.totalPercentageText, { color: theme.colors.text }]}>
+                      {dashboardData.attendance}%
+                    </Text>
+                    <Text style={[styles.totalCountText, { color: theme.colors.text }]}>
+                      {attendanceData.physical + attendanceData.placement}/{attendanceData.total}
+                    </Text>
+                  </View>
+                </>
+              ) : (
+                <View style={{ padding: 20, alignItems: 'center' }}>
+                  <Text style={{ color: theme.colors.textSecondary, fontSize: 14 }}>
+                    No attendance records yet.
+                  </Text>
+                </View>
+              )}
             </View>
           </Surface>
         )}
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.expandableCard, { backgroundColor: theme.colors.card }]}
           onPress={() => setTodayAttendanceExpanded(!todayAttendanceExpanded)}
           activeOpacity={0.7}
         >
           <Text style={[styles.expandableTitle, { color: theme.colors.text }]}>Today Attendance</Text>
-          <Ionicons 
-            name={todayAttendanceExpanded ? "remove" : "add"} 
-            size={24} 
-            color={theme.colors.text} 
+          <Ionicons
+            name={todayAttendanceExpanded ? "remove" : "add"}
+            size={24}
+            color={theme.colors.text}
           />
         </TouchableOpacity>
 
         {todayAttendanceExpanded && (
           <Surface style={[styles.expandedContent, { backgroundColor: theme.colors.card }]} elevation={2}>
-            <Text style={[styles.expandedText, { color: theme.colors.textSecondary }]}>
-              Today's attendance records will be displayed here.
-            </Text>
+            {todayRecords.length > 0 ? (
+              <View style={styles.attendanceTable}>
+                <View style={[styles.tableHeader, { borderBottomColor: theme.colors.border }]}>
+                  <Text style={[styles.tableHeaderText, { color: theme.colors.textSecondary }]}>COURSE</Text>
+                  <Text style={[styles.tableHeaderText, { color: theme.colors.textSecondary }]}>STATUS</Text>
+                </View>
+                {todayRecords.map((rec, idx) => {
+                  const statusColor = rec.status === 'present' ? '#10B981' : rec.status === 'late' ? '#F59E0B' : '#EF4444';
+                  return (
+                    <View key={idx} style={[styles.tableRow, { borderBottomColor: theme.colors.border }]}>
+                      <Text style={[styles.typeText, { color: theme.colors.text, flex: 1 }]}>
+                        {rec.course?.code || rec.course?.name || 'Course'}
+                      </Text>
+                      <Text style={[styles.percentageText, { color: statusColor, textTransform: 'uppercase' }]}>
+                        {rec.status}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            ) : (
+              <View style={{ padding: 20, alignItems: 'center' }}>
+                <Text style={{ color: theme.colors.textSecondary, fontSize: 14 }}>
+                  No attendance marked for today yet.
+                </Text>
+              </View>
+            )}
           </Surface>
         )}
 
         {/* Action Cards */}
         <View style={styles.actionCardsContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[
-              styles.actionCard, 
-              { 
-                backgroundColor: theme.colors.card, 
+              styles.actionCard,
+              {
+                backgroundColor: theme.colors.card,
                 borderColor: theme.colors.border,
                 borderWidth: 1,
               }
@@ -296,11 +403,11 @@ export default function StudentDashboard({ navigation }: any) {
             <Text style={[styles.actionCardText, { color: theme.colors.text }]}>Day Wise Attendance</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[
-              styles.actionCard, 
-              { 
-                backgroundColor: theme.colors.card, 
+              styles.actionCard,
+              {
+                backgroundColor: theme.colors.card,
                 borderColor: theme.colors.border,
                 borderWidth: 1,
               }
