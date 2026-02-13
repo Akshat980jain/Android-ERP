@@ -134,12 +134,11 @@ function AdminVerificationPanel() {
               // Also unassigned requests
               canApprove = true;
             } else if (adminType === 'program') {
-              // Program Admin approves Branch Admin and Faculty
+              // Program Admin approves Branch Admin only
               if (req.requestedRole === 'admin' && (req as any).adminType === 'branch') canApprove = true;
-              if (req.requestedRole === 'faculty') canApprove = true;
             } else if (adminType === 'branch') {
-              // Branch Admin approves Students
-              if (req.requestedRole === 'student') canApprove = true;
+              // Branch Admin approves Students and Faculty
+              if (req.requestedRole === 'student' || req.requestedRole === 'faculty') canApprove = true;
             }
 
             return (

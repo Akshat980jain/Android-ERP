@@ -1096,20 +1096,17 @@ router.get('/verification-requests', auth, authorize('admin', 'faculty'), async 
       ];
     } else if (effectiveAdminType === 'program') {
       // Program Admin sees:
-      // 1. Branch Admin requests (for their program)
-      // 2. Faculty requests (for their program)
-      // 3. Student requests are handled by Branch Admin, but Program Admin can see them if NO Branch Admin exists (optional fallback)
-      //    For now, adhering to strict chain: Program Admin manages Staff (Branch Admin + Faculty)
+      // 1. Branch Admin requests (for their program) only
+      // Faculty requests are handled by Branch Admin
       query.program = { $in: adminPrograms };
-      query.$or = [
-        { requestedRole: 'admin', adminType: 'branch' },
-        { requestedRole: 'faculty' }
-      ];
+      query.requestedRole = 'admin';
+      query.adminType = 'branch';
     } else if (effectiveAdminType === 'branch') {
       // Branch Admin sees:
       // 1. Student requests (for their program AND branch)
-      query.requestedRole = 'student';
+      // 2. Faculty requests (for their program AND branch)
       query.program = { $in: adminPrograms };
+      query.requestedRole = { $in: ['student', 'faculty'] };
 
       const adminBranch = req.user.branch || req.user.profile?.branch;
       if (adminBranch) {
@@ -1213,18 +1210,16 @@ router.post('/verification-requests/:id/decision', auth, authorize('admin', 'fac
           }
         }
       } else if (effectiveAdminType === 'program') {
-        // Program Admin approves: Branch Admin, Faculty (for their program)
+        // Program Admin approves: Branch Admin only (for their program)
+        // Faculty requests are handled by Branch Admin
         if (!adminPrograms.includes(request.program)) {
           return res.status(403).json({ success: false, message: 'Cross-program approval denied' });
         }
-        if (!['admin', 'faculty'].includes(request.requestedRole)) {
-          return res.status(403).json({ success: false, message: 'Program Admin approves Branch Admins and Faculty only.' });
-        }
-        if (request.requestedRole === 'admin' && request.adminType !== 'branch') {
-          return res.status(403).json({ success: false, message: 'Program Admin can only approve Branch Admins.' });
+        if (request.requestedRole !== 'admin' || request.adminType !== 'branch') {
+          return res.status(403).json({ success: false, message: 'Program Admin can only approve Branch Admin requests. Faculty requests are handled by Branch Admin.' });
         }
       } else if (effectiveAdminType === 'branch') {
-        // Branch Admin approves: Students (for their program + branch)
+        // Branch Admin approves: Students AND Faculty (for their program + branch)
         if (!adminPrograms.includes(request.program)) {
           return res.status(403).json({ success: false, message: 'Cross-program approval denied' });
         }
@@ -1232,8 +1227,8 @@ router.post('/verification-requests/:id/decision', auth, authorize('admin', 'fac
         if (adminBranch && request.branch && request.branch.toLowerCase() !== adminBranch.toLowerCase()) {
           return res.status(403).json({ success: false, message: 'Cross-branch approval denied' });
         }
-        if (request.requestedRole !== 'student') {
-          return res.status(403).json({ success: false, message: 'Branch Admin can only approve Student requests.' });
+        if (!['student', 'faculty'].includes(request.requestedRole)) {
+          return res.status(403).json({ success: false, message: 'Branch Admin can only approve Student and Faculty requests.' });
         }
       }
     }

@@ -5,7 +5,7 @@ const auth = async (req, res, next) => {
   try {
     console.log('Auth middleware - Headers:', req.headers);
     const token = req.header('Authorization')?.replace('Bearer ', '');
-    
+
     if (!token) {
       console.log('No token provided');
       return res.status(401).json({ message: 'No token, authorization denied' });
@@ -15,9 +15,9 @@ const auth = async (req, res, next) => {
     const secret = process.env.JWT_SECRET || 'your-secret-key';
     const decoded = jwt.verify(token, secret);
     console.log('Token decoded:', { id: decoded.id });
-    
+
     const user = await User.findById(decoded.id).select('-password');
-    
+
     if (!user) {
       console.log('User not found for token');
       return res.status(401).json({ message: 'Token is not valid' });
@@ -35,8 +35,8 @@ const auth = async (req, res, next) => {
 const authorize = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ 
-        message: `User role ${req.user.role} is not authorized to access this route` 
+      return res.status(403).json({
+        message: `User role ${req.user.role} is not authorized to access this route`
       });
     }
     next();
@@ -66,4 +66,31 @@ const checkVerification = (req, res, next) => {
   }
 };
 
-module.exports = { auth, authorize, checkVerification };
+// Restrict route to admin users with specific adminType(s)
+// Usage: authorizeAdmin('head', 'program')
+const authorizeAdmin = (...adminTypes) => {
+  return (req, res, next) => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+    const effective = getEffectiveAdminType(req.user);
+    if (adminTypes.length > 0 && !adminTypes.includes(effective)) {
+      return res.status(403).json({
+        message: `This action requires ${adminTypes.join(' or ')} admin access. You are ${effective || 'unknown'} admin.`
+      });
+    }
+    req.effectiveAdminType = effective;
+    next();
+  };
+};
+
+// Resolve effective admin type with fallback logic
+function getEffectiveAdminType(user) {
+  if (user.role !== 'admin') return null;
+  if (user.adminType) return user.adminType;
+  // Fallback: no adminPrograms → head, has programs → program
+  if (!user.adminPrograms || user.adminPrograms.length === 0) return 'head';
+  return 'program';
+}
+
+module.exports = { auth, authorize, checkVerification, authorizeAdmin, getEffectiveAdminType };
