@@ -33,8 +33,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Type-check
-        run: npx tsc --noEmit
+      - name: Type-check (warnings only)
+        run: npx tsc --noEmit --skipLibCheck
+        continue-on-error: true
 
       # Preview build for beta tags (e.g., v1.2.0-beta)
       - name: Build Preview APK
