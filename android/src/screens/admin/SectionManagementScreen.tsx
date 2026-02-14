@@ -33,7 +33,6 @@ interface Student {
 }
 
 const SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8];
-const PROGRAMS = ['B.Tech', 'M.Tech', 'B.Pharma', 'MCA', 'MBA'];
 const CURRENT_YEAR = new Date().getFullYear();
 const ACADEMIC_YEARS = [`${CURRENT_YEAR - 1}-${String(CURRENT_YEAR).slice(2)}`, `${CURRENT_YEAR}-${String(CURRENT_YEAR + 1).slice(2)}`];
 
@@ -61,11 +60,13 @@ const SectionManagementScreen: React.FC = () => {
     // Create form
     const [formName, setFormName] = useState('');
     const [formSemester, setFormSemester] = useState<number>(1);
-    const [formProgram, setFormProgram] = useState(user?.program || PROGRAMS[0]);
-    const [formBranch, setFormBranch] = useState(user?.branch || '');
     const [formYear, setFormYear] = useState(ACADEMIC_YEARS[ACADEMIC_YEARS.length - 1]);
     const [formMaxStudents, setFormMaxStudents] = useState('60');
     const [formSubmitting, setFormSubmitting] = useState(false);
+
+    // Auto-derived from user profile
+    const userProgram = user?.program || '';
+    const userBranch = user?.branch || '';
 
     // Student modal
     const [availableStudents, setAvailableStudents] = useState<Student[]>([]);
@@ -118,8 +119,8 @@ const SectionManagementScreen: React.FC = () => {
             const res = await apiService.createSection({
                 name: formName.trim(),
                 semester: formSemester,
-                program: formProgram,
-                branch: formBranch,
+                program: userProgram,
+                branch: userBranch,
                 academicYear: formYear,
                 maxStudents: parseInt(formMaxStudents) || 60,
             });
@@ -141,8 +142,6 @@ const SectionManagementScreen: React.FC = () => {
     const resetForm = () => {
         setFormName('');
         setFormSemester(selectedSemester || 1);
-        setFormProgram(user?.program || PROGRAMS[0]);
-        setFormBranch(user?.branch || '');
         setFormYear(ACADEMIC_YEARS[ACADEMIC_YEARS.length - 1]);
         setFormMaxStudents('60');
     };
@@ -523,20 +522,18 @@ const SectionManagementScreen: React.FC = () => {
                             ))}
                         </ScrollView>
 
-                        <Text style={[styles.inputLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>Program</Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.semesterPicker}>
-                            {PROGRAMS.map(p => (
-                                <TouchableOpacity key={p} onPress={() => setFormProgram(p)}
-                                    style={[styles.semPill, { marginRight: 8 }, formProgram === p && styles.semPillActive]}>
-                                    <Text style={[styles.semPillText, formProgram === p && styles.semPillTextActive]}>{p}</Text>
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
-
-                        <Text style={[styles.inputLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>Branch</Text>
-                        <TextInput style={[styles.input, { backgroundColor: isDark ? '#0F172A' : '#F1F5F9', color: isDark ? '#E2E8F0' : '#1E293B' }]}
-                            placeholder="e.g. CS, IT, ECE" placeholderTextColor={isDark ? '#475569' : '#94A3B8'}
-                            value={formBranch} onChangeText={setFormBranch} />
+                        <Text style={[styles.inputLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>Program & Branch</Text>
+                        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
+                            <View style={{ backgroundColor: isDark ? '#312E81' : '#EEF2FF', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12 }}>
+                                <Text style={{ color: isDark ? '#C7D2FE' : '#4338CA', fontWeight: '700', fontSize: 14 }}>{userProgram || 'Not set'}</Text>
+                            </View>
+                            {userBranch ? (
+                                <View style={{ backgroundColor: isDark ? '#064E3B' : '#ECFDF5', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12 }}>
+                                    <Text style={{ color: isDark ? '#6EE7B7' : '#059669', fontWeight: '700', fontSize: 14 }}>{userBranch}</Text>
+                                </View>
+                            ) : null}
+                            <Text style={{ color: isDark ? '#475569' : '#94A3B8', fontSize: 11, alignSelf: 'center' }}>from your profile</Text>
+                        </View>
 
                         <Text style={[styles.inputLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>Academic Year</Text>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.semesterPicker}>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Plus, Layers, Users, ChevronDown, Search, Trash2, Edit3,
+    Plus, Layers, Users, ChevronDown, Search, Edit3,
     UserPlus, X, Check, AlertCircle, RefreshCw, Archive
 } from 'lucide-react';
 import apiClient from '../../utils/api';
@@ -28,7 +28,6 @@ interface Student {
 }
 
 const SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8];
-const PROGRAMS = ['B.Tech', 'M.Tech', 'B.Pharma', 'MCA', 'MBA'];
 const CURRENT_YEAR = new Date().getFullYear();
 const ACADEMIC_YEARS = [`${CURRENT_YEAR - 1}-${String(CURRENT_YEAR).slice(2)}`, `${CURRENT_YEAR}-${String(CURRENT_YEAR + 1).slice(2)}`];
 
@@ -55,10 +54,12 @@ export function SectionModule() {
     // Form
     const [formName, setFormName] = useState('');
     const [formSemester, setFormSemester] = useState(1);
-    const [formProgram, setFormProgram] = useState(PROGRAMS[0]);
-    const [formBranch, setFormBranch] = useState('');
     const [formYear, setFormYear] = useState(ACADEMIC_YEARS[ACADEMIC_YEARS.length - 1]);
     const [formMaxStudents, setFormMaxStudents] = useState('60');
+
+    // Auto-derived from user profile
+    const userProgram = (user as any)?.program || '';
+    const userBranch = (user as any)?.branch || '';
     const [submitting, setSubmitting] = useState(false);
 
     // Student modal
@@ -94,8 +95,8 @@ export function SectionModule() {
             const res: any = await apiClient.createSection({
                 name: formName.trim().toUpperCase(),
                 semester: formSemester,
-                program: formProgram,
-                branch: formBranch,
+                program: userProgram,
+                branch: userBranch,
                 academicYear: formYear,
                 maxStudents: parseInt(formMaxStudents) || 60,
             });
@@ -219,8 +220,6 @@ export function SectionModule() {
     const resetForm = () => {
         setFormName('');
         setFormSemester(selectedSemester || 1);
-        setFormProgram(PROGRAMS[0]);
-        setFormBranch('');
         setFormYear(ACADEMIC_YEARS[ACADEMIC_YEARS.length - 1]);
         setFormMaxStudents('60');
     };
@@ -357,8 +356,8 @@ export function SectionModule() {
                                 exit={{ opacity: 0, y: -10 }}
                                 transition={{ delay: i * 0.05 }}
                                 className={`rounded-2xl border transition-all ${bulkSelected.has(section._id)
-                                        ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/10'
-                                        : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 hover:shadow-lg'
+                                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/10'
+                                    : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 hover:shadow-lg'
                                     } p-5`}
                             >
                                 <div
@@ -490,21 +489,20 @@ export function SectionModule() {
                                         ))}
                                     </div>
                                 </div>
+                                {/* Program & Branch — auto-filled from your profile */}
                                 <div>
-                                    <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Program</label>
-                                    <div className="flex flex-wrap gap-2 mt-1">
-                                        {PROGRAMS.map(p => (
-                                            <button key={p} type="button" onClick={() => setFormProgram(p)}
-                                                className={`px-3 py-2 rounded-lg text-xs font-semibold transition ${formProgram === p ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>
-                                                {p}
-                                            </button>
-                                        ))}
+                                    <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Program & Branch</label>
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <span className="px-4 py-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 font-semibold text-sm">
+                                            {userProgram || 'Not set'}
+                                        </span>
+                                        {userBranch && (
+                                            <span className="px-4 py-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 font-semibold text-sm">
+                                                {userBranch}
+                                            </span>
+                                        )}
+                                        <span className="text-xs text-gray-400 dark:text-gray-500 ml-1">from your profile</span>
                                     </div>
-                                </div>
-                                <div>
-                                    <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Branch</label>
-                                    <input type="text" value={formBranch} onChange={e => setFormBranch(e.target.value)} placeholder="e.g. CS, IT, ECE"
-                                        className="mt-1 w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none" />
                                 </div>
                                 <div>
                                     <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Academic Year</label>
