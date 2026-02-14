@@ -1,0 +1,113 @@
+name: CI — Quality Gates
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_call: # Allow deploy.yml to reuse this workflow
+
+jobs:
+  # ─── Frontend: Lint + Type-check + Build ───
+  frontend-ci:
+    name: Frontend CI
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type-check
+        run: npx tsc --noEmit --skipLibCheck
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_API_URL: https://android-1ej6.onrender.com
+
+  # ─── Backend: Syntax validation ───
+  backend-ci:
+    name: Backend CI
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Syntax check — app.js
+        run: node --check app.js
+
+      - name: Syntax check — all routes
+        run: |
+          for file in routes/*.js; do
+            echo "Checking $file..."
+            node --check "$file"
+          done
+
+      - name: Syntax check — all middleware
+        run: |
+          for file in middleware/*.js; do
+            echo "Checking $file..."
+            node --check "$file"
+          done
+
+      - name: Syntax check — all models
+        run: |
+          for file in models/*.js; do
+            echo "Checking $file..."
+            node --check "$file"
+          done
+
+  # ─── Android: Type-check ───
+  android-ci:
+    name: Android CI
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: android/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check
+        run: npx tsc --noEmit
