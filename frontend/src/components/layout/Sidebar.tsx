@@ -30,6 +30,7 @@ import {
   Palette
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import apiClient from '../../utils/api';
 import { useBackground } from '../../contexts/BackgroundContext';
 import { clsx } from 'clsx';
 import {
@@ -125,6 +126,7 @@ export function Sidebar({
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [animateItems, setAnimateItems] = useState(false);
   const [showContextMenu, setShowContextMenu] = useState<string | null>(null);
+  const [sidebarStats, setSidebarStats] = useState<Record<string, number>>({});
 
   // Load saved preferences from localStorage
   useEffect(() => {
@@ -134,6 +136,25 @@ export function Sidebar({
     if (savedExpanded) setExpandedCategories(JSON.parse(savedExpanded));
     if (savedAccessStats) setAccessStats(JSON.parse(savedAccessStats));
   }, []);
+
+  // Fetch sidebar stats from backend
+  useEffect(() => {
+    let cancelled = false;
+    const fetchStats = async () => {
+      try {
+        const res = await apiClient.getSidebarStats();
+        if (!cancelled && res.success && res.stats) {
+          setSidebarStats(res.stats);
+        }
+      } catch (e) {
+        console.error('Failed to fetch sidebar stats:', e);
+      }
+    };
+    fetchStats();
+    // Refresh every 60 seconds
+    const interval = setInterval(fetchStats, 60000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [user]);
 
   // Online/offline detection
   useEffect(() => {
@@ -168,7 +189,9 @@ export function Sidebar({
         icon: Bell,
         category: 'main',
         description: 'Stay updated with alerts',
-        color: 'orange'
+        color: 'orange',
+        badge: sidebarStats.unreadNotifications || undefined,
+        badgeType: 'warning'
       },
       {
         id: 'background-showcase',
@@ -221,7 +244,7 @@ export function Sidebar({
               description: 'Submit and track assignments',
               color: 'orange',
               priority: 'high',
-              badge: 'New',
+              badge: sidebarStats.pendingAssignments || undefined,
               badgeType: 'info'
             },
             {
@@ -288,7 +311,7 @@ export function Sidebar({
               description: 'Course management',
               color: 'blue',
               gradient: true,
-              badge: 4,
+              badge: sidebarStats.coursesCount || undefined,
               badgeType: 'info'
             },
             {
@@ -323,7 +346,7 @@ export function Sidebar({
               description: 'Create and grade assignments',
               color: 'orange',
               priority: 'high',
-              badge: 'Active',
+              badge: sidebarStats.activeAssignments || undefined,
               badgeType: 'success'
             },
             {
@@ -341,7 +364,7 @@ export function Sidebar({
               category: 'teaching',
               description: 'Grade submissions',
               color: 'yellow',
-              badge: 'Pending',
+              badge: sidebarStats.pendingMarksCount ? `${sidebarStats.pendingMarksCount} Pending` : undefined,
               badgeType: 'warning'
             },
             {
@@ -351,7 +374,7 @@ export function Sidebar({
               category: 'management',
               description: 'Student management',
               color: 'purple',
-              badge: 156,
+              badge: sidebarStats.studentsCount || undefined,
               badgeType: 'default'
             },
             {
@@ -392,7 +415,7 @@ export function Sidebar({
               category: 'management',
               description: 'User management',
               color: 'purple',
-              badge: 1250,
+              badge: sidebarStats.totalUsers || undefined,
               badgeType: 'info'
             },
             {
@@ -402,6 +425,8 @@ export function Sidebar({
               category: 'management',
               description: 'Review verification requests',
               color: 'green',
+              badge: sidebarStats.pendingVerifications || undefined,
+              badgeType: 'warning'
             },
             {
               id: 'courses',
@@ -409,7 +434,9 @@ export function Sidebar({
               icon: Book,
               category: 'academics',
               description: 'Course administration',
-              color: 'indigo'
+              color: 'indigo',
+              badge: sidebarStats.totalCourses || undefined,
+              badgeType: 'info'
             },
             {
               id: 'finance',
@@ -478,7 +505,7 @@ export function Sidebar({
     };
 
     return [...commonItems, ...getRoleSpecificItems(), profileItem];
-  }, [user]);
+  }, [user, sidebarStats]);
 
   const menuItems = useMemo(() => {
     const items = getMenuItems();
@@ -632,7 +659,7 @@ export function Sidebar({
                 'animate-pulse': animateItems && isActive,
                 // Collapsed styles
                 'px-3 py-3 rounded-xl justify-center': collapsed,
-                'px-4 py-3 rounded-xl space-x-3 hover:scale-[1.02]': !collapsed,
+                'px-4 py-3 rounded-xl space-x-3': !collapsed,
               }
             )}
             title={collapsed ? item.label : undefined}

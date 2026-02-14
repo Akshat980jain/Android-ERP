@@ -2163,4 +2163,151 @@ router.post('/reset-password', async (req, res) => {
   }
 });
 
+// @route   GET /api/auth/sidebar-stats
+// @desc    Get role-specific badge counts for sidebar
+// @access  Private
+router.get('/sidebar-stats', auth, async (req, res) => {
+  try {
+    const Notification = require('../models/Notification');
+    const Assignment = require('../models/Assignment');
+    const Leave = require('../models/Leave');
+    const Marks = require('../models/Marks');
+
+    const userId = req.user._id;
+    const role = req.user.role;
+    const stats = {};
+
+    // Unread notifications count (common for all roles)
+    try {
+      const allNotifications = await Notification.find({
+        $or: [
+          { targetRoles: role },
+          { targetUsers: userId }
+        ],
+        isActive: true
+      }).select('readBy');
+
+      stats.unreadNotifications = allNotifications.filter(n =>
+        !n.readBy.some(r => r.user.toString() === userId.toString())
+      ).length;
+    } catch (e) {
+      stats.unreadNotifications = 0;
+    }
+
+    if (role === 'faculty') {
+      // Courses taught by this faculty
+      try {
+        const facultyCourses = await Course.find({ faculty: userId });
+        stats.coursesCount = facultyCourses.length;
+
+        // Students enrolled in faculty's courses
+        let studentIds = new Set();
+        for (const course of facultyCourses) {
+          if (course.students && Array.isArray(course.students)) {
+            course.students.forEach(s => studentIds.add(s.toString()));
+          }
+        }
+        stats.studentsCount = studentIds.size;
+      } catch (e) {
+        stats.coursesCount = 0;
+        stats.studentsCount = 0;
+      }
+
+      // Pending marks (assignments created by faculty that need grading)
+      try {
+        const pendingAssignments = await Assignment.find({
+          createdBy: userId,
+          status: 'published'
+        }).select('submissions');
+        let pendingCount = 0;
+        pendingAssignments.forEach(a => {
+          if (a.submissions) {
+            pendingCount += a.submissions.filter(s => s.status === 'submitted' && !s.grade).length;
+          }
+        });
+        stats.pendingMarksCount = pendingCount;
+      } catch (e) {
+        stats.pendingMarksCount = 0;
+      }
+
+      // Active assignments
+      try {
+        const activeAssignments = await Assignment.countDocuments({
+          createdBy: userId,
+          status: 'published'
+        });
+        stats.activeAssignments = activeAssignments;
+      } catch (e) {
+        stats.activeAssignments = 0;
+      }
+
+      // Pending leave requests to review
+      try {
+        const pendingLeaves = await Leave.countDocuments({ status: 'pending' });
+        stats.pendingLeaves = pendingLeaves;
+      } catch (e) {
+        stats.pendingLeaves = 0;
+      }
+
+    } else if (role === 'student') {
+      // Courses enrolled
+      try {
+        const enrolledCourses = await Course.find({ students: userId });
+        stats.coursesCount = enrolledCourses.length;
+      } catch (e) {
+        stats.coursesCount = 0;
+      }
+
+      // Pending assignments
+      try {
+        const pendingAssignments = await Assignment.countDocuments({
+          status: 'published',
+          dueDate: { $gte: new Date() }
+        });
+        stats.pendingAssignments = pendingAssignments;
+      } catch (e) {
+        stats.pendingAssignments = 0;
+      }
+
+      // Pending leave requests
+      try {
+        const pendingLeaves = await Leave.countDocuments({
+          student: userId,
+          status: 'pending'
+        });
+        stats.pendingLeaves = pendingLeaves;
+      } catch (e) {
+        stats.pendingLeaves = 0;
+      }
+
+    } else if (role === 'admin') {
+      // Total users
+      try {
+        stats.totalUsers = await User.countDocuments();
+      } catch (e) {
+        stats.totalUsers = 0;
+      }
+
+      // Pending verification requests
+      try {
+        stats.pendingVerifications = await RoleRequest.countDocuments({ status: 'pending' });
+      } catch (e) {
+        stats.pendingVerifications = 0;
+      }
+
+      // Total courses
+      try {
+        stats.totalCourses = await Course.countDocuments();
+      } catch (e) {
+        stats.totalCourses = 0;
+      }
+    }
+
+    res.json({ success: true, stats });
+  } catch (error) {
+    console.error('Sidebar stats error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch sidebar stats' });
+  }
+});
+
 module.exports = router;

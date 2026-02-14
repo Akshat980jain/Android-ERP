@@ -699,6 +699,11 @@ class ApiClient {
       body: JSON.stringify(data)
     });
   }
+
+  // Sidebar stats
+  async getSidebarStats() {
+    return this.request<{ success: boolean; stats: Record<string, number> }>('/auth/sidebar-stats');
+  }
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);
