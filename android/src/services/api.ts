@@ -9,9 +9,9 @@ const API_BASE_URL = API_CONFIG.BASE_URL;
 function getCandidateBaseUrls(): string[] {
   const urls: string[] = [];
 
-  // In production, only use the production URL
+  // In production (forced), only use the production URL
   if (API_CONFIG.IS_PRODUCTION) {
-    urls.push(API_BASE_URL);
+    urls.push(API_CONFIG.PRODUCTION_URL);
     return urls;
   }
 
@@ -43,6 +43,9 @@ function getCandidateBaseUrls(): string[] {
   if (Platform.OS !== 'android') {
     urls.push('http://localhost:5000/api');
   }
+
+  // Final fallback: hosted production URL (always reachable when local is down)
+  urls.push(API_CONFIG.PRODUCTION_URL);
 
   // De-duplicate while preserving order
   const seen = new Set<string>();

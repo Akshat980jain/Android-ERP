@@ -864,7 +864,7 @@ export function Sidebar({
       <motion.div
         className={clsx(
           'h-full border-r border-gray-200 dark:border-gray-800 flex flex-col shadow-xl relative',
-          'backdrop-blur-sm',
+          'backdrop-blur-sm overflow-x-hidden',
           'md:static md:translate-x-0 fixed top-0 left-0 z-40',
           sidebarBgColor,
           sidebarEffects[intensity],
@@ -955,7 +955,7 @@ export function Sidebar({
 
         {/* Enhanced Navigation - Flexible height with proper scrolling */}
         <motion.nav
-          className="flex-1 p-4 space-y-3 overflow-y-auto custom-scrollbar min-h-0 text-gray-800 dark:text-gray-100 relative"
+          className="flex-1 p-4 space-y-3 overflow-y-auto overflow-x-hidden custom-scrollbar min-h-0 text-gray-800 dark:text-gray-100 relative"
           variants={staggerContainer}
           initial="initial"
           animate="animate"
@@ -1036,7 +1036,7 @@ export function Sidebar({
         </motion.nav>
 
         {/* Enhanced Footer - Fixed height */}
-        <div className={`flex-shrink-0 border-t border-gray-200/50 dark:border-gray-700/50 relative overflow-hidden ${getSidebarBackground()}`}>
+        <div className={`flex-shrink-0 border-t border-gray-200/50 dark:border-gray-700/50 relative overflow-hidden overflow-x-hidden ${getSidebarBackground()}`}>
           {/* Subtle gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-gray-50/50 via-transparent to-transparent dark:from-gray-800/50" />
 

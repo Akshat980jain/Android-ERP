@@ -1,57 +1,89 @@
 /**
  * API Configuration
  * 
- * This file manages the API base URL for different environments.
+ * Supports both local development and hosted production backend.
+ * The app will attempt to connect to localhost first; if that fails,
+ * it automatically falls back to the hosted Render URL.
  * 
  * DEVELOPMENT:
  * - Update LOCAL_IP with your computer's IP address
  * - Find your IP: Run "ipconfig" (Windows) or "ifconfig" (Mac/Linux)
- * - Look for IPv4 Address under your active network adapter
  * 
  * PRODUCTION:
- * - Set IS_PRODUCTION to true
- * - Update PRODUCTION_URL with your hosted server URL
+ * - The hosted URL is always available as fallback
+ * - Set FORCE_PRODUCTION = true to skip local attempts entirely
  */
 
 // ==================== CONFIGURATION ====================
 
-// Set to true when deploying to production
-const IS_PRODUCTION = false;
+// Set to true to ALWAYS use hosted backend (skip local)
+const FORCE_PRODUCTION = false;
 
-// Your local computer's IP address (update this when it changes)
+// Your local computer's IP address (update when it changes)
 const LOCAL_IP = '192.168.1.3';
+const LOCAL_PORT = '5000';
 
-// Your production server URL (update before deploying)
+// Your hosted backend URL
 const PRODUCTION_URL = 'https://android-1ej6.onrender.com/api';
 
 // ==================== DO NOT EDIT BELOW ====================
 
-const LOCAL_PORT = '5000';
 const API_ENDPOINT = '/api';
+const LOCAL_URL = `http://${LOCAL_IP}:${LOCAL_PORT}${API_ENDPOINT}`;
+
+// Track which backend we're currently using
+let currentBaseUrl = FORCE_PRODUCTION ? PRODUCTION_URL : LOCAL_URL;
+let isUsingProduction = FORCE_PRODUCTION;
 
 export const API_CONFIG = {
-    BASE_URL: IS_PRODUCTION
-        ? PRODUCTION_URL
-        : `http://${LOCAL_IP}:${LOCAL_PORT}${API_ENDPOINT}`,
+    get BASE_URL() {
+        return currentBaseUrl;
+    },
 
-    IS_PRODUCTION,
+    IS_PRODUCTION: FORCE_PRODUCTION,
     LOCAL_IP,
+    LOCAL_URL,
     PRODUCTION_URL,
 
-    // Helper to get the current environment
-    getEnvironment: () => IS_PRODUCTION ? 'production' : 'development',
+    // Switch to production URL (called on local connection failure)
+    switchToProduction: () => {
+        if (!isUsingProduction) {
+            console.log('⚡ Switching to hosted backend:', PRODUCTION_URL);
+            currentBaseUrl = PRODUCTION_URL;
+            isUsingProduction = true;
+        }
+    },
 
-    // Helper to log current configuration (useful for debugging)
+    // Switch back to local URL (for retry)
+    switchToLocal: () => {
+        if (isUsingProduction && !FORCE_PRODUCTION) {
+            console.log('⚡ Switching back to local backend:', LOCAL_URL);
+            currentBaseUrl = LOCAL_URL;
+            isUsingProduction = false;
+        }
+    },
+
+    // Check if currently using production
+    isProduction: () => isUsingProduction,
+
+    // Helper to get the current environment
+    getEnvironment: () => isUsingProduction ? 'production' : 'development',
+
+    // Helper to log current configuration
     logConfig: () => {
         console.log('=== API Configuration ===');
-        console.log('Environment:', IS_PRODUCTION ? 'PRODUCTION' : 'DEVELOPMENT');
-        console.log('Base URL:', API_CONFIG.BASE_URL);
+        console.log('Environment:', isUsingProduction ? 'PRODUCTION (Hosted)' : 'DEVELOPMENT (Local)');
+        console.log('Base URL:', currentBaseUrl);
+        console.log('Local URL:', LOCAL_URL);
+        console.log('Production URL:', PRODUCTION_URL);
         console.log('========================');
     }
 };
 
-// Log configuration on app start (always log in case of issues)
+// Log configuration on app start
 console.log('🔗 API Config:', {
-    environment: IS_PRODUCTION ? 'PRODUCTION' : 'DEVELOPMENT',
-    baseUrl: API_CONFIG.BASE_URL
+    environment: API_CONFIG.getEnvironment(),
+    baseUrl: API_CONFIG.BASE_URL,
+    localUrl: LOCAL_URL,
+    productionUrl: PRODUCTION_URL
 });
