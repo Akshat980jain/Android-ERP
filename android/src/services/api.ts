@@ -482,7 +482,7 @@ class ApiService {
   }
 
   async getFacultyCourses(): Promise<ApiResponse<any>> {
-    return this.request('/faculty/courses');
+    return this.request('/courses');
   }
 
   async getFacultyStudents(): Promise<ApiResponse<any>> {
@@ -940,6 +940,37 @@ class ApiService {
       method: 'PUT',
       body: JSON.stringify({ status }),
     });
+  }
+
+  // ── Section Management ──
+
+  async getSections(params?: { semester?: number; program?: string; branch?: string; academicYear?: string }): Promise<ApiResponse<any>> {
+    const query = params ? '?' + Object.entries(params).filter(([, v]) => v !== undefined).map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`).join('&') : '';
+    return this.request(`/sections${query}`);
+  }
+
+  async createSection(data: { name: string; semester: number; program: string; branch?: string; academicYear: string; maxStudents?: number }): Promise<ApiResponse<any>> {
+    return this.request('/sections', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async updateSection(id: string, data: { name?: string; semester?: number; academicYear?: string; maxStudents?: number; status?: string }): Promise<ApiResponse<any>> {
+    return this.request(`/sections/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  }
+
+  async bulkUpdateSemester(sectionIds: string[], newSemester: number): Promise<ApiResponse<any>> {
+    return this.request('/sections/bulk-semester', { method: 'PUT', body: JSON.stringify({ sectionIds, newSemester }) });
+  }
+
+  async addStudentsToSection(sectionId: string, studentIds: string[]): Promise<ApiResponse<any>> {
+    return this.request(`/sections/${sectionId}/students`, { method: 'POST', body: JSON.stringify({ studentIds }) });
+  }
+
+  async removeStudentsFromSection(sectionId: string, studentIds: string[]): Promise<ApiResponse<any>> {
+    return this.request(`/sections/${sectionId}/students`, { method: 'DELETE', body: JSON.stringify({ studentIds }) });
+  }
+
+  async deleteSection(id: string): Promise<ApiResponse<any>> {
+    return this.request(`/sections/${id}`, { method: 'DELETE' });
   }
 }
 

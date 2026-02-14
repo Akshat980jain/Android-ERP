@@ -704,6 +704,37 @@ class ApiClient {
   async getSidebarStats() {
     return this.request<{ success: boolean; stats: Record<string, number> }>('/auth/sidebar-stats');
   }
+
+  // ── Section Management ──
+
+  async getSections(params?: { semester?: number; program?: string; branch?: string; academicYear?: string; status?: string }) {
+    const queryString = params ? `?${new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== null).map(([k, v]) => [k, String(v)]))).toString()}` : '';
+    return this.request(`/sections${queryString}`);
+  }
+
+  async createSection(data: { name: string; semester: number; program: string; branch?: string; academicYear: string; maxStudents?: number }) {
+    return this.request('/sections', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async updateSection(id: string, data: { name?: string; semester?: number; academicYear?: string; maxStudents?: number; status?: string }) {
+    return this.request(`/sections/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  }
+
+  async bulkUpdateSemester(sectionIds: string[], newSemester: number) {
+    return this.request('/sections/bulk-semester', { method: 'PUT', body: JSON.stringify({ sectionIds, newSemester }) });
+  }
+
+  async addStudentsToSection(sectionId: string, studentIds: string[]) {
+    return this.request(`/sections/${sectionId}/students`, { method: 'POST', body: JSON.stringify({ studentIds }) });
+  }
+
+  async removeStudentsFromSection(sectionId: string, studentIds: string[]) {
+    return this.request(`/sections/${sectionId}/students`, { method: 'DELETE', body: JSON.stringify({ studentIds }) });
+  }
+
+  async deleteSection(id: string) {
+    return this.request(`/sections/${id}`, { method: 'DELETE' });
+  }
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);

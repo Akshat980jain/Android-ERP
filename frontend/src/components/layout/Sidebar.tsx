@@ -27,7 +27,8 @@ import {
   ChevronLeft,
   Bus,
   Building2,
-  Palette
+  Palette,
+  Layers
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import apiClient from '../../utils/api';
@@ -488,6 +489,16 @@ export function Sidebar({
               description: 'Routes & GPS',
               color: 'blue'
             },
+            {
+              id: 'sections',
+              label: 'Sections',
+              icon: Layers,
+              category: 'management',
+              description: 'Semester & section management',
+              color: 'indigo',
+              gradient: true,
+              priority: 'high'
+            },
           ];
 
         default:
@@ -527,7 +538,7 @@ export function Sidebar({
     } else if (role === 'faculty') {
       ['courses', 'exams', 'feedback', 'calendar', 'assignments', 'attendance', 'marks', 'students', 'schedule'].forEach(id => allowed.add(id));
     } else if (role === 'admin') {
-      ['analytics', 'users', 'request-approval', 'courses', 'finance', 'reports', 'settings', 'security', 'hostel', 'transport'].forEach(id => allowed.add(id));
+      ['analytics', 'users', 'request-approval', 'courses', 'finance', 'reports', 'settings', 'security', 'hostel', 'transport', 'sections'].forEach(id => allowed.add(id));
     }
     return menuItems.filter(mi => allowed.has(mi.id));
   }, [menuItems, user]);

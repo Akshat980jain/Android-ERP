@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,9 +9,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Animated,
+  useColorScheme,
+  Dimensions,
 } from 'react-native';
 import {
-  Card,
   Chip,
   DataTable,
   Surface,
@@ -22,12 +24,15 @@ import { useAuth } from '../../contexts/AuthContext';
 import apiService from '../../services/api';
 import CircularAttendanceChart from '../../components/CircularAttendanceChart';
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface Course {
   _id: string;
   name: string;
   code: string;
+  schedule?: Array<{ day: string; time: string; endTime?: string; room?: string }>;
 }
 
 interface Student {
@@ -65,50 +70,123 @@ interface CourseStat {
   percentage: number;
 }
 
+// ─── Theme System ────────────────────────────────────────────────────────────
+
+const themes = {
+  dark: {
+    bg: '#0F1117',
+    card: '#1A1D27',
+    cardElevated: '#222639',
+    surface: '#2A2E3D',
+    text: '#FFFFFF',
+    textSecondary: '#9CA3AF',
+    textMuted: '#6B7280',
+    accent: '#10B981',     // Green
+    accentLight: '#065F46',
+    accentSoft: 'rgba(16, 185, 129, 0.15)',
+    danger: '#EF4444',
+    dangerSoft: 'rgba(239, 68, 68, 0.15)',
+    warning: '#F59E0B',
+    warningSoft: 'rgba(245, 158, 11, 0.15)',
+    info: '#6366F1',
+    infoSoft: 'rgba(99, 102, 241, 0.15)',
+    border: '#2D3148',
+    headerGrad: ['#0F1117', '#161927'] as [string, string],
+    statusBar: 'light-content' as const,
+    inputBg: '#1A1D27',
+    inputBorder: '#2D3148',
+    dropdownBg: '#222639',
+    successGrad: ['#0F1117', '#0D2818'] as [string, string],
+    present: '#10B981',
+    absent: '#EF4444',
+    late: '#F59E0B',
+    presentBg: 'rgba(16, 185, 129, 0.2)',
+    absentBg: 'rgba(239, 68, 68, 0.2)',
+    lateBg: 'rgba(245, 158, 11, 0.2)',
+  },
+  light: {
+    bg: '#F3F4F6',
+    card: '#FFFFFF',
+    cardElevated: '#FFFFFF',
+    surface: '#F9FAFB',
+    text: '#111827',
+    textSecondary: '#6B7280',
+    textMuted: '#9CA3AF',
+    accent: '#059669',
+    accentLight: '#D1FAE5',
+    accentSoft: 'rgba(5, 150, 105, 0.1)',
+    danger: '#DC2626',
+    dangerSoft: 'rgba(220, 38, 38, 0.1)',
+    warning: '#D97706',
+    warningSoft: 'rgba(217, 119, 6, 0.1)',
+    info: '#4F46E5',
+    infoSoft: 'rgba(79, 70, 229, 0.1)',
+    border: '#E5E7EB',
+    headerGrad: ['#1F2937', '#111827'] as [string, string],
+    statusBar: 'light-content' as const,
+    inputBg: '#F9FAFB',
+    inputBorder: '#D1D5DB',
+    dropdownBg: '#FFFFFF',
+    successGrad: ['#F0FDF4', '#DCFCE7'] as [string, string],
+    present: '#059669',
+    absent: '#DC2626',
+    late: '#D97706',
+    presentBg: '#D1FAE5',
+    absentBg: '#FEE2E2',
+    lateBg: '#FEF3C7',
+  },
+};
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function AttendanceScreen({ navigation }: any) {
   const { user } = useAuth();
+  const colorScheme = useColorScheme();
+  const t = themes[colorScheme === 'light' ? 'light' : 'dark'];
   const isFaculty = user?.role === 'faculty' || user?.role === 'admin';
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1F2937" />
-      <LinearGradient colors={['#1F2937', '#111827']} style={styles.header}>
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>ATTENDANCE</Text>
-          <Ionicons name="information-circle-outline" size={24} color="#9CA3AF" />
-        </View>
-      </LinearGradient>
-
-      {isFaculty ? <FacultyView /> : <StudentView />}
+    <View style={[styles.container, { backgroundColor: t.bg }]}>
+      <StatusBar barStyle={t.statusBar} backgroundColor={t.headerGrad[0]} />
+      {isFaculty ? <FacultyFlow theme={t} /> : <StudentView theme={t} />}
     </View>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// FACULTY VIEW — Course selector + Schedule-based attendance marking
+// FACULTY 3-STEP FLOW (matching reference image)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function FacultyView() {
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [selectedCourse, setSelectedCourse] = useState<string>('');
-  const [selectedDate, setSelectedDate] = useState(new Date());
+type FacultyStep = 'select' | 'slots' | 'success';
 
+function FacultyFlow({ theme: t }: { theme: typeof themes.dark }) {
+  const [step, setStep] = useState<FacultyStep>('select');
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [selectedCourseId, setSelectedCourseId] = useState('');
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const [scheduleData, setScheduleData] = useState<SlotData[]>([]);
+  const [courseInfo, setCourseInfo] = useState<{ name: string; code: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState<number | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
-  const [courseName, setCourseCode] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [successSlot, setSuccessSlot] = useState('');
+  const fadeAnim = useRef(new Animated.Value(1)).current;
 
-  // Fetch faculty courses
+  // Current time for status
+  const [currentTime, setCurrentTime] = useState(new Date());
+  useEffect(() => {
+    const interval = setInterval(() => setCurrentTime(new Date()), 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Fetch courses on mount
   useEffect(() => {
     const fetchCourses = async () => {
       try {
         const res = await apiService.getFacultyCourses();
-        if (res.success !== false) {
-          const c = (res as any).courses || (res as any).data?.courses || [];
-          setCourses(c);
+        const data = res as any;
+        if (data?.success !== false) {
+          setCourses(data?.courses || []);
         }
       } catch (e) {
         console.error('Error fetching courses:', e);
@@ -117,42 +195,56 @@ function FacultyView() {
     fetchCourses();
   }, []);
 
-  // Fetch schedule attendance when course or date changes
-  const fetchSchedule = useCallback(async () => {
-    if (!selectedCourse) {
-      setScheduleData([]);
+  const selectedCourse = courses.find(c => c._id === selectedCourseId);
+
+  // Transition helper
+  const animateTransition = (nextStep: FacultyStep) => {
+    Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: true }).start(() => {
+      setStep(nextStep);
+      Animated.timing(fadeAnim, { toValue: 1, duration: 250, useNativeDriver: true }).start();
+    });
+  };
+
+  // Find Slots
+  const findSlots = async () => {
+    if (!selectedCourseId) {
+      Alert.alert('Select Course', 'Please select a course first.');
       return;
     }
     setLoading(true);
     try {
       const dateStr = selectedDate.toISOString().split('T')[0];
-      const res = await apiService.getScheduleAttendance(selectedCourse, dateStr);
-      if (res.success !== false) {
-        const data = res as any;
+      const res = await apiService.getScheduleAttendance(selectedCourseId, dateStr);
+      const data = res as any;
+      if (data?.success !== false) {
         setScheduleData(data.attendanceMatrix || []);
-        setCourseCode(data.course ? `${data.course.name} (${data.course.code})` : '');
+        setCourseInfo(data.course || null);
+        animateTransition('slots');
       } else {
-        setScheduleData([]);
+        Alert.alert('Error', data.message || 'Failed to fetch schedule');
       }
-    } catch (e) {
-      console.error('Error fetching schedule attendance:', e);
-      setScheduleData([]);
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Failed to fetch schedule');
     } finally {
       setLoading(false);
     }
-  }, [selectedCourse, selectedDate]);
-
-  useEffect(() => {
-    fetchSchedule();
-  }, [fetchSchedule]);
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchSchedule();
-    setRefreshing(false);
   };
 
-  // Mark individual student
+  // Time status helpers
+  const getTimeStatus = (slotTime: string, slotEndTime?: string) => {
+    const now = currentTime;
+    const dateStr = selectedDate.toISOString().split('T')[0];
+    const start = new Date(dateStr + 'T' + slotTime);
+    const end = slotEndTime
+      ? new Date(dateStr + 'T' + slotEndTime)
+      : new Date(start.getTime() + 60 * 60 * 1000);
+
+    if (now < start) return 'upcoming';
+    if (now >= start && now <= end) return 'current';
+    return 'past';
+  };
+
+  // Toggle student status
   const toggleStatus = (slotIdx: number, studentIdx: number, status: 'present' | 'absent' | 'late') => {
     setScheduleData(prev => {
       const updated = [...prev];
@@ -169,13 +261,13 @@ function FacultyView() {
     });
   };
 
-  // Mark all students in a slot
-  const markAllInSlot = (slotIdx: number, status: 'present' | 'absent' | 'late') => {
+  // Mark all in slot
+  const markAllInSlot = (slotIdx: number, status: 'present' | 'absent') => {
     setScheduleData(prev => {
       const updated = [...prev];
       const slot = { ...updated[slotIdx] };
-      slot.attendance = slot.attendance.map(record => ({
-        ...record,
+      slot.attendance = slot.attendance.map(r => ({
+        ...r,
         status,
         markedAt: new Date().toISOString(),
       }));
@@ -196,7 +288,7 @@ function FacultyView() {
       }));
 
     if (attendanceData.length === 0) {
-      Alert.alert('No Data', 'Please mark at least one student before submitting.');
+      Alert.alert('No Data', 'Mark at least one student before submitting.');
       return;
     }
 
@@ -204,7 +296,7 @@ function FacultyView() {
     try {
       const dateStr = selectedDate.toISOString().split('T')[0];
       const res = await apiService.markScheduleAttendance({
-        courseId: selectedCourse,
+        courseId: selectedCourseId,
         date: dateStr,
         scheduleSlot: {
           startTime: slot.slot.time,
@@ -213,11 +305,11 @@ function FacultyView() {
         attendanceData,
       });
 
-      if (res.success !== false) {
-        Alert.alert('Success', `Attendance submitted for ${slot.slot.time} slot!`);
-        await fetchSchedule(); // Refresh
+      if ((res as any).success !== false) {
+        setSuccessSlot(slot.slot.time);
+        animateTransition('success');
       } else {
-        Alert.alert('Error', (res as any).message || 'Failed to submit attendance');
+        Alert.alert('Error', (res as any).message || 'Failed to submit');
       }
     } catch (e: any) {
       Alert.alert('Error', e.message || 'Failed to submit attendance');
@@ -233,231 +325,420 @@ function FacultyView() {
     year: 'numeric',
   });
 
-  return (
-    <ScrollView
-      style={styles.content}
-      contentContainerStyle={styles.contentContainer}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#6366F1']} />}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Course Selector */}
-      <Surface style={styles.selectorCard} elevation={2}>
-        <Text style={styles.selectorLabel}>Select Course</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.courseChips}>
-          {courses.length === 0 ? (
-            <Text style={styles.emptyText}>No courses assigned</Text>
-          ) : (
-            courses.map(course => (
-              <TouchableOpacity
-                key={course._id}
-                onPress={() => setSelectedCourse(course._id)}
-                style={[
-                  styles.courseChip,
-                  selectedCourse === course._id && styles.courseChipActive,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.courseChipText,
-                    selectedCourse === course._id && styles.courseChipTextActive,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {course.code || course.name}
-                </Text>
-              </TouchableOpacity>
-            ))
+  // ── STEP 1: Select Course & Date ──────────────────────────────────────────
+
+  if (step === 'select') {
+    return (
+      <Animated.View style={[styles.flex1, { opacity: fadeAnim }]}>
+        {/* Header */}
+        <LinearGradient colors={t.headerGrad} style={styles.header}>
+          <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={22} color={t.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerLabel, { color: t.textSecondary }]}>Faculty Attendance</Text>
+        </LinearGradient>
+
+        <ScrollView
+          style={styles.flex1}
+          contentContainerStyle={[styles.stepContent, { backgroundColor: t.bg }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={[styles.stepTitle, { color: t.text }]}>Select Course & Date</Text>
+
+          {/* Course Dropdown */}
+          <Text style={[styles.fieldLabel, { color: t.textSecondary }]}>Course</Text>
+          <TouchableOpacity
+            style={[styles.dropdown, { backgroundColor: t.inputBg, borderColor: t.inputBorder }]}
+            onPress={() => setShowDropdown(!showDropdown)}
+          >
+            <Text
+              style={[
+                styles.dropdownText,
+                { color: selectedCourse ? t.text : t.textMuted },
+              ]}
+              numberOfLines={1}
+            >
+              {selectedCourse
+                ? `${selectedCourse.code} - ${selectedCourse.name}`
+                : 'Choose a course'}
+            </Text>
+            <Ionicons
+              name={showDropdown ? 'chevron-up' : 'chevron-down'}
+              size={20}
+              color={t.textMuted}
+            />
+          </TouchableOpacity>
+
+          {/* Dropdown Options */}
+          {showDropdown && (
+            <View style={[styles.dropdownList, { backgroundColor: t.dropdownBg, borderColor: t.border }]}>
+              {courses.length === 0 ? (
+                <Text style={[styles.dropdownItem, { color: t.textMuted }]}>No courses found</Text>
+              ) : (
+                courses.map(course => (
+                  <TouchableOpacity
+                    key={course._id}
+                    style={[
+                      styles.dropdownItemRow,
+                      selectedCourseId === course._id && { backgroundColor: t.accentSoft },
+                      { borderBottomColor: t.border },
+                    ]}
+                    onPress={() => {
+                      setSelectedCourseId(course._id);
+                      setShowDropdown(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.dropdownItemText,
+                        { color: selectedCourseId === course._id ? t.accent : t.text },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {course.code} - {course.name}
+                    </Text>
+                    {selectedCourseId === course._id && (
+                      <Ionicons name="checkmark" size={18} color={t.accent} />
+                    )}
+                  </TouchableOpacity>
+                ))
+              )}
+            </View>
           )}
-        </ScrollView>
 
-        {/* Date Navigation */}
-        <View style={styles.dateRow}>
-          <TouchableOpacity
-            onPress={() => setSelectedDate(d => { const n = new Date(d); n.setDate(n.getDate() - 1); return n; })}
-            style={styles.dateNavBtn}
-          >
-            <Ionicons name="chevron-back" size={20} color="#6366F1" />
-          </TouchableOpacity>
-          <View style={styles.dateButton}>
-            <Ionicons name="calendar-outline" size={16} color="#6366F1" />
-            <Text style={styles.dateText}>{dateStr}</Text>
+          {/* Date Picker */}
+          <Text style={[styles.fieldLabel, { color: t.textSecondary, marginTop: 24 }]}>Date</Text>
+          <View style={[styles.dateNav, { backgroundColor: t.inputBg, borderColor: t.inputBorder }]}>
+            <TouchableOpacity
+              onPress={() =>
+                setSelectedDate(d => {
+                  const n = new Date(d);
+                  n.setDate(n.getDate() - 1);
+                  return n;
+                })
+              }
+              style={[styles.dateNavBtn, { backgroundColor: t.surface }]}
+            >
+              <Ionicons name="chevron-back" size={20} color={t.accent} />
+            </TouchableOpacity>
+
+            <View style={styles.dateCenter}>
+              <Ionicons name="calendar" size={16} color={t.accent} style={{ marginRight: 8 }} />
+              <Text style={[styles.dateText, { color: t.text }]}>{dateStr}</Text>
+            </View>
+
+            <TouchableOpacity
+              onPress={() =>
+                setSelectedDate(d => {
+                  const n = new Date(d);
+                  n.setDate(n.getDate() + 1);
+                  return n;
+                })
+              }
+              style={[styles.dateNavBtn, { backgroundColor: t.surface }]}
+            >
+              <Ionicons name="chevron-forward" size={20} color={t.accent} />
+            </TouchableOpacity>
           </View>
+
+          {/* Find Slots Button */}
           <TouchableOpacity
-            onPress={() => setSelectedDate(d => { const n = new Date(d); n.setDate(n.getDate() + 1); return n; })}
-            style={styles.dateNavBtn}
+            style={[styles.primaryBtn, { backgroundColor: t.accent, opacity: loading ? 0.7 : 1 }]}
+            onPress={findSlots}
+            disabled={loading}
           >
-            <Ionicons name="chevron-forward" size={20} color="#6366F1" />
+            {loading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <>
+                <Ionicons name="search" size={18} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={styles.primaryBtnText}>Find Slots</Text>
+              </>
+            )}
           </TouchableOpacity>
-        </View>
-      </Surface>
+        </ScrollView>
+      </Animated.View>
+    );
+  }
 
-      {/* Loading State */}
-      {loading && (
-        <View style={styles.centerBox}>
-          <ActivityIndicator size="large" color="#6366F1" />
-          <Text style={styles.loadingText}>Loading schedule...</Text>
-        </View>
-      )}
+  // ── STEP 2: Available Time Slots ──────────────────────────────────────────
 
-      {/* No Course Selected */}
-      {!selectedCourse && !loading && (
-        <Surface style={styles.emptyCard} elevation={1}>
-          <Ionicons name="school-outline" size={48} color="#D1D5DB" />
-          <Text style={styles.emptyTitle}>Select a Course</Text>
-          <Text style={styles.emptySubtitle}>Choose a course above to view schedule and mark attendance</Text>
-        </Surface>
-      )}
+  if (step === 'slots') {
+    return (
+      <Animated.View style={[styles.flex1, { opacity: fadeAnim }]}>
+        {/* Header */}
+        <LinearGradient colors={t.headerGrad} style={styles.header}>
+          <TouchableOpacity onPress={() => animateTransition('select')} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={22} color={t.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: t.text }]}>
+            {courseInfo?.code || ''} - {dateStr.split(',').slice(0, 2).join(',')}
+          </Text>
+        </LinearGradient>
 
-      {/* No Slots */}
-      {selectedCourse && !loading && scheduleData.length === 0 && (
-        <Surface style={styles.emptyCard} elevation={1}>
-          <Ionicons name="calendar-outline" size={48} color="#D1D5DB" />
-          <Text style={styles.emptyTitle}>No Classes Scheduled</Text>
-          <Text style={styles.emptySubtitle}>No scheduled classes for {courseName} on this date</Text>
-        </Surface>
-      )}
+        <ScrollView
+          style={styles.flex1}
+          contentContainerStyle={[styles.stepContent, { backgroundColor: t.bg }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={[styles.stepTitle, { color: t.text }]}>Available Time Slots</Text>
 
-      {/* Course Info */}
-      {selectedCourse && !loading && scheduleData.length > 0 && courseName && (
-        <Surface style={styles.courseInfoCard} elevation={2}>
-          <Ionicons name="book-outline" size={20} color="#6366F1" />
-          <Text style={styles.courseInfoText}>{courseName}</Text>
-        </Surface>
-      )}
-
-      {/* Schedule Slots */}
-      {scheduleData.map((slotData, slotIdx) => {
-        const markedCount = slotData.attendance.filter(r => r.status !== null).length;
-        const totalStudents = slotData.attendance.length;
-        const isSubmitting = submitting === slotIdx;
-
-        return (
-          <Surface key={slotIdx} style={styles.slotCard} elevation={3}>
-            {/* Slot Header */}
-            <View style={styles.slotHeader}>
-              <View style={styles.slotTimeRow}>
-                <Ionicons name="time-outline" size={20} color="#6366F1" />
-                <Text style={styles.slotTime}>
-                  {slotData.slot.time}
-                  {slotData.slot.endTime ? ` - ${slotData.slot.endTime}` : ''}
-                </Text>
-                {slotData.slot.room && (
-                  <Chip mode="outlined" style={styles.roomChip} textStyle={styles.roomChipText}>
-                    {slotData.slot.room}
-                  </Chip>
-                )}
-              </View>
-              <Text style={styles.markedCount}>
-                {markedCount}/{totalStudents} marked
+          {scheduleData.length === 0 ? (
+            <View style={[styles.emptyState, { backgroundColor: t.card }]}>
+              <Ionicons name="calendar-outline" size={48} color={t.textMuted} />
+              <Text style={[styles.emptyTitle, { color: t.text }]}>No Classes Scheduled</Text>
+              <Text style={[styles.emptySubtitle, { color: t.textSecondary }]}>
+                No scheduled classes for this date
               </Text>
             </View>
+          ) : (
+            scheduleData.map((slotData, slotIdx) => {
+              const timeStatus = getTimeStatus(slotData.slot.time, slotData.slot.endTime);
+              const markedCount = slotData.attendance.filter(r => r.status !== null).length;
+              const totalStudents = slotData.attendance.length;
+              const isSubmitting = submitting === slotIdx;
 
-            {/* Quick Actions */}
-            <View style={styles.quickActions}>
-              <TouchableOpacity
-                style={[styles.quickBtn, { backgroundColor: '#D1FAE5' }]}
-                onPress={() => markAllInSlot(slotIdx, 'present')}
-              >
-                <Ionicons name="checkmark-circle" size={16} color="#059669" />
-                <Text style={[styles.quickBtnText, { color: '#059669' }]}>All Present</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.quickBtn, { backgroundColor: '#FEE2E2' }]}
-                onPress={() => markAllInSlot(slotIdx, 'absent')}
-              >
-                <Ionicons name="close-circle" size={16} color="#DC2626" />
-                <Text style={[styles.quickBtnText, { color: '#DC2626' }]}>All Absent</Text>
-              </TouchableOpacity>
-            </View>
+              return (
+                <View key={slotIdx} style={[styles.slotCard, { backgroundColor: t.card, borderColor: t.border }]}>
+                  {/* Slot Header */}
+                  <View style={styles.slotHeaderRow}>
+                    <View style={styles.slotTimeInfo}>
+                      <Text style={[styles.slotTime, { color: t.text }]}>
+                        {slotData.slot.time}
+                        {slotData.slot.endTime ? ` - ${slotData.slot.endTime}` : ''}
+                      </Text>
+                      <Text style={[styles.slotRoom, { color: t.textSecondary }]}>
+                        {slotData.slot.room ? `| ${slotData.slot.room}` : ''}
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.statusBadge,
+                        {
+                          backgroundColor:
+                            timeStatus === 'current'
+                              ? t.accentSoft
+                              : timeStatus === 'upcoming'
+                                ? t.infoSoft
+                                : t.surface,
+                        },
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.statusDot,
+                          {
+                            backgroundColor:
+                              timeStatus === 'current'
+                                ? t.accent
+                                : timeStatus === 'upcoming'
+                                  ? t.info
+                                  : t.textMuted,
+                          },
+                        ]}
+                      />
+                      <Text
+                        style={[
+                          styles.statusText,
+                          {
+                            color:
+                              timeStatus === 'current'
+                                ? t.accent
+                                : timeStatus === 'upcoming'
+                                  ? t.info
+                                  : t.textMuted,
+                          },
+                        ]}
+                      >
+                        {timeStatus === 'current'
+                          ? 'Currently in session'
+                          : timeStatus === 'upcoming'
+                            ? 'Upcoming'
+                            : 'Completed'}
+                      </Text>
+                    </View>
+                  </View>
 
-            {/* Student List */}
-            {slotData.attendance.map((record, studentIdx) => (
-              <View key={record.student._id} style={styles.studentRow}>
-                <View style={styles.studentInfo}>
-                  <Text style={styles.studentName} numberOfLines={1}>
-                    {record.student.name}
-                  </Text>
-                  <Text style={styles.studentId} numberOfLines={1}>
-                    {record.student.profile?.studentId || record.student.email}
+                  {/* Students Section */}
+                  <View style={styles.studentsSection}>
+                    <View style={styles.studentsSectionHeader}>
+                      <Text style={[styles.studentsSectionTitle, { color: t.text }]}>Students</Text>
+                      <View style={styles.quickActions}>
+                        <TouchableOpacity
+                          style={[styles.quickBtn, { borderColor: t.present }]}
+                          onPress={() => markAllInSlot(slotIdx, 'present')}
+                        >
+                          <Text style={[styles.quickBtnText, { color: t.present }]}>All Present</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.quickBtn, { borderColor: t.absent }]}
+                          onPress={() => markAllInSlot(slotIdx, 'absent')}
+                        >
+                          <Text style={[styles.quickBtnText, { color: t.absent }]}>All Absent</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
+                    {/* Student List */}
+                    {slotData.attendance.map((record, studentIdx) => {
+                      const initials = record.student.name
+                        .split(' ')
+                        .map(n => n[0])
+                        .join('')
+                        .substring(0, 2)
+                        .toUpperCase();
+
+                      return (
+                        <View
+                          key={record.student._id}
+                          style={[styles.studentRow, { borderBottomColor: t.border }]}
+                        >
+                          {/* Avatar */}
+                          <View style={[styles.avatar, { backgroundColor: t.surface }]}>
+                            <Text style={[styles.avatarText, { color: t.textSecondary }]}>
+                              {initials}
+                            </Text>
+                          </View>
+
+                          {/* Name */}
+                          <View style={styles.studentInfo}>
+                            <Text style={[styles.studentName, { color: t.text }]} numberOfLines={1}>
+                              {record.student.name}
+                            </Text>
+                          </View>
+
+                          {/* P / A / L Circle Buttons */}
+                          <View style={styles.statusCircles}>
+                            <TouchableOpacity
+                              onPress={() => toggleStatus(slotIdx, studentIdx, 'present')}
+                              style={[
+                                styles.circle,
+                                record.status === 'present'
+                                  ? { backgroundColor: t.present }
+                                  : { backgroundColor: t.presentBg },
+                              ]}
+                            >
+                              <Ionicons
+                                name="checkmark"
+                                size={16}
+                                color={record.status === 'present' ? '#fff' : t.present}
+                              />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              onPress={() => toggleStatus(slotIdx, studentIdx, 'absent')}
+                              style={[
+                                styles.circle,
+                                record.status === 'absent'
+                                  ? { backgroundColor: t.absent }
+                                  : { backgroundColor: t.absentBg },
+                              ]}
+                            >
+                              <Ionicons
+                                name="close"
+                                size={16}
+                                color={record.status === 'absent' ? '#fff' : t.absent}
+                              />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              onPress={() => toggleStatus(slotIdx, studentIdx, 'late')}
+                              style={[
+                                styles.circle,
+                                record.status === 'late'
+                                  ? { backgroundColor: t.late }
+                                  : { backgroundColor: t.lateBg },
+                              ]}
+                            >
+                              <Ionicons
+                                name="time"
+                                size={14}
+                                color={record.status === 'late' ? '#fff' : t.late}
+                              />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
+
+                  {/* Submit Button */}
+                  <TouchableOpacity
+                    style={[
+                      styles.submitBtn,
+                      { backgroundColor: t.accent, opacity: isSubmitting ? 0.7 : 1 },
+                    ]}
+                    onPress={() => submitSlot(slotIdx)}
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={styles.submitBtnText}>Submit Attendance</Text>
+                    )}
+                  </TouchableOpacity>
+
+                  {/* Progress */}
+                  <Text style={[styles.markedLabel, { color: t.textSecondary }]}>
+                    {markedCount}/{totalStudents} students marked
                   </Text>
                 </View>
-                <View style={styles.statusButtons}>
-                  <TouchableOpacity
-                    onPress={() => toggleStatus(slotIdx, studentIdx, 'present')}
-                    style={[
-                      styles.statusBtn,
-                      record.status === 'present' && styles.statusBtnPresent,
-                    ]}
-                  >
-                    <Ionicons
-                      name="checkmark"
-                      size={16}
-                      color={record.status === 'present' ? '#fff' : '#059669'}
-                    />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => toggleStatus(slotIdx, studentIdx, 'absent')}
-                    style={[
-                      styles.statusBtn,
-                      record.status === 'absent' && styles.statusBtnAbsent,
-                    ]}
-                  >
-                    <Ionicons
-                      name="close"
-                      size={16}
-                      color={record.status === 'absent' ? '#fff' : '#DC2626'}
-                    />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => toggleStatus(slotIdx, studentIdx, 'late')}
-                    style={[
-                      styles.statusBtn,
-                      record.status === 'late' && styles.statusBtnLate,
-                    ]}
-                  >
-                    <Ionicons
-                      name="time"
-                      size={16}
-                      color={record.status === 'late' ? '#fff' : '#D97706'}
-                    />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
+              );
+            })
+          )}
 
-            {/* Submit Button */}
-            <TouchableOpacity
-              style={[styles.submitBtn, isSubmitting && styles.submitBtnDisabled]}
-              onPress={() => submitSlot(slotIdx)}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <>
-                  <Ionicons name="cloud-upload-outline" size={18} color="#fff" />
-                  <Text style={styles.submitBtnText}>Submit Attendance</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </Surface>
-        );
-      })}
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </Animated.View>
+    );
+  }
 
-      <View style={{ height: 40 }} />
-    </ScrollView>
+  // ── STEP 3: Success Screen ────────────────────────────────────────────────
+
+  return (
+    <Animated.View style={[styles.flex1, { opacity: fadeAnim }]}>
+      <LinearGradient colors={t.successGrad} style={styles.successContainer}>
+        {/* Success Icon */}
+        <View style={[styles.successIconOuter, { borderColor: t.accent }]}>
+          <View style={[styles.successIconInner, { backgroundColor: t.accentSoft }]}>
+            <Ionicons name="checkmark" size={48} color={t.accent} />
+          </View>
+        </View>
+
+        <Text style={[styles.successTitle, { color: t.text }]}>Success!</Text>
+        <Text style={[styles.successSubtitle, { color: t.textSecondary }]}>
+          Attendance marked successfully{'\n'}for {successSlot} slot!
+        </Text>
+        <Text style={[styles.successMeta, { color: t.textMuted }]}>
+          {courseInfo?.code}, {dateStr}
+        </Text>
+
+        {/* Action Buttons */}
+        <TouchableOpacity
+          style={[styles.primaryBtn, { backgroundColor: t.accent, marginTop: 40 }]}
+          onPress={() => animateTransition('slots')}
+        >
+          <Ionicons name="list" size={18} color="#fff" style={{ marginRight: 8 }} />
+          <Text style={styles.primaryBtnText}>View Attendance</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.secondaryBtn, { borderColor: t.border }]}
+          onPress={() => animateTransition('select')}
+        >
+          <Text style={[styles.secondaryBtnText, { color: t.textSecondary }]}>Go to Dashboard</Text>
+        </TouchableOpacity>
+      </LinearGradient>
+    </Animated.View>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// STUDENT VIEW — Real attendance stats (no hardcoded data)
+// STUDENT VIEW — Real attendance stats
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function StudentView() {
+function StudentView({ theme: t }: { theme: typeof themes.dark }) {
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [courseStats, setCourseStats] = useState<CourseStat[]>([]);
-  const [averageAttendance, setAverageAttendance] = useState(0);
   const [recentRecords, setRecentRecords] = useState<any[]>([]);
   const [attendanceData, setAttendanceData] = useState({
     physical: 0,
@@ -469,17 +750,13 @@ function StudentView() {
   const fetchAttendance = useCallback(async () => {
     try {
       const res = await apiService.getAttendanceStats();
-      if (res.success !== false) {
-        const data = res as any;
+      const data = res as any;
+      if (data?.success !== false) {
         const stats: CourseStat[] = data.stats || [];
         const records = data.attendance || [];
-        const avg = data.averageAttendance || 0;
-
         setCourseStats(stats);
-        setAverageAttendance(avg);
         setRecentRecords(records.slice(0, 10));
 
-        // Calculate totals for the chart
         let totalPresent = 0;
         let totalAbsent = 0;
         let totalAll = 0;
@@ -514,144 +791,177 @@ function StudentView() {
   };
 
   return (
-    <ScrollView
-      style={styles.content}
-      contentContainerStyle={styles.contentContainer}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#6366F1']} />}
-      showsVerticalScrollIndicator={false}
-    >
-      {loading ? (
-        <View style={styles.centerBox}>
-          <ActivityIndicator size="large" color="#6366F1" />
-          <Text style={styles.loadingText}>Loading attendance...</Text>
+    <>
+      <LinearGradient colors={t.headerGrad} style={styles.header}>
+        <View style={styles.headerContent}>
+          <Text style={[styles.headerTitleLarge, { color: t.text }]}>ATTENDANCE</Text>
+          <Ionicons name="information-circle-outline" size={24} color={t.textMuted} />
         </View>
-      ) : (
-        <>
-          {/* Overall Chart */}
-          {attendanceData.total > 0 ? (
-            <Surface style={styles.chartCard} elevation={4}>
-              <CircularAttendanceChart data={attendanceData} />
-            </Surface>
-          ) : (
-            <Surface style={styles.emptyCard} elevation={1}>
-              <Ionicons name="bar-chart-outline" size={48} color="#D1D5DB" />
-              <Text style={styles.emptyTitle}>No Attendance Data</Text>
-              <Text style={styles.emptySubtitle}>Attendance records will appear here once marked</Text>
-            </Surface>
-          )}
+      </LinearGradient>
 
-          {/* Course-wise Breakdown */}
-          {courseStats.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Course-wise Attendance</Text>
-              {courseStats.map((stat, idx) => {
-                const pct = Math.round(stat.percentage || 0);
-                const isLow = pct < 75;
-                return (
-                  <Surface key={idx} style={styles.courseStatCard} elevation={2}>
-                    <View style={styles.courseStatHeader}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.courseStatName} numberOfLines={1}>
-                          {stat.course?.name || 'Unknown'}
-                        </Text>
-                        <Text style={styles.courseStatCode}>{stat.course?.code || ''}</Text>
-                      </View>
-                      <View style={[styles.percentBadge, isLow ? styles.percentBadgeLow : styles.percentBadgeOk]}>
-                        <Text style={[styles.percentText, isLow ? styles.percentTextLow : styles.percentTextOk]}>
-                          {pct}%
-                        </Text>
-                      </View>
-                    </View>
-                    {/* Progress bar */}
-                    <View style={styles.progressBg}>
-                      <View
-                        style={[
-                          styles.progressFill,
-                          { width: `${Math.min(pct, 100)}%` },
-                          isLow ? { backgroundColor: '#EF4444' } : { backgroundColor: '#10B981' },
-                        ]}
-                      />
-                    </View>
-                    <Text style={styles.courseStatDetail}>
-                      {Math.round(stat.present)}/{stat.total} classes attended
-                    </Text>
-                  </Surface>
-                );
-              })}
-            </View>
-          )}
+      <ScrollView
+        style={styles.flex1}
+        contentContainerStyle={[styles.stepContent, { backgroundColor: t.bg }]}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[t.accent]} />
+        }
+        showsVerticalScrollIndicator={false}
+      >
+        {loading ? (
+          <View style={styles.centerBox}>
+            <ActivityIndicator size="large" color={t.accent} />
+            <Text style={[styles.loadingText, { color: t.textSecondary }]}>Loading attendance...</Text>
+          </View>
+        ) : (
+          <>
+            {/* Overall Chart */}
+            {attendanceData.total > 0 ? (
+              <View style={[styles.chartCard, { backgroundColor: t.card }]}>
+                <CircularAttendanceChart data={attendanceData} />
+              </View>
+            ) : (
+              <View style={[styles.emptyState, { backgroundColor: t.card }]}>
+                <Ionicons name="bar-chart-outline" size={48} color={t.textMuted} />
+                <Text style={[styles.emptyTitle, { color: t.text }]}>No Attendance Data</Text>
+                <Text style={[styles.emptySubtitle, { color: t.textSecondary }]}>
+                  Records will appear here once marked
+                </Text>
+              </View>
+            )}
 
-          {/* Recent Records */}
-          {recentRecords.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Recent Records</Text>
-              <Surface style={styles.tableCard} elevation={2}>
-                <DataTable>
-                  <DataTable.Header style={styles.tableHeader}>
-                    <DataTable.Title textStyle={styles.tableHeaderText}>Course</DataTable.Title>
-                    <DataTable.Title textStyle={styles.tableHeaderText}>Date</DataTable.Title>
-                    <DataTable.Title textStyle={styles.tableHeaderText}>Status</DataTable.Title>
-                  </DataTable.Header>
-
-                  {recentRecords.map((record: any, idx: number) => (
-                    <DataTable.Row key={record._id || idx} style={styles.tableRow}>
-                      <DataTable.Cell textStyle={styles.tableCellText}>
-                        {record.course?.code || record.course?.name || 'N/A'}
-                      </DataTable.Cell>
-                      <DataTable.Cell textStyle={styles.tableCellText}>
-                        {new Date(record.date).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                        })}
-                      </DataTable.Cell>
-                      <DataTable.Cell>
-                        <Chip
-                          mode="flat"
+            {/* Course-wise Breakdown */}
+            {courseStats.length > 0 && (
+              <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: t.text }]}>Course-wise Attendance</Text>
+                {courseStats.map((stat, idx) => {
+                  const pct = Math.round(stat.percentage || 0);
+                  const isLow = pct < 75;
+                  return (
+                    <View key={idx} style={[styles.courseStatCard, { backgroundColor: t.card, borderColor: t.border }]}>
+                      <View style={styles.courseStatHeader}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.courseStatName, { color: t.text }]} numberOfLines={1}>
+                            {stat.course?.name || 'Unknown'}
+                          </Text>
+                          <Text style={[styles.courseStatCode, { color: t.textSecondary }]}>
+                            {stat.course?.code || ''}
+                          </Text>
+                        </View>
+                        <View
                           style={[
-                            styles.statusChip,
-                            {
-                              backgroundColor:
-                                record.status === 'present'
-                                  ? '#D1FAE5'
-                                  : record.status === 'absent'
-                                    ? '#FEE2E2'
-                                    : '#FEF3C7',
-                            },
-                          ]}
-                          textStyle={[
-                            styles.statusChipText,
-                            {
-                              color:
-                                record.status === 'present'
-                                  ? '#059669'
-                                  : record.status === 'absent'
-                                    ? '#DC2626'
-                                    : '#D97706',
-                            },
+                            styles.percentBadge,
+                            { backgroundColor: isLow ? t.dangerSoft : t.accentSoft },
                           ]}
                         >
-                          {record.status === 'present' ? 'Present' : record.status === 'late' ? 'Late' : 'Absent'}
-                        </Chip>
-                      </DataTable.Cell>
-                    </DataTable.Row>
-                  ))}
-                </DataTable>
-              </Surface>
+                          <Text
+                            style={[
+                              styles.percentText,
+                              { color: isLow ? t.danger : t.accent },
+                            ]}
+                          >
+                            {pct}%
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={[styles.progressBg, { backgroundColor: t.surface }]}>
+                        <View
+                          style={[
+                            styles.progressFill,
+                            {
+                              width: `${Math.min(pct, 100)}%`,
+                              backgroundColor: isLow ? t.danger : t.accent,
+                            },
+                          ]}
+                        />
+                      </View>
+                      <Text style={[styles.courseStatDetail, { color: t.textSecondary }]}>
+                        {Math.round(stat.present)}/{stat.total} classes attended
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
+            {/* Recent Records */}
+            {recentRecords.length > 0 && (
+              <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: t.text }]}>Recent Records</Text>
+                <View style={[styles.tableCard, { backgroundColor: t.card, borderColor: t.border }]}>
+                  <DataTable>
+                    <DataTable.Header style={[styles.tableHeader, { backgroundColor: t.surface }]}>
+                      <DataTable.Title textStyle={[styles.tableHeaderText, { color: t.textSecondary }]}>
+                        Course
+                      </DataTable.Title>
+                      <DataTable.Title textStyle={[styles.tableHeaderText, { color: t.textSecondary }]}>
+                        Date
+                      </DataTable.Title>
+                      <DataTable.Title textStyle={[styles.tableHeaderText, { color: t.textSecondary }]}>
+                        Status
+                      </DataTable.Title>
+                    </DataTable.Header>
+
+                    {recentRecords.map((record: any, idx: number) => (
+                      <DataTable.Row key={record._id || idx} style={[styles.tableRow, { borderBottomColor: t.border }]}>
+                        <DataTable.Cell textStyle={[styles.tableCellText, { color: t.text }]}>
+                          {record.course?.code || 'N/A'}
+                        </DataTable.Cell>
+                        <DataTable.Cell textStyle={[styles.tableCellText, { color: t.text }]}>
+                          {new Date(record.date).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                          })}
+                        </DataTable.Cell>
+                        <DataTable.Cell>
+                          <Chip
+                            mode="flat"
+                            style={{
+                              height: 26,
+                              backgroundColor:
+                                record.status === 'present'
+                                  ? t.presentBg
+                                  : record.status === 'absent'
+                                    ? t.absentBg
+                                    : t.lateBg,
+                            }}
+                            textStyle={{
+                              fontSize: 11,
+                              fontWeight: '600',
+                              color:
+                                record.status === 'present'
+                                  ? t.present
+                                  : record.status === 'absent'
+                                    ? t.absent
+                                    : t.late,
+                            }}
+                          >
+                            {record.status === 'present'
+                              ? 'Present'
+                              : record.status === 'late'
+                                ? 'Late'
+                                : 'Absent'}
+                          </Chip>
+                        </DataTable.Cell>
+                      </DataTable.Row>
+                    ))}
+                  </DataTable>
+                </View>
+              </View>
+            )}
+
+            {/* Info Note */}
+            <View style={[styles.infoCard, { backgroundColor: t.infoSoft }]}>
+              <Ionicons name="information-circle" size={20} color={t.info} />
+              <Text style={[styles.infoText, { color: t.info }]}>
+                Minimum 75% attendance is required for semester eligibility
+              </Text>
             </View>
-          )}
+          </>
+        )}
 
-          {/* Info Note */}
-          <Surface style={styles.infoCard} elevation={1}>
-            <Ionicons name="information-circle" size={20} color="#6366F1" />
-            <Text style={styles.infoText}>
-              Minimum 75% attendance is required for semester eligibility
-            </Text>
-          </Surface>
-        </>
-      )}
-
-      <View style={{ height: 40 }} />
-    </ScrollView>
+        <View style={{ height: 40 }} />
+      </ScrollView>
+    </>
   );
 }
 
@@ -660,130 +970,252 @@ function StudentView() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
-  header: { paddingTop: 50, paddingBottom: 20, paddingHorizontal: 20 },
+  container: { flex: 1 },
+  flex1: { flex: 1 },
+
+  // Header
+  header: { paddingTop: 50, paddingBottom: 16, paddingHorizontal: 20 },
   headerContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  headerTitle: { fontSize: 24, fontWeight: '700', color: '#FFFFFF', letterSpacing: 1.5 },
-  content: { flex: 1 },
-  contentContainer: { padding: 16 },
+  headerLabel: { fontSize: 14, fontWeight: '500', marginTop: 4 },
+  headerTitle: { fontSize: 16, fontWeight: '600' },
+  headerTitleLarge: { fontSize: 24, fontWeight: '700', letterSpacing: 1.5 },
+  backBtn: { marginBottom: 8, width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
 
-  // Selector card
-  selectorCard: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 16 },
-  selectorLabel: { fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 10 },
-  courseChips: { flexDirection: 'row', marginBottom: 12 },
-  courseChip: {
-    paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20,
-    borderWidth: 1.5, borderColor: '#E5E7EB', backgroundColor: '#F9FAFB', marginRight: 8,
+  // Step content
+  stepContent: { padding: 20 },
+  stepTitle: { fontSize: 26, fontWeight: '800', marginBottom: 24 },
+
+  // Field label
+  fieldLabel: { fontSize: 13, fontWeight: '600', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
+
+  // Dropdown
+  dropdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
-  courseChipActive: { borderColor: '#6366F1', backgroundColor: '#EEF2FF' },
-  courseChipText: { fontSize: 13, fontWeight: '600', color: '#6B7280' },
-  courseChipTextActive: { color: '#6366F1' },
-  dateRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  dateNavBtn: { padding: 6, borderRadius: 8, backgroundColor: '#EEF2FF' },
-  dateButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingHorizontal: 12, backgroundColor: '#F3F4F6', borderRadius: 8 },
-  dateText: { fontSize: 14, fontWeight: '500', color: '#374151' },
-
-  // Empty states
-  emptyCard: {
-    backgroundColor: '#fff', borderRadius: 16, padding: 32,
-    alignItems: 'center', marginBottom: 16,
+  dropdownText: { fontSize: 15, fontWeight: '500', flex: 1, marginRight: 8 },
+  dropdownList: {
+    borderWidth: 1,
+    borderRadius: 12,
+    marginTop: 4,
+    overflow: 'hidden',
   },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: '#374151', marginTop: 12 },
-  emptySubtitle: { fontSize: 13, color: '#9CA3AF', textAlign: 'center', marginTop: 4 },
-  emptyText: { fontSize: 13, color: '#9CA3AF', paddingVertical: 8 },
-
-  // Loading
-  centerBox: { alignItems: 'center', paddingVertical: 40 },
-  loadingText: { fontSize: 14, color: '#6B7280', marginTop: 12 },
-
-  // Course info
-  courseInfoCard: {
-    backgroundColor: '#EEF2FF', borderRadius: 12, padding: 12,
-    marginBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 8,
+  dropdownItem: { paddingHorizontal: 16, paddingVertical: 12, fontSize: 14 },
+  dropdownItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
   },
-  courseInfoText: { fontSize: 14, fontWeight: '600', color: '#4338CA', flex: 1 },
+  dropdownItemText: { fontSize: 14, fontWeight: '500', flex: 1 },
+
+  // Date nav
+  dateNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+  },
+  dateNavBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dateCenter: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dateText: { fontSize: 15, fontWeight: '600' },
+
+  // Primary button
+  primaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+    paddingVertical: 16,
+    marginTop: 32,
+  },
+  primaryBtnText: { fontSize: 16, fontWeight: '700', color: '#fff' },
+
+  // Secondary button
+  secondaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+    paddingVertical: 14,
+    marginTop: 12,
+    borderWidth: 1,
+  },
+  secondaryBtnText: { fontSize: 15, fontWeight: '600' },
 
   // Slot card
-  slotCard: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 16 },
-  slotHeader: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginBottom: 12,
+  slotCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 20,
   },
-  slotTimeRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  slotTime: { fontSize: 16, fontWeight: '700', color: '#111827' },
-  roomChip: { height: 28, marginLeft: 4 },
-  roomChipText: { fontSize: 11 },
-  markedCount: { fontSize: 12, fontWeight: '600', color: '#6B7280' },
+  slotHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  slotTimeInfo: { flex: 1 },
+  slotTime: { fontSize: 20, fontWeight: '800' },
+  slotRoom: { fontSize: 13, fontWeight: '500', marginTop: 2 },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  statusDot: { width: 6, height: 6, borderRadius: 3, marginRight: 6 },
+  statusText: { fontSize: 11, fontWeight: '600' },
 
-  // Quick actions
-  quickActions: { flexDirection: 'row', gap: 8, marginBottom: 12 },
-  quickBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8,
+  // Students section
+  studentsSection: { marginBottom: 12 },
+  studentsSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
-  quickBtnText: { fontSize: 12, fontWeight: '600' },
+  studentsSectionTitle: { fontSize: 15, fontWeight: '700' },
+  quickActions: { flexDirection: 'row', gap: 6 },
+  quickBtn: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  quickBtnText: { fontSize: 11, fontWeight: '700' },
 
   // Student row
   studentRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
   },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  avatarText: { fontSize: 12, fontWeight: '700' },
   studentInfo: { flex: 1, marginRight: 8 },
-  studentName: { fontSize: 14, fontWeight: '600', color: '#111827' },
-  studentId: { fontSize: 12, color: '#9CA3AF' },
+  studentName: { fontSize: 14, fontWeight: '600' },
 
-  // Status buttons
-  statusButtons: { flexDirection: 'row', gap: 6 },
-  statusBtn: {
-    width: 34, height: 34, borderRadius: 17,
-    borderWidth: 1.5, borderColor: '#E5E7EB',
-    alignItems: 'center', justifyContent: 'center',
+  // Circle buttons
+  statusCircles: { flexDirection: 'row', gap: 8 },
+  circle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  statusBtnPresent: { backgroundColor: '#059669', borderColor: '#059669' },
-  statusBtnAbsent: { backgroundColor: '#DC2626', borderColor: '#DC2626' },
-  statusBtnLate: { backgroundColor: '#D97706', borderColor: '#D97706' },
 
   // Submit
   submitBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#6366F1', borderRadius: 12, paddingVertical: 14, marginTop: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    paddingVertical: 14,
+    marginTop: 4,
   },
-  submitBtnDisabled: { opacity: 0.6 },
   submitBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  markedLabel: { fontSize: 12, fontWeight: '500', textAlign: 'center', marginTop: 8 },
 
-  // Student view chart
-  chartCard: { backgroundColor: '#1F2937', borderRadius: 20, padding: 24, marginBottom: 24 },
-
-  // Course stat cards
-  section: { marginBottom: 24 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 12 },
-  courseStatCard: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10 },
-  courseStatHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  courseStatName: { fontSize: 14, fontWeight: '600', color: '#111827' },
-  courseStatCode: { fontSize: 12, color: '#9CA3AF' },
-  percentBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  percentBadgeOk: { backgroundColor: '#D1FAE5' },
-  percentBadgeLow: { backgroundColor: '#FEE2E2' },
-  percentText: { fontSize: 14, fontWeight: '700' },
-  percentTextOk: { color: '#059669' },
-  percentTextLow: { color: '#DC2626' },
-  progressBg: { height: 6, backgroundColor: '#F3F4F6', borderRadius: 3, overflow: 'hidden' },
-  progressFill: { height: 6, borderRadius: 3 },
-  courseStatDetail: { fontSize: 12, color: '#6B7280', marginTop: 6 },
-
-  // Recent records table
-  tableCard: { backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden' },
-  tableHeader: { backgroundColor: '#F3F4F6' },
-  tableHeaderText: { fontSize: 13, fontWeight: '700', color: '#374151' },
-  tableRow: { borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-  tableCellText: { fontSize: 14, fontWeight: '500', color: '#111827' },
-  statusChip: { height: 28 },
-  statusChipText: { fontSize: 12, fontWeight: '600' },
-
-  // Info card
-  infoCard: {
-    flexDirection: 'row', alignItems: 'center', padding: 16,
-    backgroundColor: '#EEF2FF', borderRadius: 12, gap: 12,
+  // Success
+  successContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 40,
   },
-  infoText: { flex: 1, fontSize: 13, fontWeight: '500', color: '#4338CA', lineHeight: 18 },
+  successIconOuter: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  successIconInner: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  successTitle: { fontSize: 28, fontWeight: '800', marginBottom: 8 },
+  successSubtitle: { fontSize: 15, fontWeight: '500', textAlign: 'center', lineHeight: 22 },
+  successMeta: { fontSize: 13, fontWeight: '500', marginTop: 8 },
+
+  // Empty state
+  emptyState: {
+    borderRadius: 16,
+    padding: 40,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  emptyTitle: { fontSize: 16, fontWeight: '700', marginTop: 12 },
+  emptySubtitle: { fontSize: 13, textAlign: 'center', marginTop: 4 },
+
+  // Loading
+  centerBox: { alignItems: 'center', paddingVertical: 40 },
+  loadingText: { fontSize: 14, marginTop: 12 },
+
+  // Student view
+  chartCard: { borderRadius: 20, padding: 24, marginBottom: 24 },
+  section: { marginBottom: 24 },
+  sectionTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12 },
+  courseStatCard: { borderRadius: 12, borderWidth: 1, padding: 14, marginBottom: 10 },
+  courseStatHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  courseStatName: { fontSize: 14, fontWeight: '600' },
+  courseStatCode: { fontSize: 12 },
+  percentBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  percentText: { fontSize: 14, fontWeight: '700' },
+  progressBg: { height: 6, borderRadius: 3, overflow: 'hidden' },
+  progressFill: { height: 6, borderRadius: 3 },
+  courseStatDetail: { fontSize: 12, marginTop: 6 },
+
+  // Table
+  tableCard: { borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
+  tableHeader: {},
+  tableHeaderText: { fontSize: 13, fontWeight: '700' },
+  tableRow: { borderBottomWidth: 1 },
+  tableCellText: { fontSize: 14, fontWeight: '500' },
+
+  // Info
+  infoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    gap: 12,
+  },
+  infoText: { flex: 1, fontSize: 13, fontWeight: '500', lineHeight: 18 },
 });

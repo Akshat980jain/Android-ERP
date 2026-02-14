@@ -38,6 +38,7 @@ import { ReportsModule } from './components/modules/ReportsModule';
 import { SettingsModule } from './components/modules/SettingsModule';
 import { TransportModule } from './components/modules/TransportModule';
 import { HostelModule } from './components/modules/HostelModule';
+import { SectionModule } from './components/modules/SectionModule';
 import { LeaveModule } from './components/modules/LeaveModule';
 import { ParentPortal } from './components/modules/ParentPortal';
 import { RequestApproval } from './components/admin/RequestApproval';
@@ -202,6 +203,8 @@ function AppContent() {
                           return <SettingsModule />;
                         case 'background-showcase': // Background showcase for all users
                           return <BackgroundShowcase />;
+                        case 'sections': // Admin: Section Management
+                          return <SectionModule />;
                         default:
                           return (
                             <div className="text-center py-12">

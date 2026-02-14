@@ -43,6 +43,7 @@ const leavesRoutes = require('./routes/leaves');
 const hostelRoutes = require('./routes/hostel');
 const parentRoutes = require('./routes/parents');
 const emailRoutes = require('./routes/email');
+const sectionsRoutes = require('./routes/sections');
 
 // ========== SECURITY & PERFORMANCE MIDDLEWARE ==========
 app.use(helmet());
@@ -187,6 +188,7 @@ app.use('/api/leaves', leavesRoutes);
 app.use('/api/hostel', hostelRoutes);
 app.use('/api/parents', parentRoutes);
 app.use('/api/email', emailRoutes);
+app.use('/api/sections', sectionsRoutes);
 
 // ========== SERVER START ==========
 const PORT = process.env.PORT || 5000;
