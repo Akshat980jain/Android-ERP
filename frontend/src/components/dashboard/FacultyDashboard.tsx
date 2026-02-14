@@ -21,7 +21,7 @@ interface CourseResponse extends ApiResponse<unknown> {
 
 function FacultyApprovalPanel() {
   const { user } = useAuth();
-  
+
   // Define the request type
   type Request = {
     _id: string;
@@ -37,7 +37,7 @@ function FacultyApprovalPanel() {
     email?: string;
     requestedRole?: string;
   };
-  
+
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -69,7 +69,7 @@ function FacultyApprovalPanel() {
       const response = await apiClient.updateFacultyRequest(requestId, { status });
       if (response && typeof response === 'object' && 'success' in response && response.success) {
         // Update local state
-        setRequests(prev => prev.map(req => 
+        setRequests(prev => prev.map(req =>
           req._id === requestId ? { ...req, status } : req
         ));
       }
@@ -127,11 +127,11 @@ function FacultyApprovalPanel() {
 }
 
 export function FacultyDashboard() {
-  // Initialize with empty data
-  const attendanceData = [
+  // Attendance data fetched from API
+  const [attendanceData, setAttendanceData] = useState([
     { name: 'Present', value: 0, color: '#10B981' },
     { name: 'Absent', value: 0, color: '#EF4444' },
-  ];
+  ]);
 
   const marksData = [
     { subject: 'No Data', marks: 0 },
@@ -147,47 +147,67 @@ export function FacultyDashboard() {
 
   // Calculate quick stats based on actual data
   const quickStats = [
-    { 
-      title: 'Total Students', 
-      value: '0', 
-      icon: CheckCircle, 
-      color: 'text-green-600' 
+    {
+      title: 'Total Students',
+      value: '0',
+      icon: CheckCircle,
+      color: 'text-green-600'
     },
-    { 
-      title: 'Courses Teaching', 
-      value: facultyCourses.length.toString(), 
-      icon: Shield, 
-      color: 'text-blue-600' 
+    {
+      title: 'Courses Teaching',
+      value: facultyCourses.length.toString(),
+      icon: Shield,
+      color: 'text-blue-600'
     },
-    { 
-      title: 'Pending Requests', 
-      value: '0', 
-      icon: CheckCircle, 
-      color: 'text-orange-600' 
+    {
+      title: 'Pending Requests',
+      value: '0',
+      icon: CheckCircle,
+      color: 'text-orange-600'
     },
-    { 
-      title: 'Active Courses', 
-      value: facultyCourses.filter(c => c.status !== 'inactive').length.toString(), 
-      icon: Shield, 
-      color: 'text-purple-600' 
+    {
+      title: 'Active Courses',
+      value: facultyCourses.filter(c => c.status !== 'inactive').length.toString(),
+      icon: Shield,
+      color: 'text-purple-600'
     },
   ];
 
   useEffect(() => {
-    const loadFacultyCourses = async () => {
+    const loadFacultyData = async () => {
       if (!user || user.role !== 'faculty') return;
       try {
+        // Load courses
         const data = await apiClient.getFacultyCourses();
         if (data && typeof data === 'object' && 'success' in data && data.success) {
           const courseResponse = data as CourseResponse;
           setFacultyCourses(courseResponse.courses || []);
         }
+
+        // Load attendance stats for the faculty's courses
+        const attendanceRes = await apiClient.getAttendance();
+        if (attendanceRes && typeof attendanceRes === 'object' && 'stats' in attendanceRes) {
+          const stats = (attendanceRes as any).stats || [];
+          let totalPresent = 0;
+          let totalAbsent = 0;
+          stats.forEach((s: any) => {
+            totalPresent += s.present || 0;
+            totalAbsent += (s.total || 0) - (s.present || 0);
+          });
+          const totalAll = totalPresent + totalAbsent;
+          if (totalAll > 0) {
+            setAttendanceData([
+              { name: 'Present', value: Math.round((totalPresent / totalAll) * 100), color: '#10B981' },
+              { name: 'Absent', value: Math.round((totalAbsent / totalAll) * 100), color: '#EF4444' },
+            ]);
+          }
+        }
       } catch (err: unknown) {
-        console.error('Failed to load faculty courses:', err);
+        console.error('Failed to load faculty data:', err);
       }
     };
 
-    loadFacultyCourses();
+    loadFacultyData();
   }, [user]);
 
   return (

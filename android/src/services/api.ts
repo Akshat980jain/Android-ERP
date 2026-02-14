@@ -500,6 +500,28 @@ class ApiService {
     });
   }
 
+  // Schedule-based attendance (faculty)
+  async getScheduleAttendance(courseId: string, date: string): Promise<ApiResponse<any>> {
+    return this.request(`/academic/schedule-attendance?courseId=${encodeURIComponent(courseId)}&date=${encodeURIComponent(date)}`);
+  }
+
+  async markScheduleAttendance(data: {
+    courseId: string;
+    date: string;
+    scheduleSlot: { startTime: string; endTime: string };
+    attendanceData: Array<{ studentId: string; status: string; remarks?: string }>;
+  }): Promise<ApiResponse<any>> {
+    return this.request('/academic/schedule-attendance', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Get attendance stats (role-aware: student sees own, faculty sees all for their courses)
+  async getAttendanceStats(): Promise<ApiResponse<any>> {
+    return this.request('/attendance');
+  }
+
   async addMarks(marksData: any): Promise<ApiResponse<any>> {
     return this.request('/faculty/marks', {
       method: 'POST',
