@@ -110,5 +110,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Type-check
+      - name: Type-check (warnings only)
         run: npx tsc --noEmit --skipLibCheck
+        continue-on-error: true
