@@ -54,6 +54,8 @@ import LoadingScreen from '../screens/common/LoadingScreen';
 import RequestApprovalScreen from '../screens/admin/RequestApprovalScreen';
 import AdminAcademicScreen from '../screens/admin/AdminAcademicScreen';
 import SectionManagementScreen from '../screens/admin/SectionManagementScreen';
+import StudentSectionScreen from '../screens/modules/StudentSectionScreen';
+import FacultySectionScreen from '../screens/modules/FacultySectionScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -328,6 +330,8 @@ function AppNavigator() {
         <Stack.Screen name="StudentManagement" component={StudentManagementScreen} />
         <Stack.Screen name="UserManagement" component={UserManagementScreen} />
         <Stack.Screen name="SectionManagement" component={SectionManagementScreen} />
+        <Stack.Screen name="MySection" component={StudentSectionScreen} />
+        <Stack.Screen name="FacultySections" component={FacultySectionScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

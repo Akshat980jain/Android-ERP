@@ -735,6 +735,15 @@ class ApiClient {
   async deleteSection(id: string) {
     return this.request(`/sections/${id}`, { method: 'DELETE' });
   }
+
+  async getMySection() {
+    return this.request('/sections/my-section');
+  }
+
+  async getFacultySections(params?: { semester?: number }) {
+    const queryString = params?.semester ? `?semester=${params.semester}` : '';
+    return this.request(`/sections/faculty-sections${queryString}`);
+  }
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);

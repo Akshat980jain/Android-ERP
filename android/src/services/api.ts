@@ -972,6 +972,17 @@ class ApiService {
   async deleteSection(id: string): Promise<ApiResponse<any>> {
     return this.request(`/sections/${id}`, { method: 'DELETE' });
   }
+
+  // Student: view own section
+  async getMySection(): Promise<ApiResponse<any>> {
+    return this.request('/sections/my-section');
+  }
+
+  // Faculty: view relevant sections
+  async getFacultySections(params?: { semester?: number }): Promise<ApiResponse<any>> {
+    const query = params?.semester ? `?semester=${params.semester}` : '';
+    return this.request(`/sections/faculty-sections${query}`);
+  }
 }
 
 export default new ApiService();

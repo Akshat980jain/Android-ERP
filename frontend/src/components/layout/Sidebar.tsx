@@ -300,6 +300,14 @@ export function Sidebar({
               description: 'Apply for leave',
               color: 'rose'
             },
+            {
+              id: 'my-section',
+              label: 'My Section',
+              icon: Layers,
+              category: 'academics',
+              description: 'Your assigned section & classmates',
+              color: 'indigo'
+            },
           ];
 
         case 'faculty':
@@ -393,6 +401,14 @@ export function Sidebar({
               category: 'management',
               description: 'Manage leave requests',
               color: 'rose'
+            },
+            {
+              id: 'sections',
+              label: 'Sections',
+              icon: Layers,
+              category: 'management',
+              description: 'View sections & students',
+              color: 'indigo'
             },
           ];
 

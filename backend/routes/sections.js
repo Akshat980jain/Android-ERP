@@ -60,6 +60,69 @@ router.get('/', auth, authorize('admin'), async (req, res) => {
 });
 
 // ──────────────────────────────────────
+// GET /api/sections/my-section — Student: view own section
+// ──────────────────────────────────────
+router.get('/my-section', auth, async (req, res) => {
+    try {
+        // Find the section where this student is enrolled
+        const section = await Section.findOne({
+            students: req.user._id,
+            status: 'active'
+        })
+            .populate('students', 'name email profile.studentId profile.semester profile.section')
+            .populate('createdBy', 'name email');
+
+        if (!section) {
+            return res.json({
+                success: true,
+                section: null,
+                message: 'You are not assigned to any section yet'
+            });
+        }
+
+        res.json({ success: true, section });
+    } catch (error) {
+        console.error('Error fetching student section:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch your section' });
+    }
+});
+
+// ──────────────────────────────────────
+// GET /api/sections/faculty-sections — Faculty: view relevant sections
+// ──────────────────────────────────────
+router.get('/faculty-sections', auth, authorize('faculty'), async (req, res) => {
+    try {
+        const { semester } = req.query;
+        const query = { status: 'active' };
+
+        // Scope by faculty's program if available
+        if (req.user.program) {
+            query.program = req.user.program;
+        }
+        if (req.user.branch) {
+            query.branch = req.user.branch;
+        }
+        if (semester) {
+            query.semester = Number(semester);
+        }
+
+        const sections = await Section.find(query)
+            .populate('students', 'name email profile.studentId profile.semester profile.section')
+            .populate('createdBy', 'name email')
+            .sort({ semester: 1, name: 1 });
+
+        res.json({
+            success: true,
+            sections,
+            count: sections.length
+        });
+    } catch (error) {
+        console.error('Error fetching faculty sections:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch sections' });
+    }
+});
+
+// ──────────────────────────────────────
 // POST /api/sections — Create section
 // ──────────────────────────────────────
 router.post('/', auth, authorize('admin'), async (req, res) => {
