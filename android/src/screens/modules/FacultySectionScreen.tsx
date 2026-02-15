@@ -172,7 +172,7 @@ export default function FacultySectionScreen() {
                                 </LinearGradient>
                                 <View style={styles.sectionInfo}>
                                     <Text style={styles.sectionName}>
-                                        {section.program} {section.branch ? `- ${section.branch}` : ''}
+                                        Section {section.name} • {section.program} {section.branch ? `- ${section.branch}` : ''}
                                     </Text>
                                     <View style={styles.sectionBadges}>
                                         <View style={styles.semBadge}>

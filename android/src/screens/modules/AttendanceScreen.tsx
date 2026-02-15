@@ -157,45 +157,46 @@ export default function AttendanceScreen({ navigation }: any) {
 // FACULTY 3-STEP FLOW (matching reference image)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-type FacultyStep = 'select' | 'slots' | 'success';
+type FacultyStep = 'section' | 'course' | 'mark' | 'success';
+
+interface SectionItem {
+  _id: string;
+  name: string;
+  semester: number;
+  program: string;
+  branch: string;
+  academicYear: string;
+  students: Student[];
+  maxStudents: number;
+  status: string;
+}
 
 function FacultyFlow({ theme: t }: { theme: typeof themes.dark }) {
-  const [step, setStep] = useState<FacultyStep>('select');
+  const [step, setStep] = useState<FacultyStep>('section');
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  // Step 1: Sections
+  const [sections, setSections] = useState<SectionItem[]>([]);
+  const [selectedSection, setSelectedSection] = useState<SectionItem | null>(null);
+  const [sectionsLoading, setSectionsLoading] = useState(true);
+
+  // Step 2: Course + Date
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [scheduleData, setScheduleData] = useState<SlotData[]>([]);
-  const [courseInfo, setCourseInfo] = useState<{ name: string; code: string } | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState<number | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [successSlot, setSuccessSlot] = useState('');
-  const fadeAnim = useRef(new Animated.Value(1)).current;
 
-  // Current time for status
-  const [currentTime, setCurrentTime] = useState(new Date());
-  useEffect(() => {
-    const interval = setInterval(() => setCurrentTime(new Date()), 60000);
-    return () => clearInterval(interval);
-  }, []);
+  // Step 3: Students + checkboxes
+  const [students, setStudents] = useState<Student[]>([]);
+  const [checkedStudents, setCheckedStudents] = useState<Set<string>>(new Set());
+  const [scheduleSlots, setScheduleSlots] = useState<ScheduleSlot[]>([]);
+  const [selectedSlotIndex, setSelectedSlotIndex] = useState(0);
 
-  // Fetch courses on mount
-  useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        const res = await apiService.getFacultyCourses();
-        const data = res as any;
-        if (data?.success !== false) {
-          setCourses(data?.courses || []);
-        }
-      } catch (e) {
-        console.error('Error fetching courses:', e);
-      }
-    };
-    fetchCourses();
-  }, []);
-
-  const selectedCourse = courses.find(c => c._id === selectedCourseId);
+  // UI state
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [successInfo, setSuccessInfo] = useState({ present: 0, absent: 0 });
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Transition helper
   const animateTransition = (nextStep: FacultyStep) => {
@@ -205,137 +206,236 @@ function FacultyFlow({ theme: t }: { theme: typeof themes.dark }) {
     });
   };
 
-  // Find Slots
-  const findSlots = async () => {
-    if (!selectedCourseId) {
-      Alert.alert('Select Course', 'Please select a course first.');
-      return;
-    }
+  // ── Fetch sections on mount ──
+  useEffect(() => {
+    const fetchSections = async () => {
+      setSectionsLoading(true);
+      try {
+        const res = await apiService.getFacultySections() as any;
+        if (res?.success !== false) {
+          setSections(res?.sections || []);
+        }
+      } catch (e) {
+        console.error('Error fetching sections:', e);
+      } finally {
+        setSectionsLoading(false);
+      }
+    };
+    fetchSections();
+  }, []);
+
+  // ── Fetch courses when section selected ──
+  useEffect(() => {
+    if (!selectedSection) return;
+    const fetchCourses = async () => {
+      try {
+        const res = await apiService.getFacultyCourses() as any;
+        if (res?.success !== false) {
+          setCourses(res?.courses || []);
+        }
+      } catch (e) {
+        console.error('Error fetching courses:', e);
+      }
+    };
+    fetchCourses();
+  }, [selectedSection]);
+
+  const selectedCourse = courses.find(c => c._id === selectedCourseId);
+  const dateStr = selectedDate.toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+  });
+
+  // ── Load students from section + schedule slots ──
+  const loadStudentsAndSlots = async () => {
+    if (!selectedSection || !selectedCourseId) return;
     setLoading(true);
     try {
-      const dateStr = selectedDate.toISOString().split('T')[0];
-      const res = await apiService.getScheduleAttendance(selectedCourseId, dateStr);
-      const data = res as any;
+      const dateString = selectedDate.toISOString().split('T')[0];
+      const data = await apiService.getScheduleAttendance(selectedCourseId, dateString) as any;
       if (data?.success !== false) {
-        setScheduleData(data.attendanceMatrix || []);
-        setCourseInfo(data.course || null);
-        animateTransition('slots');
+        setStudents(selectedSection.students);
+
+        if (data.attendanceMatrix && data.attendanceMatrix.length > 0) {
+          setScheduleSlots(data.attendanceMatrix.map((sm: any) => sm.slot));
+          setSelectedSlotIndex(0);
+          // Pre-check already present students
+          const firstSlot = data.attendanceMatrix[0]?.attendance || [];
+          const preChecked = new Set<string>();
+          firstSlot.forEach((r: any) => {
+            if (r.status === 'present' || r.status === 'late') {
+              preChecked.add(r.student._id);
+            }
+          });
+          setCheckedStudents(preChecked);
+        } else {
+          setScheduleSlots([]);
+          setCheckedStudents(new Set());
+        }
+        animateTransition('mark');
       } else {
-        Alert.alert('Error', data.message || 'Failed to fetch schedule');
+        Alert.alert('Error', data?.message || 'Failed to load schedule');
       }
     } catch (e: any) {
-      Alert.alert('Error', e.message || 'Failed to fetch schedule');
+      Alert.alert('Error', e.message || 'Failed to load data');
     } finally {
       setLoading(false);
     }
   };
 
-  // Time status helpers
-  const getTimeStatus = (slotTime: string, slotEndTime?: string) => {
-    const now = currentTime;
-    const dateStr = selectedDate.toISOString().split('T')[0];
-    const start = new Date(dateStr + 'T' + slotTime);
-    const end = slotEndTime
-      ? new Date(dateStr + 'T' + slotEndTime)
-      : new Date(start.getTime() + 60 * 60 * 1000);
-
-    if (now < start) return 'upcoming';
-    if (now >= start && now <= end) return 'current';
-    return 'past';
-  };
-
-  // Toggle student status
-  const toggleStatus = (slotIdx: number, studentIdx: number, status: 'present' | 'absent' | 'late') => {
-    setScheduleData(prev => {
-      const updated = [...prev];
-      const slot = { ...updated[slotIdx] };
-      const attendance = [...slot.attendance];
-      attendance[studentIdx] = {
-        ...attendance[studentIdx],
-        status: attendance[studentIdx].status === status ? null : status,
-        markedAt: new Date().toISOString(),
-      };
-      slot.attendance = attendance;
-      updated[slotIdx] = slot;
-      return updated;
+  // ── Toggle helpers ──
+  const toggleStudent = (id: string) => {
+    setCheckedStudents(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
     });
   };
 
-  // Mark all in slot
-  const markAllInSlot = (slotIdx: number, status: 'present' | 'absent') => {
-    setScheduleData(prev => {
-      const updated = [...prev];
-      const slot = { ...updated[slotIdx] };
-      slot.attendance = slot.attendance.map(r => ({
-        ...r,
-        status,
-        markedAt: new Date().toISOString(),
-      }));
-      updated[slotIdx] = slot;
-      return updated;
+  const toggleAll = () => {
+    const filtered = getFilteredStudents();
+    const allChecked = filtered.every(s => checkedStudents.has(s._id));
+    setCheckedStudents(prev => {
+      const next = new Set(prev);
+      filtered.forEach(s => allChecked ? next.delete(s._id) : next.add(s._id));
+      return next;
     });
   };
 
-  // Submit attendance for a slot
-  const submitSlot = async (slotIdx: number) => {
-    const slot = scheduleData[slotIdx];
-    const attendanceData = slot.attendance
-      .filter(r => r.status !== null && r.student._id)
-      .map(r => ({
-        studentId: r.student._id,
-        status: r.status!,
-        remarks: r.remarks || '',
-      }));
+  const getFilteredStudents = () => {
+    if (!searchQuery.trim()) return students;
+    const q = searchQuery.toLowerCase();
+    return students.filter(s =>
+      s.name.toLowerCase().includes(q) ||
+      s.email.toLowerCase().includes(q) ||
+      (s.profile?.studentId || '').toLowerCase().includes(q)
+    );
+  };
 
-    if (attendanceData.length === 0) {
-      Alert.alert('No Data', 'Mark at least one student before submitting.');
-      return;
-    }
-
-    setSubmitting(slotIdx);
+  // ── Submit attendance ──
+  const submitAttendance = async () => {
+    if (students.length === 0) return;
+    setSubmitting(true);
     try {
-      const dateStr = selectedDate.toISOString().split('T')[0];
-      const res = await apiService.markScheduleAttendance({
-        courseId: selectedCourseId,
-        date: dateStr,
-        scheduleSlot: {
-          startTime: slot.slot.time,
-          endTime: slot.slot.endTime || slot.slot.time,
-        },
-        attendanceData,
-      });
+      const attendanceData = students.map(s => ({
+        studentId: s._id,
+        status: checkedStudents.has(s._id) ? 'present' as const : 'absent' as const,
+        remarks: '',
+      }));
 
-      if ((res as any).success !== false) {
-        setSuccessSlot(slot.slot.time);
+      const slot = scheduleSlots[selectedSlotIndex];
+      const payload: any = {
+        courseId: selectedCourseId,
+        date: selectedDate.toISOString().split('T')[0],
+        attendanceData,
+      };
+      if (slot) {
+        payload.scheduleSlot = { startTime: slot.time, endTime: slot.endTime || slot.time };
+      }
+
+      const res = await apiService.markScheduleAttendance(payload) as any;
+      if (res?.success !== false) {
+        setSuccessInfo({ present: checkedStudents.size, absent: students.length - checkedStudents.size });
         animateTransition('success');
       } else {
-        Alert.alert('Error', (res as any).message || 'Failed to submit');
+        Alert.alert('Error', res?.message || 'Failed to submit');
       }
     } catch (e: any) {
       Alert.alert('Error', e.message || 'Failed to submit attendance');
     } finally {
-      setSubmitting(null);
+      setSubmitting(false);
     }
   };
 
-  const dateStr = selectedDate.toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  const filteredStudents = getFilteredStudents();
+  const allFilteredChecked = filteredStudents.length > 0 && filteredStudents.every(s => checkedStudents.has(s._id));
 
-  // ── STEP 1: Select Course & Date ──────────────────────────────────────────
-
-  if (step === 'select') {
+  // ═══ STEP 1: Section Picker ═══
+  if (step === 'section') {
     return (
       <Animated.View style={[styles.flex1, { opacity: fadeAnim }]}>
-        {/* Header */}
-        <LinearGradient colors={t.headerGrad} style={styles.header}>
-          <TouchableOpacity onPress={() => navigation?.goBack?.()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={22} color={t.text} />
+        <LinearGradient colors={['#059669', '#0D9488']} style={styles.header}>
+          <Text style={[styles.headerLabel, { color: '#D1FAE5' }]}>Faculty Attendance</Text>
+          <Text style={[styles.stepTitle, { color: '#fff', marginBottom: 0, fontSize: 20 }]}>Select a Section</Text>
+        </LinearGradient>
+
+        <ScrollView
+          style={styles.flex1}
+          contentContainerStyle={[styles.stepContent, { backgroundColor: t.bg }]}
+          showsVerticalScrollIndicator={false}
+        >
+          {sectionsLoading ? (
+            <View style={styles.centerBox}>
+              <ActivityIndicator size="large" color={t.accent} />
+              <Text style={[styles.loadingText, { color: t.textSecondary }]}>Loading sections...</Text>
+            </View>
+          ) : sections.length === 0 ? (
+            <View style={[styles.emptyState, { backgroundColor: t.card }]}>
+              <Ionicons name="layers-outline" size={48} color={t.textMuted} />
+              <Text style={[styles.emptyTitle, { color: t.text }]}>No Sections Found</Text>
+              <Text style={[styles.emptySubtitle, { color: t.textSecondary }]}>
+                No sections available for your program
+              </Text>
+            </View>
+          ) : (
+            sections.map((section) => (
+              <TouchableOpacity
+                key={section._id}
+                style={[styles.slotCard, { backgroundColor: t.card, borderColor: t.border, marginBottom: 12 }]}
+                onPress={() => {
+                  setSelectedSection(section);
+                  setSelectedCourseId('');
+                  setStudents([]);
+                  setCheckedStudents(new Set());
+                  animateTransition('course');
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <LinearGradient
+                    colors={['#6366F1', '#8B5CF6']}
+                    style={{
+                      width: 48, height: 48, borderRadius: 14,
+                      alignItems: 'center', justifyContent: 'center', marginRight: 14,
+                    }}
+                  >
+                    <Text style={{ color: '#fff', fontWeight: '800', fontSize: 18 }}>{section.name}</Text>
+                  </LinearGradient>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.studentName, { color: t.text, fontSize: 15 }]}>
+                      Section {section.name} • {section.program} {section.branch ? `- ${section.branch}` : ''}
+                    </Text>
+                    <Text style={{ color: t.textSecondary, fontSize: 12, marginTop: 2 }}>
+                      Sem {section.semester} • {section.academicYear}
+                    </Text>
+                  </View>
+                  <View style={{ alignItems: 'center' }}>
+                    <Text style={{ color: t.accent, fontWeight: '700', fontSize: 16 }}>
+                      {section.students.length}
+                    </Text>
+                    <Text style={{ color: t.textMuted, fontSize: 10 }}>students</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={t.textMuted} style={{ marginLeft: 8 }} />
+                </View>
+              </TouchableOpacity>
+            ))
+          )}
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </Animated.View>
+    );
+  }
+
+  // ═══ STEP 2: Course + Date ═══
+  if (step === 'course') {
+    return (
+      <Animated.View style={[styles.flex1, { opacity: fadeAnim }]}>
+        <LinearGradient colors={['#6366F1', '#8B5CF6']} style={styles.header}>
+          <TouchableOpacity onPress={() => { setSelectedSection(null); animateTransition('section'); }} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={22} color="#fff" />
           </TouchableOpacity>
-          <Text style={[styles.headerLabel, { color: t.textSecondary }]}>Faculty Attendance</Text>
+          <Text style={[styles.headerLabel, { color: '#C7D2FE' }]}>
+            Section {selectedSection?.name} • {selectedSection?.students.length} students
+          </Text>
         </LinearGradient>
 
         <ScrollView
@@ -352,24 +452,14 @@ function FacultyFlow({ theme: t }: { theme: typeof themes.dark }) {
             onPress={() => setShowDropdown(!showDropdown)}
           >
             <Text
-              style={[
-                styles.dropdownText,
-                { color: selectedCourse ? t.text : t.textMuted },
-              ]}
+              style={[styles.dropdownText, { color: selectedCourse ? t.text : t.textMuted }]}
               numberOfLines={1}
             >
-              {selectedCourse
-                ? `${selectedCourse.code} - ${selectedCourse.name}`
-                : 'Choose a course'}
+              {selectedCourse ? `${selectedCourse.code} - ${selectedCourse.name}` : 'Choose a course'}
             </Text>
-            <Ionicons
-              name={showDropdown ? 'chevron-up' : 'chevron-down'}
-              size={20}
-              color={t.textMuted}
-            />
+            <Ionicons name={showDropdown ? 'chevron-up' : 'chevron-down'} size={20} color={t.textMuted} />
           </TouchableOpacity>
 
-          {/* Dropdown Options */}
           {showDropdown && (
             <View style={[styles.dropdownList, { backgroundColor: t.dropdownBg, borderColor: t.border }]}>
               {courses.length === 0 ? (
@@ -383,23 +473,15 @@ function FacultyFlow({ theme: t }: { theme: typeof themes.dark }) {
                       selectedCourseId === course._id && { backgroundColor: t.accentSoft },
                       { borderBottomColor: t.border },
                     ]}
-                    onPress={() => {
-                      setSelectedCourseId(course._id);
-                      setShowDropdown(false);
-                    }}
+                    onPress={() => { setSelectedCourseId(course._id); setShowDropdown(false); }}
                   >
                     <Text
-                      style={[
-                        styles.dropdownItemText,
-                        { color: selectedCourseId === course._id ? t.accent : t.text },
-                      ]}
+                      style={[styles.dropdownItemText, { color: selectedCourseId === course._id ? t.accent : t.text }]}
                       numberOfLines={1}
                     >
                       {course.code} - {course.name}
                     </Text>
-                    {selectedCourseId === course._id && (
-                      <Ionicons name="checkmark" size={18} color={t.accent} />
-                    )}
+                    {selectedCourseId === course._id && <Ionicons name="checkmark" size={18} color={t.accent} />}
                   </TouchableOpacity>
                 ))
               )}
@@ -410,49 +492,35 @@ function FacultyFlow({ theme: t }: { theme: typeof themes.dark }) {
           <Text style={[styles.fieldLabel, { color: t.textSecondary, marginTop: 24 }]}>Date</Text>
           <View style={[styles.dateNav, { backgroundColor: t.inputBg, borderColor: t.inputBorder }]}>
             <TouchableOpacity
-              onPress={() =>
-                setSelectedDate(d => {
-                  const n = new Date(d);
-                  n.setDate(n.getDate() - 1);
-                  return n;
-                })
-              }
+              onPress={() => setSelectedDate(d => { const n = new Date(d); n.setDate(n.getDate() - 1); return n; })}
               style={[styles.dateNavBtn, { backgroundColor: t.surface }]}
             >
               <Ionicons name="chevron-back" size={20} color={t.accent} />
             </TouchableOpacity>
-
             <View style={styles.dateCenter}>
               <Ionicons name="calendar" size={16} color={t.accent} style={{ marginRight: 8 }} />
               <Text style={[styles.dateText, { color: t.text }]}>{dateStr}</Text>
             </View>
-
             <TouchableOpacity
-              onPress={() =>
-                setSelectedDate(d => {
-                  const n = new Date(d);
-                  n.setDate(n.getDate() + 1);
-                  return n;
-                })
-              }
+              onPress={() => setSelectedDate(d => { const n = new Date(d); n.setDate(n.getDate() + 1); return n; })}
               style={[styles.dateNavBtn, { backgroundColor: t.surface }]}
             >
               <Ionicons name="chevron-forward" size={20} color={t.accent} />
             </TouchableOpacity>
           </View>
 
-          {/* Find Slots Button */}
+          {/* Load Students Button */}
           <TouchableOpacity
-            style={[styles.primaryBtn, { backgroundColor: t.accent, opacity: loading ? 0.7 : 1 }]}
-            onPress={findSlots}
-            disabled={loading}
+            style={[styles.primaryBtn, { backgroundColor: t.accent, opacity: loading || !selectedCourseId ? 0.6 : 1 }]}
+            onPress={loadStudentsAndSlots}
+            disabled={loading || !selectedCourseId}
           >
             {loading ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
               <>
-                <Ionicons name="search" size={18} color="#fff" style={{ marginRight: 8 }} />
-                <Text style={styles.primaryBtnText}>Find Slots</Text>
+                <Ionicons name="people" size={18} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={styles.primaryBtnText}>Load Students</Text>
               </>
             )}
           </TouchableOpacity>
@@ -461,228 +529,186 @@ function FacultyFlow({ theme: t }: { theme: typeof themes.dark }) {
     );
   }
 
-  // ── STEP 2: Available Time Slots ──────────────────────────────────────────
-
-  if (step === 'slots') {
+  // ═══ STEP 3: Student Checkbox List ═══
+  if (step === 'mark') {
     return (
       <Animated.View style={[styles.flex1, { opacity: fadeAnim }]}>
-        {/* Header */}
-        <LinearGradient colors={t.headerGrad} style={styles.header}>
-          <TouchableOpacity onPress={() => animateTransition('select')} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={22} color={t.text} />
+        {/* Header with counters */}
+        <LinearGradient colors={['#6366F1', '#8B5CF6']} style={[styles.header, { paddingBottom: 20 }]}>
+          <TouchableOpacity onPress={() => animateTransition('course')} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={22} color="#fff" />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: t.text }]}>
-            {courseInfo?.code || ''} - {dateStr.split(',').slice(0, 2).join(',')}
+          <Text style={{ color: '#C7D2FE', fontSize: 12, fontWeight: '600' }}>
+            Section {selectedSection?.name} • {selectedCourse?.code || 'Course'}
           </Text>
+          <Text style={{ color: '#fff', fontSize: 14, fontWeight: '500', marginTop: 2 }}>
+            {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+          </Text>
+
+          {/* Counters */}
+          <View style={{ flexDirection: 'row', marginTop: 12, gap: 16 }}>
+            <View style={{ alignItems: 'center' }}>
+              <Text style={{ color: '#fff', fontSize: 22, fontWeight: '800' }}>{checkedStudents.size}</Text>
+              <Text style={{ color: '#A7F3D0', fontSize: 10, fontWeight: '600' }}>Present</Text>
+            </View>
+            <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.3)', height: 30 }} />
+            <View style={{ alignItems: 'center' }}>
+              <Text style={{ color: '#fff', fontSize: 22, fontWeight: '800' }}>{students.length - checkedStudents.size}</Text>
+              <Text style={{ color: '#FCA5A5', fontSize: 10, fontWeight: '600' }}>Absent</Text>
+            </View>
+            <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.3)', height: 30 }} />
+            <View style={{ alignItems: 'center' }}>
+              <Text style={{ color: '#fff', fontSize: 22, fontWeight: '800' }}>{students.length}</Text>
+              <Text style={{ color: '#C7D2FE', fontSize: 10, fontWeight: '600' }}>Total</Text>
+            </View>
+          </View>
         </LinearGradient>
 
         <ScrollView
           style={styles.flex1}
-          contentContainerStyle={[styles.stepContent, { backgroundColor: t.bg }]}
+          contentContainerStyle={[styles.stepContent, { backgroundColor: t.bg, paddingTop: 8 }]}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={[styles.stepTitle, { color: t.text }]}>Available Time Slots</Text>
+          {/* Schedule slot picker */}
+          {scheduleSlots.length > 1 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+              {scheduleSlots.map((slot, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  onPress={() => setSelectedSlotIndex(idx)}
+                  style={{
+                    paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, marginRight: 8,
+                    backgroundColor: selectedSlotIndex === idx ? t.accent : t.card,
+                    borderWidth: 1, borderColor: selectedSlotIndex === idx ? t.accent : t.border,
+                  }}
+                >
+                  <Text style={{ color: selectedSlotIndex === idx ? '#fff' : t.text, fontSize: 13, fontWeight: '600' }}>
+                    {slot.time}{slot.endTime ? ` - ${slot.endTime}` : ''}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
 
-          {scheduleData.length === 0 ? (
+          {/* Select All button */}
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 12, gap: 8 }}>
+            <TouchableOpacity
+              onPress={toggleAll}
+              style={{
+                flexDirection: 'row', alignItems: 'center',
+                paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10,
+                backgroundColor: allFilteredChecked ? t.accentSoft : t.card,
+                borderWidth: 1, borderColor: allFilteredChecked ? t.accent : t.border,
+              }}
+            >
+              <Ionicons
+                name={allFilteredChecked ? 'checkbox' : 'square-outline'}
+                size={18}
+                color={allFilteredChecked ? t.accent : t.textSecondary}
+              />
+              <Text style={{ color: allFilteredChecked ? t.accent : t.textSecondary, fontSize: 13, fontWeight: '600', marginLeft: 6 }}>
+                {allFilteredChecked ? 'Deselect All' : 'Select All'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Student list */}
+          {filteredStudents.length === 0 ? (
             <View style={[styles.emptyState, { backgroundColor: t.card }]}>
-              <Ionicons name="calendar-outline" size={48} color={t.textMuted} />
-              <Text style={[styles.emptyTitle, { color: t.text }]}>No Classes Scheduled</Text>
+              <Ionicons name="people-outline" size={48} color={t.textMuted} />
+              <Text style={[styles.emptyTitle, { color: t.text }]}>No Students</Text>
               <Text style={[styles.emptySubtitle, { color: t.textSecondary }]}>
-                No scheduled classes for this date
+                No students found in this section
               </Text>
             </View>
           ) : (
-            scheduleData.map((slotData, slotIdx) => {
-              const timeStatus = getTimeStatus(slotData.slot.time, slotData.slot.endTime);
-              const markedCount = slotData.attendance.filter(r => r.status !== null).length;
-              const totalStudents = slotData.attendance.length;
-              const isSubmitting = submitting === slotIdx;
-
-              return (
-                <View key={slotIdx} style={[styles.slotCard, { backgroundColor: t.card, borderColor: t.border }]}>
-                  {/* Slot Header */}
-                  <View style={styles.slotHeaderRow}>
-                    <View style={styles.slotTimeInfo}>
-                      <Text style={[styles.slotTime, { color: t.text }]}>
-                        {slotData.slot.time}
-                        {slotData.slot.endTime ? ` - ${slotData.slot.endTime}` : ''}
-                      </Text>
-                      <Text style={[styles.slotRoom, { color: t.textSecondary }]}>
-                        {slotData.slot.room ? `| ${slotData.slot.room}` : ''}
-                      </Text>
-                    </View>
-                    <View
-                      style={[
-                        styles.statusBadge,
-                        {
-                          backgroundColor:
-                            timeStatus === 'current'
-                              ? t.accentSoft
-                              : timeStatus === 'upcoming'
-                                ? t.infoSoft
-                                : t.surface,
-                        },
-                      ]}
-                    >
-                      <View
-                        style={[
-                          styles.statusDot,
-                          {
-                            backgroundColor:
-                              timeStatus === 'current'
-                                ? t.accent
-                                : timeStatus === 'upcoming'
-                                  ? t.info
-                                  : t.textMuted,
-                          },
-                        ]}
-                      />
-                      <Text
-                        style={[
-                          styles.statusText,
-                          {
-                            color:
-                              timeStatus === 'current'
-                                ? t.accent
-                                : timeStatus === 'upcoming'
-                                  ? t.info
-                                  : t.textMuted,
-                          },
-                        ]}
-                      >
-                        {timeStatus === 'current'
-                          ? 'Currently in session'
-                          : timeStatus === 'upcoming'
-                            ? 'Upcoming'
-                            : 'Completed'}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Students Section */}
-                  <View style={styles.studentsSection}>
-                    <View style={styles.studentsSectionHeader}>
-                      <Text style={[styles.studentsSectionTitle, { color: t.text }]}>Students</Text>
-                      <View style={styles.quickActions}>
-                        <TouchableOpacity
-                          style={[styles.quickBtn, { borderColor: t.present }]}
-                          onPress={() => markAllInSlot(slotIdx, 'present')}
-                        >
-                          <Text style={[styles.quickBtnText, { color: t.present }]}>All Present</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[styles.quickBtn, { borderColor: t.absent }]}
-                          onPress={() => markAllInSlot(slotIdx, 'absent')}
-                        >
-                          <Text style={[styles.quickBtnText, { color: t.absent }]}>All Absent</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-
-                    {/* Student List */}
-                    {slotData.attendance.map((record, studentIdx) => {
-                      const initials = record.student.name
-                        .split(' ')
-                        .map(n => n[0])
-                        .join('')
-                        .substring(0, 2)
-                        .toUpperCase();
-
-                      return (
-                        <View
-                          key={record.student._id}
-                          style={[styles.studentRow, { borderBottomColor: t.border }]}
-                        >
-                          {/* Avatar */}
-                          <View style={[styles.avatar, { backgroundColor: t.surface }]}>
-                            <Text style={[styles.avatarText, { color: t.textSecondary }]}>
-                              {initials}
-                            </Text>
-                          </View>
-
-                          {/* Name */}
-                          <View style={styles.studentInfo}>
-                            <Text style={[styles.studentName, { color: t.text }]} numberOfLines={1}>
-                              {record.student.name}
-                            </Text>
-                          </View>
-
-                          {/* P / A / L Circle Buttons */}
-                          <View style={styles.statusCircles}>
-                            <TouchableOpacity
-                              onPress={() => toggleStatus(slotIdx, studentIdx, 'present')}
-                              style={[
-                                styles.circle,
-                                record.status === 'present'
-                                  ? { backgroundColor: t.present }
-                                  : { backgroundColor: t.presentBg },
-                              ]}
-                            >
-                              <Ionicons
-                                name="checkmark"
-                                size={16}
-                                color={record.status === 'present' ? '#fff' : t.present}
-                              />
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                              onPress={() => toggleStatus(slotIdx, studentIdx, 'absent')}
-                              style={[
-                                styles.circle,
-                                record.status === 'absent'
-                                  ? { backgroundColor: t.absent }
-                                  : { backgroundColor: t.absentBg },
-                              ]}
-                            >
-                              <Ionicons
-                                name="close"
-                                size={16}
-                                color={record.status === 'absent' ? '#fff' : t.absent}
-                              />
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                              onPress={() => toggleStatus(slotIdx, studentIdx, 'late')}
-                              style={[
-                                styles.circle,
-                                record.status === 'late'
-                                  ? { backgroundColor: t.late }
-                                  : { backgroundColor: t.lateBg },
-                              ]}
-                            >
-                              <Ionicons
-                                name="time"
-                                size={14}
-                                color={record.status === 'late' ? '#fff' : t.late}
-                              />
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                      );
-                    })}
-                  </View>
-
-                  {/* Submit Button */}
+            <View style={[styles.slotCard, { backgroundColor: t.card, borderColor: t.border, padding: 0 }]}>
+              {filteredStudents.map((student, idx) => {
+                const isChecked = checkedStudents.has(student._id);
+                const initial = student.name.charAt(0).toUpperCase();
+                return (
                   <TouchableOpacity
+                    key={student._id}
+                    onPress={() => toggleStudent(student._id)}
                     style={[
-                      styles.submitBtn,
-                      { backgroundColor: t.accent, opacity: isSubmitting ? 0.7 : 1 },
+                      styles.studentRow,
+                      {
+                        borderBottomColor: t.border,
+                        paddingHorizontal: 16,
+                        backgroundColor: isChecked ? (t === themes.dark ? 'rgba(16,185,129,0.08)' : '#F0FDF4') : 'transparent',
+                        borderBottomWidth: idx === filteredStudents.length - 1 ? 0 : 1,
+                      },
                     ]}
-                    onPress={() => submitSlot(slotIdx)}
-                    disabled={isSubmitting}
+                    activeOpacity={0.6}
                   >
-                    {isSubmitting ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <Text style={styles.submitBtnText}>Submit Attendance</Text>
-                    )}
-                  </TouchableOpacity>
+                    {/* Checkbox */}
+                    <View style={{
+                      width: 26, height: 26, borderRadius: 8,
+                      borderWidth: 2, marginRight: 12,
+                      borderColor: isChecked ? t.accent : t.textMuted,
+                      backgroundColor: isChecked ? t.accent : 'transparent',
+                      alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      {isChecked && <Ionicons name="checkmark" size={16} color="#fff" />}
+                    </View>
 
-                  {/* Progress */}
-                  <Text style={[styles.markedLabel, { color: t.textSecondary }]}>
-                    {markedCount}/{totalStudents} students marked
+                    {/* Avatar */}
+                    <LinearGradient
+                      colors={['#6366F1', '#8B5CF6']}
+                      style={[styles.avatar, { marginRight: 10 }]}
+                    >
+                      <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>{initial}</Text>
+                    </LinearGradient>
+
+                    {/* Info */}
+                    <View style={styles.studentInfo}>
+                      <Text style={[styles.studentName, { color: t.text }]} numberOfLines={1}>
+                        {student.name}
+                      </Text>
+                      <Text style={{ color: t.textSecondary, fontSize: 11 }} numberOfLines={1}>
+                        {student.profile?.studentId || student.email}
+                      </Text>
+                    </View>
+
+                    {/* Status badge */}
+                    <View style={{
+                      paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8,
+                      backgroundColor: isChecked ? t.presentBg : t.absentBg,
+                    }}>
+                      <Text style={{
+                        fontSize: 11, fontWeight: '700',
+                        color: isChecked ? t.present : t.absent,
+                      }}>
+                        {isChecked ? 'Present' : 'Absent'}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+
+          {/* Submit Button */}
+          {students.length > 0 && (
+            <TouchableOpacity
+              style={[styles.primaryBtn, {
+                backgroundColor: t.accent, marginTop: 16,
+                opacity: submitting ? 0.7 : 1,
+              }]}
+              onPress={submitAttendance}
+              disabled={submitting}
+            >
+              {submitting ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <Ionicons name="checkmark-circle" size={18} color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={styles.primaryBtnText}>
+                    Submit — {checkedStudents.size} Present, {students.length - checkedStudents.size} Absent
                   </Text>
-                </View>
-              );
-            })
+                </>
+              )}
+            </TouchableOpacity>
           )}
 
           <View style={{ height: 40 }} />
@@ -691,12 +717,10 @@ function FacultyFlow({ theme: t }: { theme: typeof themes.dark }) {
     );
   }
 
-  // ── STEP 3: Success Screen ────────────────────────────────────────────────
-
+  // ═══ STEP 4: Success ═══
   return (
     <Animated.View style={[styles.flex1, { opacity: fadeAnim }]}>
       <LinearGradient colors={t.successGrad} style={styles.successContainer}>
-        {/* Success Icon */}
         <View style={[styles.successIconOuter, { borderColor: t.accent }]}>
           <View style={[styles.successIconInner, { backgroundColor: t.accentSoft }]}>
             <Ionicons name="checkmark" size={48} color={t.accent} />
@@ -705,16 +729,15 @@ function FacultyFlow({ theme: t }: { theme: typeof themes.dark }) {
 
         <Text style={[styles.successTitle, { color: t.text }]}>Success!</Text>
         <Text style={[styles.successSubtitle, { color: t.textSecondary }]}>
-          Attendance marked successfully{'\n'}for {successSlot} slot!
+          Attendance submitted{'\n'}{successInfo.present} present, {successInfo.absent} absent
         </Text>
         <Text style={[styles.successMeta, { color: t.textMuted }]}>
-          {courseInfo?.code}, {dateStr}
+          Section {selectedSection?.name} • {selectedCourse?.code}, {dateStr}
         </Text>
 
-        {/* Action Buttons */}
         <TouchableOpacity
           style={[styles.primaryBtn, { backgroundColor: t.accent, marginTop: 40 }]}
-          onPress={() => animateTransition('slots')}
+          onPress={() => animateTransition('mark')}
         >
           <Ionicons name="list" size={18} color="#fff" style={{ marginRight: 8 }} />
           <Text style={styles.primaryBtnText}>View Attendance</Text>
@@ -722,9 +745,15 @@ function FacultyFlow({ theme: t }: { theme: typeof themes.dark }) {
 
         <TouchableOpacity
           style={[styles.secondaryBtn, { borderColor: t.border }]}
-          onPress={() => animateTransition('select')}
+          onPress={() => {
+            setSelectedSection(null);
+            setSelectedCourseId('');
+            setStudents([]);
+            setCheckedStudents(new Set());
+            animateTransition('section');
+          }}
         >
-          <Text style={[styles.secondaryBtnText, { color: t.textSecondary }]}>Go to Dashboard</Text>
+          <Text style={[styles.secondaryBtnText, { color: t.textSecondary }]}>Back to Sections</Text>
         </TouchableOpacity>
       </LinearGradient>
     </Animated.View>

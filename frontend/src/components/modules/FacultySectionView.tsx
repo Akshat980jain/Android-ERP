@@ -189,7 +189,7 @@ export default function FacultySectionView() {
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 flex-wrap">
                                                 <span className="text-sm font-bold text-gray-900 dark:text-white">
-                                                    {section.program} {section.branch ? `- ${section.branch}` : ''}
+                                                    Section {section.name} • {section.program} {section.branch ? `- ${section.branch}` : ''}
                                                 </span>
                                                 <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-semibold">
                                                     Sem {section.semester}
