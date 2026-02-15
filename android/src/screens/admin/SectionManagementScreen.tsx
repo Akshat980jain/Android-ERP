@@ -53,6 +53,7 @@ const SectionManagementScreen: React.FC = () => {
     const [showStudentModal, setShowStudentModal] = useState(false);
     const [showBulkModal, setShowBulkModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
+    const [promotionEnabled, setPromotionEnabled] = useState(false);
     const [selectedSection, setSelectedSection] = useState<Section | null>(null);
     const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
     const [bulkMode, setBulkMode] = useState(false);
@@ -108,6 +109,13 @@ const SectionManagementScreen: React.FC = () => {
         setLoading(true);
         fetchSections();
     }, [fetchSections]);
+
+    // Check if promotion is enabled
+    useEffect(() => {
+        apiService.getSettings().then((res: any) => {
+            setPromotionEnabled(res?.settings?.academic?.semesterPromotionEnabled ?? false);
+        }).catch(() => { });
+    }, []);
 
     const onRefresh = () => { setRefreshing(true); fetchSections(); };
 
@@ -191,6 +199,47 @@ const SectionManagementScreen: React.FC = () => {
         } finally {
             setFormSubmitting(false);
         }
+    };
+
+    // Promote sections to next semester
+    const handlePromote = () => {
+        if (bulkSelected.size === 0) { Alert.alert('Error', 'Select sections first'); return; }
+        const selectedSections = sections.filter(s => bulkSelected.has(s._id));
+        const atMax = selectedSections.filter(s => s.semester >= 8);
+        if (atMax.length > 0) {
+            Alert.alert('Error', `${atMax.length} section(s) are already at semester 8`);
+            return;
+        }
+        const summary = selectedSections.map(s => `${s.name}: Sem ${s.semester} → ${s.semester + 1}`).join('\n');
+        Alert.alert(
+            'Promote Sections',
+            `This will promote ${selectedSections.length} section(s) to the next semester and update all enrolled students.\n\n${summary}`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Confirm Promotion',
+                    style: 'destructive',
+                    onPress: async () => {
+                        setFormSubmitting(true);
+                        try {
+                            const res = await apiService.promoteSections(Array.from(bulkSelected));
+                            if (res.success) {
+                                setBulkSelected(new Set());
+                                setBulkMode(false);
+                                fetchSections();
+                                Alert.alert('Success', `Promoted ${res.promotedSections?.length || 0} section(s). ${res.totalStudentsUpdated || 0} students updated.`);
+                            } else {
+                                Alert.alert('Error', res.message);
+                            }
+                        } catch (e: any) {
+                            Alert.alert('Error', e.message);
+                        } finally {
+                            setFormSubmitting(false);
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     // Archive section
@@ -357,6 +406,15 @@ const SectionManagementScreen: React.FC = () => {
                         <Ionicons name="swap-vertical" size={18} color="#fff" />
                         <Text style={styles.bulkActionText}>Update Semester</Text>
                     </TouchableOpacity>
+                    {promotionEnabled && (
+                        <TouchableOpacity
+                            style={[styles.bulkActionBtn, { backgroundColor: '#059669', marginLeft: 8 }]}
+                            onPress={handlePromote}
+                        >
+                            <Ionicons name="arrow-up-circle" size={18} color="#fff" />
+                            <Text style={styles.bulkActionText}>Promote</Text>
+                        </TouchableOpacity>
+                    )}
                 </View>
             )}
 

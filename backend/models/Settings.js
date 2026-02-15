@@ -34,7 +34,7 @@ const settingsSchema = new mongoose.Schema({
     website: { type: String, default: 'www.educonnect.edu' },
     logo: { type: String, default: '/uploads/logo.png' }
   },
-  
+
   // Academic Settings
   academic: {
     currentAcademicYear: { type: String, default: () => new Date().getFullYear().toString() },
@@ -43,9 +43,10 @@ const settingsSchema = new mongoose.Schema({
     passPercentage: { type: Number, default: 40 },
     maxAttendancePercentage: { type: Number, default: 75 },
     assignmentSubmissionDeadline: { type: Number, default: 24 }, // hours
-    examDuration: { type: Number, default: 180 } // minutes
+    examDuration: { type: Number, default: 180 }, // minutes
+    semesterPromotionEnabled: { type: Boolean, default: false }
   },
-  
+
   // Notification Settings
   notifications: {
     emailNotifications: { type: Boolean, default: false },
@@ -53,7 +54,7 @@ const settingsSchema = new mongoose.Schema({
     pushNotifications: { type: Boolean, default: false },
     notificationRetentionDays: { type: Number, default: 30 }
   },
-  
+
   // Security Settings
   security: {
     passwordMinLength: { type: Number, default: 8 },
@@ -62,7 +63,7 @@ const settingsSchema = new mongoose.Schema({
     maxLoginAttempts: { type: Number, default: 5 },
     twoFactorAuth: { type: Boolean, default: false }
   },
-  
+
   // Feature Flags
   features: {
     chatEnabled: { type: Boolean, default: false },
@@ -70,7 +71,7 @@ const settingsSchema = new mongoose.Schema({
     analyticsEnabled: { type: Boolean, default: false },
     backupEnabled: { type: Boolean, default: false }
   },
-  
+
   // Attendance Policy
   attendancePolicy: { type: attendancePolicySchema, default: () => ({}) },
 }, { timestamps: true });

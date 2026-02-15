@@ -744,6 +744,14 @@ class ApiClient {
     const queryString = params?.semester ? `?semester=${params.semester}` : '';
     return this.request(`/sections/faculty-sections${queryString}`);
   }
+
+  async promoteSections(sectionIds: string[]) {
+    return this.request('/sections/promote', { method: 'POST', body: JSON.stringify({ sectionIds }) });
+  }
+
+  async getSettings() {
+    return this.request('/settings/system');
+  }
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);

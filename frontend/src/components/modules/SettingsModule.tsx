@@ -25,6 +25,7 @@ interface SystemSettings {
     maxAttendancePercentage: number;
     assignmentSubmissionDeadline: number;
     examDuration: number;
+    semesterPromotionEnabled?: boolean;
   };
   notifications: {
     emailNotifications: boolean;
@@ -619,6 +620,18 @@ export function SettingsModule() {
                   placeholder="40"
                 />
               </div>
+            </div>
+            <div className="flex items-center space-x-2 mt-2 pt-3 border-t border-gray-100">
+              <input
+                type="checkbox"
+                id="semesterPromotionEnabled"
+                checked={systemSettings.academic.semesterPromotionEnabled || false}
+                onChange={(e) => handleSystemSettingChange('academic', 'semesterPromotionEnabled', e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              <label htmlFor="semesterPromotionEnabled" className="text-sm font-medium text-gray-700">
+                Enable Semester Promotion (allows admins to promote sections to the next semester in bulk)
+              </label>
             </div>
           </CardContent>
         </Card>

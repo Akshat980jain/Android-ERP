@@ -11,6 +11,7 @@ import {
   AlertCircle,
   Clock as ClockIcon,
   GraduationCap,
+  Layers,
   Bell,
   Download,
   Eye,
@@ -99,6 +100,7 @@ export function StudentDashboard({ onTabChange }: StudentDashboardProps) {
   const [confettiTrigger, setConfettiTrigger] = useState(0);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [navigating, setNavigating] = useState<string | null>(null);
+  const [sectionData, setSectionData] = useState<{ name: string; semester: number; program: string; branch: string; students: any[]; maxStudents: number; academicYear: string } | null>(null);
 
   useEffect(() => {
     if (!user || user.role !== 'student') return;
@@ -190,6 +192,16 @@ export function StudentDashboard({ onTabChange }: StudentDashboardProps) {
           }
         } catch {
           setAssignments([]);
+        }
+
+        // Fetch section info
+        try {
+          const sectionRes: any = await apiClient.getMySection();
+          if (sectionRes?.success && sectionRes.section) {
+            setSectionData(sectionRes.section);
+          }
+        } catch {
+          // Section data is optional
         }
       } catch {
         // handle error
@@ -358,6 +370,10 @@ export function StudentDashboard({ onTabChange }: StudentDashboardProps) {
           onTabChange('placement');
           moduleName = 'Placements';
           break;
+        case 'my-section':
+          onTabChange('my-section');
+          moduleName = 'My Section';
+          break;
         default:
           console.log(`Unknown action: ${action}`);
           setNavigating(null);
@@ -457,6 +473,72 @@ export function StudentDashboard({ onTabChange }: StudentDashboardProps) {
               </TiltCard>
             </motion.div>
           ))}
+        </motion.div>
+      </Reveal>
+
+      {/* Section Info Card */}
+      <Reveal>
+        <motion.div variants={fadeInUpVariants} initial="initial" animate="animate">
+          {sectionData ? (
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-400 p-[2px] shadow-lg shadow-indigo-500/20">
+              <div className="rounded-2xl bg-white dark:bg-gray-900 p-5">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-md">
+                      <Layers className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white">{sectionData.name}</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{sectionData.program} — {sectionData.branch}</p>
+                    </div>
+                  </div>
+                  <span className="px-3 py-1 text-xs font-bold rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
+                    Sem {sectionData.semester}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-3 mt-4">
+                  <div className="text-center p-2 rounded-xl bg-gray-50 dark:bg-gray-800">
+                    <div className="text-lg font-bold text-gray-900 dark:text-white">{sectionData.students?.length || 0}</div>
+                    <div className="text-xs text-gray-500">Classmates</div>
+                  </div>
+                  <div className="text-center p-2 rounded-xl bg-gray-50 dark:bg-gray-800">
+                    <div className="text-lg font-bold text-gray-900 dark:text-white">{sectionData.maxStudents}</div>
+                    <div className="text-xs text-gray-500">Capacity</div>
+                  </div>
+                  <div className="text-center p-2 rounded-xl bg-gray-50 dark:bg-gray-800">
+                    <div className="text-lg font-bold text-gray-900 dark:text-white">{sectionData.academicYear}</div>
+                    <div className="text-xs text-gray-500">Session</div>
+                  </div>
+                </div>
+                {/* Capacity bar */}
+                <div className="mt-3">
+                  <div className="flex justify-between text-xs text-gray-500 mb-1">
+                    <span>Capacity</span>
+                    <span>{sectionData.students?.length || 0}/{sectionData.maxStudents}</span>
+                  </div>
+                  <div className="w-full h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${((sectionData.students?.length || 0) / sectionData.maxStudents) > 0.9 ? 'bg-red-500' :
+                          ((sectionData.students?.length || 0) / sectionData.maxStudents) > 0.7 ? 'bg-amber-500' : 'bg-emerald-500'
+                        }`}
+                      style={{ width: `${Math.min(100, ((sectionData.students?.length || 0) / sectionData.maxStudents) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleQuickAction('my-section')}
+                  className="mt-3 w-full py-2 text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-xl transition"
+                >
+                  View Section →
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-dashed border-gray-200 dark:border-gray-700">
+              <Layers className="w-5 h-5 text-gray-400" />
+              <span className="text-sm text-gray-500 dark:text-gray-400">No section assigned yet</span>
+            </div>
+          )}
         </motion.div>
       </Reveal>
 

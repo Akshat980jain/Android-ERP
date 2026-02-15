@@ -58,18 +58,20 @@ export default function StudentDashboard({ navigation }: any) {
     date: string;
   }>>([]);
   const [hasAttendance, setHasAttendance] = useState(false);
+  const [sectionData, setSectionData] = useState<any>(null);
 
   const onRefresh = async () => {
     setRefreshing(true);
     setError(null);
     try {
-      const [meRes, attendanceRes, assignmentsRes, notificationsRes, eventsRes, feesRes] = await Promise.all([
+      const [meRes, attendanceRes, assignmentsRes, notificationsRes, eventsRes, feesRes, sectionRes] = await Promise.all([
         apiService.getCurrentUser().then((u) => ({ success: true, user: u } as any)).catch(() => ({ success: false } as any)),
         apiService.getStudentAttendance(),
         apiService.getStudentAssignments(),
         apiService.getNotifications(),
         apiService.getEvents(),
         apiService.getStudentFees(),
+        apiService.getMySection().catch(() => ({ success: false } as any)),
       ]);
 
       // --- Attendance breakdown ---
@@ -132,6 +134,12 @@ export default function StudentDashboard({ navigation }: any) {
         : Array.isArray((feesRes as any)?.fees)
           ? (feesRes as any).fees.filter?.((f: any) => f.status === 'pending')?.length ?? 0
           : (feesRes as any)?.data?.pendingCount ?? 0;
+
+      // Section data
+      const secRes = sectionRes as any;
+      if (secRes?.success && secRes.section) {
+        setSectionData(secRes.section);
+      }
 
       setDashboardData({
         attendance: avgPct,
@@ -219,6 +227,75 @@ export default function StudentDashboard({ navigation }: any) {
           </TouchableOpacity>
           <CircularAttendanceChart data={attendanceData} />
         </Surface>
+
+        {/* Section Info Card */}
+        {sectionData ? (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('MySection' as never)}
+            style={[
+              styles.sectionCard,
+              {
+                backgroundColor: theme.colors.card,
+                borderColor: theme.colors.border,
+                borderWidth: 1,
+              }
+            ]}
+          >
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionIconWrap}>
+                <Ionicons name="grid-outline" size={20} color="#fff" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.sectionName, { color: theme.colors.text }]}>{sectionData.name}</Text>
+                <Text style={[styles.sectionMeta, { color: theme.colors.textSecondary }]}>
+                  {sectionData.program} — {sectionData.branch}
+                </Text>
+              </View>
+              <View style={styles.semBadge}>
+                <Text style={styles.semBadgeText}>Sem {sectionData.semester}</Text>
+              </View>
+            </View>
+            <View style={styles.sectionStats}>
+              <View style={styles.sectionStatItem}>
+                <Text style={[styles.sectionStatValue, { color: theme.colors.text }]}>{sectionData.students?.length || 0}</Text>
+                <Text style={[styles.sectionStatLabel, { color: theme.colors.textSecondary }]}>Classmates</Text>
+              </View>
+              <View style={[styles.sectionStatDivider, { backgroundColor: theme.colors.border }]} />
+              <View style={styles.sectionStatItem}>
+                <Text style={[styles.sectionStatValue, { color: theme.colors.text }]}>{sectionData.maxStudents}</Text>
+                <Text style={[styles.sectionStatLabel, { color: theme.colors.textSecondary }]}>Capacity</Text>
+              </View>
+              <View style={[styles.sectionStatDivider, { backgroundColor: theme.colors.border }]} />
+              <View style={styles.sectionStatItem}>
+                <Text style={[styles.sectionStatValue, { color: theme.colors.text }]}>{sectionData.academicYear}</Text>
+                <Text style={[styles.sectionStatLabel, { color: theme.colors.textSecondary }]}>Session</Text>
+              </View>
+            </View>
+            {/* Capacity bar */}
+            <View style={styles.capacityBarOuter}>
+              <View style={[
+                styles.capacityBarInner,
+                {
+                  width: `${Math.min(100, ((sectionData.students?.length || 0) / (sectionData.maxStudents || 1)) * 100)}%`,
+                  backgroundColor: ((sectionData.students?.length || 0) / (sectionData.maxStudents || 1)) > 0.9 ? '#ef4444' :
+                    ((sectionData.students?.length || 0) / (sectionData.maxStudents || 1)) > 0.7 ? '#f59e0b' : '#10b981',
+                } as any
+              ]} />
+            </View>
+            <View style={styles.sectionFooter}>
+              <Text style={{ color: '#6366f1', fontWeight: '600', fontSize: 13 }}>View Section →</Text>
+            </View>
+          </TouchableOpacity>
+        ) : (
+          <View style={[
+            styles.sectionCard,
+            { backgroundColor: theme.colors.card, borderColor: theme.colors.border, borderWidth: 1, alignItems: 'center', flexDirection: 'row', gap: 10 }
+          ]}>
+            <Ionicons name="grid-outline" size={18} color={theme.colors.textSecondary} />
+            <Text style={{ color: theme.colors.textSecondary, fontSize: 13 }}>No section assigned yet</Text>
+          </View>
+        )}
 
         {/* Expandable Sections */}
         <TouchableOpacity
@@ -628,5 +705,78 @@ const styles = StyleSheet.create({
     marginTop: 12,
     textAlign: 'center',
     lineHeight: 18,
+  },
+  sectionCard: {
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 12,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  sectionIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#6366f1',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionName: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  sectionMeta: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  semBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: 'rgba(99,102,241,0.15)',
+  },
+  semBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#6366f1',
+  },
+  sectionStats: {
+    flexDirection: 'row',
+    marginTop: 14,
+    alignItems: 'center',
+  },
+  sectionStatItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  sectionStatValue: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  sectionStatLabel: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  sectionStatDivider: {
+    width: 1,
+    height: 28,
+  },
+  capacityBarOuter: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(128,128,128,0.2)',
+    marginTop: 12,
+    overflow: 'hidden',
+  },
+  capacityBarInner: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  sectionFooter: {
+    marginTop: 10,
+    alignItems: 'center',
   },
 });

@@ -191,6 +191,87 @@ router.post('/', auth, authorize('admin'), async (req, res) => {
 });
 
 // ──────────────────────────────────────
+// POST /api/sections/promote — Promote sections to next semester
+// ──────────────────────────────────────
+router.post('/promote', auth, authorize('admin'), async (req, res) => {
+    try {
+        // 1. Check settings toggle
+        const Settings = require('../models/Settings');
+        const settings = await Settings.findOne();
+        if (!settings?.academic?.semesterPromotionEnabled) {
+            return res.status(403).json({
+                success: false,
+                message: 'Semester promotion is currently disabled. Enable it in Settings → Academic.'
+            });
+        }
+
+        // 2. Validate input
+        const { sectionIds } = req.body;
+        if (!Array.isArray(sectionIds) || sectionIds.length === 0) {
+            return res.status(400).json({ success: false, message: 'sectionIds array is required' });
+        }
+
+        // 3. Scope check
+        const scopeQuery = buildScopedQuery(req.user);
+        scopeQuery._id = { $in: sectionIds };
+        const sections = await Section.find(scopeQuery);
+        if (sections.length !== sectionIds.length) {
+            return res.status(403).json({
+                success: false,
+                message: 'You do not have permission to promote all selected sections'
+            });
+        }
+
+        // 4. Check none are at max semester
+        const alreadyMax = sections.filter(s => s.semester >= 8);
+        if (alreadyMax.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: `${alreadyMax.length} section(s) are already at semester 8 and cannot be promoted further`
+            });
+        }
+
+        // 5. Promote each section
+        const promotionResults = [];
+        let totalStudentsUpdated = 0;
+
+        for (const section of sections) {
+            const newSemester = section.semester + 1;
+            await Section.updateOne(
+                { _id: section._id },
+                { $set: { semester: newSemester } }
+            );
+
+            if (section.students && section.students.length > 0) {
+                await User.updateMany(
+                    { _id: { $in: section.students } },
+                    { $set: { 'profile.semester': String(newSemester) } }
+                );
+                totalStudentsUpdated += section.students.length;
+            }
+
+            promotionResults.push({
+                sectionId: section._id,
+                name: section.name,
+                fromSemester: section.semester,
+                toSemester: newSemester,
+                studentsCount: section.students?.length || 0
+            });
+        }
+
+        res.json({
+            success: true,
+            message: `Promoted ${sections.length} section(s) to next semester`,
+            promotedSections: promotionResults,
+            totalStudentsUpdated
+        });
+    } catch (error) {
+        console.error('Error promoting sections:', error);
+        res.status(500).json({ success: false, message: 'Failed to promote sections' });
+    }
+});
+
+// ──────────────────────────────────────
 // PUT /api/sections/bulk-semester — Bulk update semester
 // ──────────────────────────────────────
 router.put('/bulk-semester', auth, authorize('admin'), async (req, res) => {

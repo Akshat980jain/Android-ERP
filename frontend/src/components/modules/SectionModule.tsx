@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Plus, Layers, Users, ChevronDown, Search, Edit3,
-    UserPlus, X, Check, AlertCircle, RefreshCw, Archive
+    UserPlus, X, Check, AlertCircle, RefreshCw, Archive,
+    ArrowUpCircle
 } from 'lucide-react';
 import apiClient from '../../utils/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -43,6 +44,8 @@ export function SectionModule() {
     const [showEditModal, setShowEditModal] = useState(false);
     const [showStudentModal, setShowStudentModal] = useState(false);
     const [showBulkModal, setShowBulkModal] = useState(false);
+    const [showPromoteModal, setShowPromoteModal] = useState(false);
+    const [promotionEnabled, setPromotionEnabled] = useState(false);
     const [selectedSection, setSelectedSection] = useState<Section | null>(null);
     const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
@@ -85,6 +88,17 @@ export function SectionModule() {
     }, [selectedSemester]);
 
     useEffect(() => { setLoading(true); fetchSections(); }, [fetchSections]);
+
+    // Check if promotion is enabled
+    useEffect(() => {
+        const checkPromotion = async () => {
+            try {
+                const res: any = await apiClient.getSettings();
+                setPromotionEnabled(res?.settings?.academic?.semesterPromotionEnabled ?? false);
+            } catch { /* ignore */ }
+        };
+        checkPromotion();
+    }, []);
 
     // ─── CRUD handlers ──────────────────────────
     const handleCreate = async (e: React.FormEvent) => {
@@ -159,6 +173,27 @@ export function SectionModule() {
                 setBulkSelected(new Set());
                 setBulkMode(false);
                 fetchSections();
+            } else {
+                alert(res.message);
+            }
+        } catch (e: any) {
+            alert(e.message);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handlePromote = async () => {
+        if (bulkSelected.size === 0) return;
+        setSubmitting(true);
+        try {
+            const res: any = await apiClient.promoteSections(Array.from(bulkSelected));
+            if (res.success) {
+                setShowPromoteModal(false);
+                setBulkSelected(new Set());
+                setBulkMode(false);
+                fetchSections();
+                alert(`✅ Promoted ${res.promotedSections?.length || 0} section(s). ${res.totalStudentsUpdated || 0} students updated.`);
             } else {
                 alert(res.message);
             }
@@ -324,6 +359,15 @@ export function SectionModule() {
                         <RefreshCw className="w-4 h-4" />
                         Update Semester
                     </button>
+                    {promotionEnabled && (
+                        <button
+                            onClick={() => setShowPromoteModal(true)}
+                            className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 flex items-center gap-2 shadow-lg shadow-emerald-500/25"
+                        >
+                            <ArrowUpCircle className="w-4 h-4" />
+                            Promote
+                        </button>
+                    )}
                 </motion.div>
             )}
 
@@ -661,6 +705,55 @@ export function SectionModule() {
                                     className="flex-1 py-3 rounded-xl bg-emerald-600 text-white font-semibold shadow-lg shadow-emerald-500/25 transition disabled:opacity-50">
                                     {submitting ? 'Adding...' : `Add ${selectedStudents.size} Student(s)`}
                                 </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ─── PROMOTE MODAL ────────── */}
+            <AnimatePresence>
+                {showPromoteModal && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
+                            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                                    <ArrowUpCircle className="w-5 h-5 text-emerald-600" />
+                                </div>
+                                <div>
+                                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">Promote Sections</h2>
+                                    <p className="text-sm text-gray-500">Advance to next semester</p>
+                                </div>
+                                <button onClick={() => setShowPromoteModal(false)} className="ml-auto p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 mb-4">
+                                <p className="text-xs text-amber-800 dark:text-amber-300">⚠️ This will increment the semester of selected sections by 1 and update all enrolled students. This action cannot be undone automatically.</p>
+                            </div>
+                            <div className="space-y-2 max-h-48 overflow-y-auto mb-4">
+                                {sections.filter(s => bulkSelected.has(s._id)).map(s => (
+                                    <div key={s._id} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                                        <span className="text-sm font-medium text-gray-900 dark:text-white">{s.name}</span>
+                                        <div className="flex items-center gap-2 text-xs">
+                                            <span className="px-2 py-1 rounded-full bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300">Sem {s.semester}</span>
+                                            <span className="text-gray-400">→</span>
+                                            {s.semester >= 8 ? (
+                                                <span className="px-2 py-1 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600">Max</span>
+                                            ) : (
+                                                <span className="px-2 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">Sem {s.semester + 1}</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="flex gap-3">
+                                <button onClick={() => setShowPromoteModal(false)}
+                                    className="flex-1 py-3 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold transition">Cancel</button>
+                                <button onClick={handlePromote} disabled={submitting}
+                                    className="flex-1 py-3 rounded-xl bg-emerald-600 text-white font-semibold shadow-lg shadow-emerald-500/25 transition disabled:opacity-50">{submitting ? 'Promoting...' : 'Confirm Promotion'}</button>
                             </div>
                         </motion.div>
                     </motion.div>

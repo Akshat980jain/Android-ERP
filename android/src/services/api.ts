@@ -983,6 +983,16 @@ class ApiService {
     const query = params?.semester ? `?semester=${params.semester}` : '';
     return this.request(`/sections/faculty-sections${query}`);
   }
+
+  // Promote sections to next semester
+  async promoteSections(sectionIds: string[]): Promise<ApiResponse<any>> {
+    return this.request('/sections/promote', { method: 'POST', body: JSON.stringify({ sectionIds }) });
+  }
+
+  // Get system settings
+  async getSettings(): Promise<ApiResponse<any>> {
+    return this.request('/settings/system');
+  }
 }
 
 export default new ApiService();
