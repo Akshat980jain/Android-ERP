@@ -314,7 +314,7 @@ export function ScheduleModule() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-800">Schedule</h2>
-        {user?.role !== 'student' && (
+        {user?.role === 'admin' && (
           <button
             onClick={() => {
               setShowAddForm(!showAddForm);
@@ -444,8 +444,8 @@ export function ScheduleModule() {
                     value={newScheduleItem.endTime}
                     onChange={(e) => setNewScheduleItem({ ...newScheduleItem, endTime: e.target.value })}
                     className={`flex-1 border rounded px-3 py-2 ${newScheduleItem.startTime && newScheduleItem.endTime &&
-                        !isValidTimeRange(newScheduleItem.startTime, newScheduleItem.endTime)
-                        ? 'border-red-500' : ''
+                      !isValidTimeRange(newScheduleItem.startTime, newScheduleItem.endTime)
+                      ? 'border-red-500' : ''
                       }`}
                     required
                   />
@@ -543,7 +543,7 @@ export function ScheduleModule() {
                           {item.type}
                         </span>
                       </div>
-                      {user?.role !== 'student' && (
+                      {user?.role === 'admin' && (
                         <div className="flex space-x-1 ml-2">
                           <button
                             onClick={() => startEditing(item)}

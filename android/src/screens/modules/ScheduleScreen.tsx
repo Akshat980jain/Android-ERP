@@ -38,7 +38,7 @@ const { width } = Dimensions.get('window');
 const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const DAY_LABELS = {
   'Monday': 'Monday',
-  'Tuesday': 'Tuesday', 
+  'Tuesday': 'Tuesday',
   'Wednesday': 'Wednesday',
   'Thursday': 'Thursday',
   'Friday': 'Friday',
@@ -159,12 +159,12 @@ export default function ScheduleScreen() {
     const startMinutes = timeToMinutes(startTime);
     const endMinutes = timeToMinutes(endTime);
     const durationMinutes = endMinutes - startMinutes;
-    
+
     if (durationMinutes <= 0) return '0 min';
-    
+
     const hours = Math.floor(durationMinutes / 60);
     const minutes = durationMinutes % 60;
-    
+
     if (hours > 0 && minutes > 0) {
       return `${hours}h ${minutes}m`;
     } else if (hours > 0) {
@@ -179,7 +179,7 @@ export default function ScheduleScreen() {
       setError('End time must be after start time');
       return;
     }
-    
+
     setLoading(true);
     setError('');
     setSuccess('');
@@ -239,7 +239,7 @@ export default function ScheduleScreen() {
         originalDayOfWeek: editingItem.dayOfWeek,
         originalStartTime: editingItem.startTime,
       };
-      
+
       const response = await apiService.updateScheduleItem(editingItem.course._id, scheduleData);
       if (response.success) {
         await fetchSchedule();
@@ -279,7 +279,7 @@ export default function ScheduleScreen() {
                 dayOfWeek: item.dayOfWeek,
                 startTime: item.startTime
               };
-              
+
               const response = await apiService.deleteScheduleItem(item.course._id, scheduleData);
               if (response.success) {
                 await fetchSchedule();
@@ -322,16 +322,16 @@ export default function ScheduleScreen() {
   const getTotalDayDuration = (day: string) => {
     const daySchedule = getScheduleForDay(day);
     let totalMinutes = 0;
-    
+
     daySchedule.forEach(item => {
       totalMinutes += timeToMinutes(item.endTime) - timeToMinutes(item.startTime);
     });
-    
+
     if (totalMinutes <= 0) return '0 min';
-    
+
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
-    
+
     if (hours > 0 && minutes > 0) {
       return `${hours}h ${minutes}m`;
     } else if (hours > 0) {
@@ -385,7 +385,7 @@ export default function ScheduleScreen() {
       <View style={styles.timelineContent}>
         {/* Course Name and Code */}
         <Text style={styles.timelineCourseTitle}>
-          {item.course.name.toUpperCase()} 
+          {item.course.name.toUpperCase()}
           <Text style={styles.timelineCourseCode}>
             {' '}( {item.course.code} )
           </Text>
@@ -408,7 +408,7 @@ export default function ScheduleScreen() {
         </View>
 
         {/* Action Buttons for Admin/Faculty */}
-        {user?.role !== 'student' && (
+        {user?.role === 'admin' && (
           <View style={styles.timelineActions}>
             <TouchableOpacity
               onPress={() => startEditing(item)}
@@ -430,8 +430,8 @@ export default function ScheduleScreen() {
 
   const renderDayTabs = () => {
     return (
-      <ScrollView 
-        horizontal 
+      <ScrollView
+        horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.dayTabsContainer}
       >
@@ -493,16 +493,16 @@ export default function ScheduleScreen() {
   return (
     <PaperProvider>
       <View style={styles.container}>
-        <StatusBar 
+        <StatusBar
           barStyle={theme.colors.statusBarStyle}
           backgroundColor={theme.colors.surface}
           translucent={false}
         />
-        <View style={[styles.header, { 
+        <View style={[styles.header, {
           paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 10 : 16,
         }]}>
           <Title style={styles.title}>Time Table</Title>
-          {user?.role !== 'student' && (
+          {user?.role === 'admin' && (
             <Button
               mode="contained"
               onPress={() => {
@@ -543,12 +543,12 @@ export default function ScheduleScreen() {
           </Card>
         ) : null}
 
-          <ScrollView
-            style={styles.scrollView}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} />
-            }
-          >
+        <ScrollView
+          style={styles.scrollView}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} />
+          }
+        >
           {renderScheduleContent()}
         </ScrollView>
 
@@ -562,15 +562,15 @@ export default function ScheduleScreen() {
               <Title style={styles.modalTitle}>
                 {editingItem ? 'Edit Schedule Item' : 'Add New Schedule Item'}
               </Title>
-              
+
               <TextInput
                 style={styles.input}
                 placeholder="Select Course"
-                value={courses.find(c => c._id === newScheduleItem.course) ? 
+                value={courses.find(c => c._id === newScheduleItem.course) ?
                   `${courses.find(c => c._id === newScheduleItem.course)?.code} - ${courses.find(c => c._id === newScheduleItem.course)?.name}` : ''}
                 editable={false}
               />
-              
+
               <View style={styles.courseList}>
                 {courses.map((item) => (
                   <TouchableOpacity
@@ -591,7 +591,7 @@ export default function ScheduleScreen() {
                 value={newScheduleItem.dayOfWeek}
                 editable={false}
               />
-              
+
               <View style={styles.dayList}>
                 {DAYS_OF_WEEK.map((item) => (
                   <TouchableOpacity
@@ -614,13 +614,13 @@ export default function ScheduleScreen() {
                     placeholder="09:00"
                     value={newScheduleItem.startTime}
                     onChangeText={(text) => {
-                      setNewScheduleItem({ 
-                        ...newScheduleItem, 
+                      setNewScheduleItem({
+                        ...newScheduleItem,
                         startTime: text,
-                        endTime: text && newScheduleItem.endTime && 
-                                !isValidTimeRange(text, newScheduleItem.endTime)
-                                  ? getDefaultEndTime(text)
-                                  : newScheduleItem.endTime
+                        endTime: text && newScheduleItem.endTime &&
+                          !isValidTimeRange(text, newScheduleItem.endTime)
+                          ? getDefaultEndTime(text)
+                          : newScheduleItem.endTime
                       });
                     }}
                   />
@@ -649,7 +649,7 @@ export default function ScheduleScreen() {
                 value={newScheduleItem.type}
                 editable={false}
               />
-              
+
               <View style={styles.typeList}>
                 {['lecture', 'lab', 'tutorial', 'seminar'].map((item) => (
                   <TouchableOpacity

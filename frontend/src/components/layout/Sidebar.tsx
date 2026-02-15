@@ -552,7 +552,7 @@ export function Sidebar({
     if (role === 'student') {
       ['academic', 'schedule', 'exams', 'assignments', 'finance', 'library', 'placement', 'services', 'transport'].forEach(id => allowed.add(id));
     } else if (role === 'faculty') {
-      ['courses', 'exams', 'feedback', 'calendar', 'assignments', 'attendance', 'marks', 'students', 'schedule'].forEach(id => allowed.add(id));
+      ['courses', 'exams', 'feedback', 'calendar', 'assignments', 'attendance', 'marks', 'students', 'schedule', 'sections'].forEach(id => allowed.add(id));
     } else if (role === 'admin') {
       ['analytics', 'users', 'request-approval', 'courses', 'finance', 'reports', 'settings', 'security', 'hostel', 'transport', 'sections'].forEach(id => allowed.add(id));
     }
