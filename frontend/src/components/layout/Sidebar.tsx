@@ -78,36 +78,11 @@ export function Sidebar({
   onThemeChange
 }: SidebarProps) {
   const { user, logout, theme: ctxTheme, toggleTheme } = useAuth();
-  const { variant, intensity, colorScheme } = useBackground();
-  const effectiveTheme = (theme as 'light' | 'dark') || ctxTheme;
+  const { variant, intensity } = useBackground();
+  const effectiveTheme = ctxTheme || (theme as 'light' | 'dark');
 
-  // Dynamic background color based on current theme and background context
-  const getSidebarBackground = () => {
-    const colorSchemes = {
-      blue: 'from-blue-500/20 via-blue-400/15 to-blue-600/20',
-      purple: 'from-purple-500/20 via-purple-400/15 to-purple-600/20',
-      green: 'from-green-500/20 via-green-400/15 to-green-600/20',
-      sunset: 'from-orange-500/20 via-yellow-400/15 to-red-500/20',
-      ocean: 'from-cyan-500/20 via-blue-400/15 to-teal-500/20',
-      forest: 'from-green-500/20 via-emerald-400/15 to-green-600/20',
-      dynamic: 'from-blue-500/20 via-purple-400/15 to-green-500/20',
-      vibrant: 'from-pink-500/20 via-purple-400/15 to-cyan-500/20',
-      neon: 'from-green-400/20 via-cyan-400/15 to-pink-500/20',
-      pastel: 'from-pink-300/20 via-blue-300/15 to-green-300/20',
-      warm: 'from-orange-500/20 via-red-400/15 to-yellow-500/20',
-      cool: 'from-cyan-500/20 via-blue-400/15 to-teal-500/20'
-    };
-
-    const gradientColors = colorSchemes[colorScheme] || colorSchemes.dynamic;
-
-    if (effectiveTheme === 'dark') {
-      return `bg-gradient-to-br ${gradientColors} bg-gray-900/95 bg-glass-dark`;
-    } else {
-      return `bg-gradient-to-br ${gradientColors} bg-white/95 bg-glass backdrop-blur-md`;
-    }
-  };
-
-  const sidebarBgColor = getSidebarBackground();
+  // Sidebar background — uses Tailwind dark: variant to match the app's theme
+  const sidebarBgColor = 'bg-white/95 dark:bg-gray-900 backdrop-blur-md';
 
   // Dynamic sidebar effects based on background context
   const sidebarEffects = {
@@ -606,34 +581,41 @@ export function Sidebar({
     onTabChange(tabId);
   };
 
-  // Get color classes for items
   const getColorClasses = (item: MenuItem, isActive: boolean) => {
-    const colorMap = {
-      blue: isActive ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25' : 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 hover:shadow-md',
-      purple: isActive ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/25' : 'text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-500/10 hover:shadow-md',
-      green: isActive ? 'bg-green-500 text-white shadow-lg shadow-green-500/25' : 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-500/10 hover:shadow-md',
-      yellow: isActive ? 'bg-yellow-500 text-white shadow-lg shadow-yellow-500/25' : 'text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-500/10 hover:shadow-md',
-      red: isActive ? 'bg-red-500 text-white shadow-lg shadow-red-500/25' : 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 hover:shadow-md',
-      indigo: isActive ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/25' : 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:shadow-md',
-      teal: isActive ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/25' : 'text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-500/10 hover:shadow-md',
-      orange: isActive ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/25' : 'text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-500/10 hover:shadow-md',
-      cyan: isActive ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/25' : 'text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-500/10 hover:shadow-md',
-      emerald: isActive ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25' : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:shadow-md',
-      slate: isActive ? 'bg-slate-500 text-white shadow-lg shadow-slate-500/25' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-500/10 hover:shadow-md',
-      gray: isActive ? 'bg-gray-500 text-white shadow-lg shadow-gray-500/25' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-500/10 hover:shadow-md'
+    // Active states: colored bg + white text
+    const activeColorMap: Record<string, string> = {
+      blue: 'bg-blue-500 text-white shadow-lg shadow-blue-500/25',
+      purple: 'bg-purple-500 text-white shadow-lg shadow-purple-500/25',
+      green: 'bg-green-500 text-white shadow-lg shadow-green-500/25',
+      yellow: 'bg-yellow-500 text-white shadow-lg shadow-yellow-500/25',
+      red: 'bg-red-500 text-white shadow-lg shadow-red-500/25',
+      indigo: 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/25',
+      teal: 'bg-teal-500 text-white shadow-lg shadow-teal-500/25',
+      orange: 'bg-orange-500 text-white shadow-lg shadow-orange-500/25',
+      cyan: 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/25',
+      emerald: 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25',
+      slate: 'bg-slate-500 text-white shadow-lg shadow-slate-500/25',
+      gray: 'bg-gray-500 text-white shadow-lg shadow-gray-500/25',
     };
 
+    // Gradient active overrides
     if (item.gradient && isActive) {
-      const gradientMap = {
+      const gradientMap: Record<string, string> = {
         blue: 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/25',
         purple: 'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg shadow-purple-500/25',
         green: 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg shadow-green-500/25',
-        emerald: 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/25'
+        emerald: 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/25',
+        indigo: 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/25',
       };
       return gradientMap[item.color as keyof typeof gradientMap] || gradientMap.blue;
     }
 
-    return colorMap[item.color as keyof typeof colorMap] || (isActive ? 'bg-gray-500 text-white shadow-lg shadow-gray-500/25' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-500/10 hover:shadow-md');
+    if (isActive) {
+      return activeColorMap[item.color as keyof typeof activeColorMap] || activeColorMap.blue;
+    }
+
+    // Non-active: neutral readable text with subtle hover — NO colored text
+    return 'text-gray-700 dark:text-gray-200 hover:bg-gray-100/80 dark:hover:bg-white/10 hover:shadow-sm';
   };
 
   // Get badge classes
@@ -930,8 +912,9 @@ export function Sidebar({
         transition={{ duration: 0.35, ease: 'easeInOut' }}
         layout
       >
+
         {/* Enhanced Header - Fixed height */}
-        <div className={`flex-shrink-0 p-6 border-b border-gray-200/50 dark:border-gray-700/50 relative overflow-hidden ${getSidebarBackground()}`}>
+        <div className="flex-shrink-0 p-6 border-b border-gray-200/50 dark:border-gray-700/40 relative overflow-hidden z-10">
           {/* Dynamic gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-r from-blue-600/80 via-purple-600/80 to-blue-600/80 dark:from-blue-700/90 dark:via-purple-700/90 dark:to-blue-700/90" />
 
@@ -1009,7 +992,7 @@ export function Sidebar({
 
         {/* Enhanced Navigation - Flexible height with proper scrolling */}
         <motion.nav
-          className="flex-1 p-4 space-y-3 overflow-y-auto overflow-x-hidden custom-scrollbar min-h-0 text-gray-800 dark:text-gray-100 relative"
+          className="flex-1 p-4 space-y-3 overflow-y-auto overflow-x-hidden custom-scrollbar min-h-0 text-gray-800 dark:text-gray-100 relative z-10"
           variants={staggerContainer}
           initial="initial"
           animate="animate"
@@ -1090,7 +1073,7 @@ export function Sidebar({
         </motion.nav>
 
         {/* Enhanced Footer - Fixed height */}
-        <div className={`flex-shrink-0 border-t border-gray-200/50 dark:border-gray-700/50 relative overflow-hidden overflow-x-hidden ${getSidebarBackground()}`}>
+        <div className="flex-shrink-0 border-t border-gray-200/50 dark:border-gray-700/40 relative overflow-hidden overflow-x-hidden z-10">
           {/* Subtle gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-gray-50/50 via-transparent to-transparent dark:from-gray-800/50" />
 

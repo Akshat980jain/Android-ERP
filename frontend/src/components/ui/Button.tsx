@@ -11,15 +11,15 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
 }
 
-export function Button({ 
-  variant = 'primary', 
-  size = 'md', 
-  loading = false, 
-  icon: Icon, 
-  className, 
-  children, 
-  disabled, 
-  ...props 
+export function Button({
+  variant = 'primary',
+  size = 'md',
+  loading = false,
+  icon: Icon,
+  className,
+  children,
+  disabled,
+  ...props
 }: ButtonProps) {
   return (
     <motion.button
@@ -31,9 +31,9 @@ export function Button({
           // Secondary variant
           'bg-gradient-to-r from-gray-600 to-gray-700 text-white shadow-lg shadow-gray-600/25 hover:from-gray-700 hover:to-gray-800 hover:shadow-xl hover:shadow-gray-600/30 focus:ring-gray-500': variant === 'secondary',
           // Outline variant
-          'border-2 border-gray-300 text-gray-700 bg-white hover:bg-gray-50 hover:border-gray-400 focus:ring-gray-500': variant === 'outline',
+          'border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-400 dark:hover:border-gray-500 focus:ring-gray-500': variant === 'outline',
           // Ghost variant
-          'text-gray-700 bg-transparent hover:bg-gray-100 focus:ring-gray-500': variant === 'ghost',
+          'text-gray-700 dark:text-gray-200 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 focus:ring-gray-500': variant === 'ghost',
           // Danger variant
           'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg shadow-red-600/25 hover:from-red-700 hover:to-red-800 hover:shadow-xl hover:shadow-red-600/30 focus:ring-red-500': variant === 'danger',
           // Success variant
@@ -55,7 +55,7 @@ export function Button({
       {...props}
     >
       {loading && (
-        <motion.div 
+        <motion.div
           className="mr-2 w-4 h-4 border-2 border-current border-t-transparent rounded-full"
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
@@ -68,17 +68,17 @@ export function Button({
 }
 
 // Quick action button for dashboard
-export function QuickActionButton({ 
-  icon: Icon, 
-  title, 
-  subtitle, 
-  onClick, 
+export function QuickActionButton({
+  icon: Icon,
+  title,
+  subtitle,
+  onClick,
   variant = 'primary',
-  className 
-}: { 
-  icon: React.ComponentType<{ className?: string }>; 
-  title: string; 
-  subtitle: string; 
+  className
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  subtitle: string;
   onClick: () => void;
   variant?: 'primary' | 'secondary' | 'success' | 'warning';
   className?: string;
@@ -118,16 +118,16 @@ export function QuickActionButton({
       >
         <Icon className={clsx('w-6 h-6 mb-3', iconColors[variant])} />
       </motion.div>
-      <motion.p 
-        className="font-semibold text-gray-900 mb-1"
+      <motion.p
+        className="font-semibold text-gray-900 dark:text-gray-100 mb-1"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
       >
         {title}
       </motion.p>
-      <motion.p 
-        className="text-sm text-gray-600"
+      <motion.p
+        className="text-sm text-gray-600 dark:text-gray-400"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
