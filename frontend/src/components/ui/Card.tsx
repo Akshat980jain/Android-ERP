@@ -11,20 +11,20 @@ interface CardProps {
   hover?: boolean;
 }
 
-export function Card({ children, className, padding = 'md', variant = 'default', hover = false }: CardProps) {
+export function Card({ children, className, padding: _padding = 'md', variant = 'default', hover = false }: CardProps) {
   return (
     <motion.div
       className={clsx(
-        'rounded-xl border transition-all duration-300',
+        'rounded-2xl border transition-all duration-300',
         {
-          // Default variant
+          // Default
           'bg-white border-gray-200/60 shadow-sm dark:bg-gray-900/80 dark:border-gray-700/40 dark:shadow-gray-950/30': variant === 'default',
-          // Elevated variant
-          'bg-white border-gray-200/60 shadow-lg shadow-gray-200/50 dark:bg-gray-900/80 dark:border-gray-700/40 dark:shadow-gray-950/40': variant === 'elevated',
-          // Outlined variant
+          // Elevated — glassmorphic
+          'bg-white/70 backdrop-blur-xl border-gray-200/60 shadow-lg shadow-gray-200/50 dark:bg-gray-900/60 dark:backdrop-blur-xl dark:border-gray-700/40 dark:shadow-gray-950/40': variant === 'elevated',
+          // Outlined
           'bg-white/50 border-gray-300/60 shadow-none backdrop-blur-sm dark:bg-gray-900/30 dark:border-gray-600/40': variant === 'outlined',
-          // Gradient variant
-          'bg-gradient-to-br from-white to-gray-50/50 border-gray-200/40 shadow-lg shadow-gray-200/30 dark:from-gray-900 dark:to-gray-800/50 dark:border-gray-700/40 dark:shadow-gray-950/30': variant === 'gradient',
+          // Gradient — glassmorphic
+          'bg-gradient-to-br from-white/80 to-gray-50/60 backdrop-blur-xl border-gray-200/40 shadow-lg shadow-gray-200/30 dark:from-gray-900/70 dark:to-gray-800/50 dark:backdrop-blur-xl dark:border-gray-700/40 dark:shadow-gray-950/30': variant === 'gradient',
         },
         className
       )}
@@ -63,7 +63,18 @@ export function CardContent({ children, className }: { children: React.ReactNode
   );
 }
 
-// New premium stat card component
+// Color glow map for StatCard hover effects
+const glowMap: Record<string, string> = {
+  blue: 'rgba(59,130,246,0.35)',
+  green: 'rgba(16,185,129,0.35)',
+  purple: 'rgba(139,92,246,0.35)',
+  orange: 'rgba(249,115,22,0.35)',
+  red: 'rgba(239,68,68,0.35)',
+  cyan: 'rgba(6,182,212,0.35)',
+  indigo: 'rgba(99,102,241,0.35)',
+};
+
+// Premium stat card component
 export function StatCard({
   title,
   value,
@@ -81,24 +92,28 @@ export function StatCard({
   color?: string;
   className?: string;
 }) {
-  const colorMap: Record<string, { iconBg: string; iconText: string }> = {
-    blue: { iconBg: 'bg-blue-50 dark:bg-blue-500/15', iconText: 'text-blue-600 dark:text-blue-400' },
-    green: { iconBg: 'bg-green-50 dark:bg-green-500/15', iconText: 'text-green-600 dark:text-green-400' },
-    purple: { iconBg: 'bg-purple-50 dark:bg-purple-500/15', iconText: 'text-purple-600 dark:text-purple-400' },
-    orange: { iconBg: 'bg-orange-50 dark:bg-orange-500/15', iconText: 'text-orange-600 dark:text-orange-400' },
-    red: { iconBg: 'bg-red-50 dark:bg-red-500/15', iconText: 'text-red-600 dark:text-red-400' },
-    cyan: { iconBg: 'bg-cyan-50 dark:bg-cyan-500/15', iconText: 'text-cyan-600 dark:text-cyan-400' },
-    indigo: { iconBg: 'bg-indigo-50 dark:bg-indigo-500/15', iconText: 'text-indigo-600 dark:text-indigo-400' },
+  const colorMap: Record<string, { iconBg: string; iconText: string; gradient: string }> = {
+    blue: { iconBg: 'bg-blue-50 dark:bg-blue-500/15', iconText: 'text-blue-600 dark:text-blue-400', gradient: 'from-blue-500/10 to-transparent dark:from-blue-500/5' },
+    green: { iconBg: 'bg-emerald-50 dark:bg-emerald-500/15', iconText: 'text-emerald-600 dark:text-emerald-400', gradient: 'from-emerald-500/10 to-transparent dark:from-emerald-500/5' },
+    purple: { iconBg: 'bg-purple-50 dark:bg-purple-500/15', iconText: 'text-purple-600 dark:text-purple-400', gradient: 'from-purple-500/10 to-transparent dark:from-purple-500/5' },
+    orange: { iconBg: 'bg-orange-50 dark:bg-orange-500/15', iconText: 'text-orange-600 dark:text-orange-400', gradient: 'from-orange-500/10 to-transparent dark:from-orange-500/5' },
+    red: { iconBg: 'bg-red-50 dark:bg-red-500/15', iconText: 'text-red-600 dark:text-red-400', gradient: 'from-red-500/10 to-transparent dark:from-red-500/5' },
+    cyan: { iconBg: 'bg-cyan-50 dark:bg-cyan-500/15', iconText: 'text-cyan-600 dark:text-cyan-400', gradient: 'from-cyan-500/10 to-transparent dark:from-cyan-500/5' },
+    indigo: { iconBg: 'bg-indigo-50 dark:bg-indigo-500/15', iconText: 'text-indigo-600 dark:text-indigo-400', gradient: 'from-indigo-500/10 to-transparent dark:from-indigo-500/5' },
   };
   const colors = colorMap[color] || colorMap.blue;
+  const glow = glowMap[color] || glowMap.blue;
 
   return (
-    <Card className={clsx('overflow-hidden hover-glow', className)} hover>
+    <Card className={clsx('overflow-hidden group', className)} hover variant="elevated">
       <div className="relative p-6">
-        <div className="flex items-center justify-between">
+        {/* Subtle gradient accent in top-right corner */}
+        <div className={clsx('absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl opacity-60 rounded-bl-full pointer-events-none', colors.gradient)} />
+
+        <div className="flex items-center justify-between relative z-10">
           <div className="flex-1">
             <motion.p
-              className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1"
+              className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
@@ -117,8 +132,8 @@ export function StatCard({
               <motion.div
                 className={clsx(
                   'flex items-center text-sm font-medium',
-                  trend === 'up' ? 'text-green-600 dark:text-green-400' :
-                    trend === 'down' ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'
+                  trend === 'up' ? 'text-emerald-600 dark:text-emerald-400' :
+                    trend === 'down' ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'
                 )}
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -136,18 +151,23 @@ export function StatCard({
             initial={{ opacity: 0, scale: 0.5, rotate: -10 }}
             animate={{ opacity: 1, scale: 1, rotate: 0 }}
             transition={{ delay: 0.4, type: "spring", stiffness: 300 }}
-            whileHover={{ scale: 1.1, rotate: 5 }}
+            whileHover={{ scale: 1.15, rotate: 5 }}
           >
-            <div className={clsx('w-12 h-12 rounded-xl flex items-center justify-center', colors.iconBg)}>
-              <Icon className={clsx('w-6 h-6', colors.iconText)} />
-            </div>
+            <motion.div
+              className={clsx('w-14 h-14 rounded-2xl flex items-center justify-center relative', colors.iconBg)}
+              whileHover={{ boxShadow: `0 0 24px ${glow}` }}
+              transition={{ duration: 0.3 }}
+            >
+              {/* Inner glass shine */}
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/30 to-transparent dark:from-white/10" />
+              <Icon className={clsx('w-7 h-7 relative z-10', colors.iconText)} />
+            </motion.div>
           </motion.div>
         </div>
+
+        {/* Hover shimmer */}
         <motion.div
-          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300"
-          initial={{ opacity: 0 }}
-          whileHover={{ opacity: 1 }}
-          transition={{ duration: 0.3 }}
+          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
         />
       </div>
     </Card>

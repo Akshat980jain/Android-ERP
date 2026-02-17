@@ -772,15 +772,15 @@ export function Sidebar({
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center space-x-2">
-                    <span className="font-semibold truncate">{item.label}</span>
+                    <span className={clsx('font-semibold truncate', { 'text-white': isActive, 'text-gray-800 dark:text-gray-100': !isActive })}>{item.label}</span>
                     {item.isExperimental && (
-                      <span className="text-xs bg-yellow-200 text-yellow-800 px-1.5 py-0.5 rounded-full">
+                      <span className="text-xs bg-yellow-200 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-300 px-1.5 py-0.5 rounded-full">
                         Beta
                       </span>
                     )}
                   </div>
                   {item.description && !isActive && (
-                    <p className="text-xs opacity-70 truncate mt-0.5">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
                       {item.description}
                     </p>
                   )}
@@ -848,17 +848,17 @@ export function Sidebar({
         <AnimatePresence>
           {showContextMenu === item.id && (
             <motion.div
-              className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-xl border z-50"
+              className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50"
               initial={{ opacity: 0, y: -10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.95 }}
               transition={{ duration: 0.2, ease: 'easeOut' }}
             >
               <div className="py-1">
-                <button className="w-full px-4 py-2 text-sm text-left hover:bg-gray-50 flex items-center space-x-2">
+                <button className="w-full px-4 py-2 text-sm text-left text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-2">
                   <span>Add to bookmarks</span>
                 </button>
-                <button className="w-full px-4 py-2 text-sm text-left hover:bg-gray-50 flex items-center space-x-2">
+                <button className="w-full px-4 py-2 text-sm text-left text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-2">
                   <span>Hide from sidebar</span>
                 </button>
               </div>
@@ -1113,10 +1113,10 @@ export function Sidebar({
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
                       {user?.name || 'User'}
                     </p>
-                    <p className="text-xs text-gray-500 truncate capitalize">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate capitalize">
                       {user?.role} • {user?.department || 'General'}
                     </p>
                   </div>
@@ -1156,7 +1156,7 @@ export function Sidebar({
             <div className="px-2 pb-2">
               <button
                 onClick={logout}
-                className="w-full p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                className="w-full p-2 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
                 title="Logout"
               >
                 <LogOut className="w-4 h-4 mx-auto" />
@@ -1205,7 +1205,7 @@ export function Sidebar({
       <style>{`
         .custom-scrollbar {
           scrollbar-width: thin;
-          scrollbar-color: #cbd5e0 transparent;
+          scrollbar-color: rgba(156,163,175,0.4) transparent;
         }
         .custom-scrollbar::-webkit-scrollbar {
           width: 4px;
@@ -1214,11 +1214,11 @@ export function Sidebar({
           background: transparent;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-          background-color: #cbd5e0;
+          background-color: rgba(156,163,175,0.4);
           border-radius: 2px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background-color: #a0aec0;
+          background-color: rgba(156,163,175,0.6);
         }
       `}</style>
     </>
