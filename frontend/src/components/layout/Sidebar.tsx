@@ -609,18 +609,18 @@ export function Sidebar({
   // Get color classes for items
   const getColorClasses = (item: MenuItem, isActive: boolean) => {
     const colorMap = {
-      blue: isActive ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25' : 'text-blue-600 hover:bg-blue-50 hover:shadow-md',
-      purple: isActive ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/25' : 'text-purple-600 hover:bg-purple-50 hover:shadow-md',
-      green: isActive ? 'bg-green-500 text-white shadow-lg shadow-green-500/25' : 'text-green-600 hover:bg-green-50 hover:shadow-md',
-      yellow: isActive ? 'bg-yellow-500 text-white shadow-lg shadow-yellow-500/25' : 'text-yellow-600 hover:bg-yellow-50 hover:shadow-md',
-      red: isActive ? 'bg-red-500 text-white shadow-lg shadow-red-500/25' : 'text-red-600 hover:bg-red-50 hover:shadow-md',
-      indigo: isActive ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/25' : 'text-indigo-600 hover:bg-indigo-50 hover:shadow-md',
-      teal: isActive ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/25' : 'text-teal-600 hover:bg-teal-50 hover:shadow-md',
-      orange: isActive ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/25' : 'text-orange-600 hover:bg-orange-50 hover:shadow-md',
-      cyan: isActive ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/25' : 'text-cyan-600 hover:bg-cyan-50 hover:shadow-md',
-      emerald: isActive ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25' : 'text-emerald-600 hover:bg-emerald-50 hover:shadow-md',
-      slate: isActive ? 'bg-slate-500 text-white shadow-lg shadow-slate-500/25' : 'text-slate-600 hover:bg-slate-50 hover:shadow-md',
-      gray: isActive ? 'bg-gray-500 text-white shadow-lg shadow-gray-500/25' : 'text-gray-600 hover:bg-gray-50 hover:shadow-md'
+      blue: isActive ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25' : 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 hover:shadow-md',
+      purple: isActive ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/25' : 'text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-500/10 hover:shadow-md',
+      green: isActive ? 'bg-green-500 text-white shadow-lg shadow-green-500/25' : 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-500/10 hover:shadow-md',
+      yellow: isActive ? 'bg-yellow-500 text-white shadow-lg shadow-yellow-500/25' : 'text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-500/10 hover:shadow-md',
+      red: isActive ? 'bg-red-500 text-white shadow-lg shadow-red-500/25' : 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 hover:shadow-md',
+      indigo: isActive ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/25' : 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:shadow-md',
+      teal: isActive ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/25' : 'text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-500/10 hover:shadow-md',
+      orange: isActive ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/25' : 'text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-500/10 hover:shadow-md',
+      cyan: isActive ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/25' : 'text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-500/10 hover:shadow-md',
+      emerald: isActive ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25' : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:shadow-md',
+      slate: isActive ? 'bg-slate-500 text-white shadow-lg shadow-slate-500/25' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-500/10 hover:shadow-md',
+      gray: isActive ? 'bg-gray-500 text-white shadow-lg shadow-gray-500/25' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-500/10 hover:shadow-md'
     };
 
     if (item.gradient && isActive) {
@@ -633,17 +633,17 @@ export function Sidebar({
       return gradientMap[item.color as keyof typeof gradientMap] || gradientMap.blue;
     }
 
-    return colorMap[item.color as keyof typeof colorMap] || (isActive ? 'bg-gray-500 text-white shadow-lg shadow-gray-500/25' : 'text-gray-600 hover:bg-gray-50 hover:shadow-md');
+    return colorMap[item.color as keyof typeof colorMap] || (isActive ? 'bg-gray-500 text-white shadow-lg shadow-gray-500/25' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-500/10 hover:shadow-md');
   };
 
   // Get badge classes
   const getBadgeClasses = (badgeType: string = 'default') => {
     const badgeMap = {
-      default: 'bg-gray-100 text-gray-800',
-      success: 'bg-green-100 text-green-800',
-      warning: 'bg-yellow-100 text-yellow-800',
-      error: 'bg-red-100 text-red-800',
-      info: 'bg-blue-100 text-blue-800'
+      default: 'bg-gray-100 dark:bg-gray-700/60 text-gray-800 dark:text-gray-200',
+      success: 'bg-green-100 dark:bg-green-500/20 text-green-800 dark:text-green-200',
+      warning: 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-800 dark:text-yellow-200',
+      error: 'bg-red-100 dark:bg-red-500/20 text-red-800 dark:text-red-200',
+      info: 'bg-blue-100 dark:bg-blue-500/20 text-blue-800 dark:text-blue-200'
     };
     return badgeMap[badgeType as keyof typeof badgeMap] || badgeMap.default;
   };

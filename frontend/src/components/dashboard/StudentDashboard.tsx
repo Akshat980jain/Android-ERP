@@ -262,18 +262,18 @@ export function StudentDashboard({ onTabChange }: StudentDashboardProps) {
     );
 
     if (hasSubmitted) {
-      return { status: 'submitted', icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-50', label: 'Submitted' };
+      return { status: 'submitted', icon: CheckCircle, color: 'text-green-600 dark:text-green-400', bgColor: 'bg-green-50 dark:bg-green-500/15', label: 'Submitted' };
     }
 
     if (now < startDate) {
-      return { status: 'not-started', icon: ClockIcon, color: 'text-gray-600', bgColor: 'bg-gray-50', label: 'Not Started' };
+      return { status: 'not-started', icon: ClockIcon, color: 'text-gray-600 dark:text-gray-400', bgColor: 'bg-gray-50 dark:bg-gray-800', label: 'Not Started' };
     }
 
     if (now > dueDate) {
-      return { status: 'overdue', icon: AlertCircle, color: 'text-red-600', bgColor: 'bg-red-50', label: 'Overdue' };
+      return { status: 'overdue', icon: AlertCircle, color: 'text-red-600 dark:text-red-400', bgColor: 'bg-red-50 dark:bg-red-500/15', label: 'Overdue' };
     }
 
-    return { status: 'active', icon: ClockIcon, color: 'text-yellow-600', bgColor: 'bg-yellow-50', label: 'Active' };
+    return { status: 'active', icon: ClockIcon, color: 'text-yellow-600 dark:text-yellow-400', bgColor: 'bg-yellow-50 dark:bg-yellow-500/15', label: 'Active' };
   };
 
   const courseColumns = [
@@ -290,7 +290,7 @@ export function StudentDashboard({ onTabChange }: StudentDashboardProps) {
       render: (value: string, item: Assignment) => (
         <div className="flex items-center space-x-3">
           <FileText className="w-4 h-4 text-gray-500" />
-          <span className="font-medium text-gray-900">{value}</span>
+          <span className="font-medium text-gray-900 dark:text-gray-100">{value}</span>
         </div>
       )
     },
@@ -304,7 +304,7 @@ export function StudentDashboard({ onTabChange }: StudentDashboardProps) {
       key: 'maxMarks',
       header: 'Max Marks',
       render: (value: number) => (
-        <span className="font-medium text-gray-900">{value}</span>
+        <span className="font-medium text-gray-900 dark:text-gray-100">{value}</span>
       )
     },
     {
@@ -397,7 +397,7 @@ export function StudentDashboard({ onTabChange }: StudentDashboardProps) {
 
   return (
     <motion.div
-      className="space-y-8 p-6 bg-gray-50/30 min-h-screen relative"
+      className="space-y-8 p-6 bg-gray-50/30 dark:bg-transparent min-h-screen relative"
       variants={pageVariants}
       initial="initial"
       animate="in"
@@ -519,7 +519,7 @@ export function StudentDashboard({ onTabChange }: StudentDashboardProps) {
                   <div className="w-full h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all ${((sectionData.students?.length || 0) / sectionData.maxStudents) > 0.9 ? 'bg-red-500' :
-                          ((sectionData.students?.length || 0) / sectionData.maxStudents) > 0.7 ? 'bg-amber-500' : 'bg-emerald-500'
+                        ((sectionData.students?.length || 0) / sectionData.maxStudents) > 0.7 ? 'bg-amber-500' : 'bg-emerald-500'
                         }`}
                       style={{ width: `${Math.min(100, ((sectionData.students?.length || 0) / sectionData.maxStudents) * 100)}%` }}
                     />
@@ -551,16 +551,16 @@ export function StudentDashboard({ onTabChange }: StudentDashboardProps) {
           animate="animate"
         >
           <DynamicBackground variant="gradient-mesh" intensity="subtle" colorScheme="ocean" className="absolute inset-0 rounded-2xl" />
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+          <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-2xl shadow-lg dark:shadow-gray-950/30 border border-gray-100 dark:border-gray-700/40 overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-blue-50">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700/40 bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-500/10 dark:to-blue-500/10">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
-                  <CalendarCheck className="w-5 h-5 text-indigo-600" />
+                <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-500/20 rounded-xl flex items-center justify-center">
+                  <CalendarCheck className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900">Today's Attendance</h2>
-                  <p className="text-xs text-gray-500">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Today's Attendance</h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
                 </div>
               </div>
             </div>
@@ -635,11 +635,11 @@ export function StudentDashboard({ onTabChange }: StudentDashboardProps) {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                     >
-                      <div className="w-14 h-14 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+                      <div className="w-14 h-14 bg-gray-50 dark:bg-gray-800 rounded-full flex items-center justify-center mb-3">
                         <CalendarCheck className="w-7 h-7 text-gray-300" />
                       </div>
-                      <p className="text-gray-500 font-medium text-sm">No lectures scheduled today</p>
-                      <p className="text-gray-400 text-xs mt-1">Enjoy your day off! 🎉</p>
+                      <p className="text-gray-500 dark:text-gray-400 font-medium text-sm">No lectures scheduled today</p>
+                      <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">Enjoy your day off! 🎉</p>
                     </motion.div>
                   );
                 }
@@ -663,7 +663,7 @@ export function StudentDashboard({ onTabChange }: StudentDashboardProps) {
                             transition={{ delay: i * 0.06, duration: 0.35 }}
                           >
                             {/* Lecture label */}
-                            <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">L{i + 1}</span>
+                            <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">L{i + 1}</span>
 
                             {/* Circle */}
                             <motion.div
@@ -693,12 +693,12 @@ export function StudentDashboard({ onTabChange }: StudentDashboardProps) {
                             </motion.div>
 
                             {/* Time */}
-                            <span className="text-[10px] text-gray-400 font-medium truncate max-w-full">
+                            <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium truncate max-w-full">
                               {slot.time || '—'}
                             </span>
 
                             {/* Course code */}
-                            <span className={`text-[10px] font-bold truncate max-w-full ${isMarked ? 'text-gray-600' : 'text-gray-300'}`}>
+                            <span className={`text-[10px] font-bold truncate max-w-full ${isMarked ? 'text-gray-600 dark:text-gray-300' : 'text-gray-300 dark:text-gray-600'}`}>
                               {slot.courseCode || '—'}
                             </span>
 
@@ -714,22 +714,22 @@ export function StudentDashboard({ onTabChange }: StudentDashboardProps) {
                     </div>
 
                     {/* Legend / Summary */}
-                    <div className="flex items-center justify-center gap-5 mt-5 pt-4 border-t border-gray-100">
+                    <div className="flex items-center justify-center gap-5 mt-5 pt-4 border-t border-gray-100 dark:border-gray-700/40">
                       <div className="flex items-center gap-1.5">
                         <span className="w-3 h-3 rounded-full bg-emerald-500 inline-block" />
-                        <span className="text-xs text-gray-500">Present <b className="text-gray-700">{presentCount}</b></span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">Present <b className="text-gray-700 dark:text-gray-200">{presentCount}</b></span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="w-3 h-3 rounded-full bg-red-500 inline-block" />
-                        <span className="text-xs text-gray-500">Absent <b className="text-gray-700">{absentCount}</b></span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">Absent <b className="text-gray-700 dark:text-gray-200">{absentCount}</b></span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="w-3 h-3 rounded-full bg-amber-400 inline-block" />
-                        <span className="text-xs text-gray-500">Late <b className="text-gray-700">{lateCount}</b></span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">Late <b className="text-gray-700 dark:text-gray-200">{lateCount}</b></span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="w-3 h-3 rounded-full inline-block" style={{ border: '1.5px dashed rgba(209,213,219,0.6)', backgroundColor: 'rgba(243,244,246,0.3)' }} />
-                        <span className="text-xs text-gray-400">Not Marked <b className="text-gray-500">{notMarkedCount}</b></span>
+                        <span className="text-xs text-gray-400 dark:text-gray-500">Not Marked <b className="text-gray-500 dark:text-gray-400">{notMarkedCount}</b></span>
                       </div>
                     </div>
                   </>
@@ -784,10 +784,10 @@ export function StudentDashboard({ onTabChange }: StudentDashboardProps) {
               </ResponsiveContainer>
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="text-center">
-                  <div className="text-4xl font-bold text-gray-900 mb-1">
+                  <div className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-1">
                     {loading ? '...' : `${attendanceStats.percentage}%`}
                   </div>
-                  <div className="text-sm text-gray-600">Attendance Rate</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Attendance Rate</div>
                 </div>
               </div>
             </motion.div>
@@ -811,7 +811,7 @@ export function StudentDashboard({ onTabChange }: StudentDashboardProps) {
             >
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={marksData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid, #f0f0f0)" />
                   <XAxis
                     dataKey="subject"
                     angle={-45}
@@ -826,10 +826,11 @@ export function StudentDashboard({ onTabChange }: StudentDashboardProps) {
                   />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: 'white',
-                      border: '1px solid #e5e7eb',
+                      backgroundColor: 'var(--tooltip-bg, white)',
+                      border: '1px solid var(--tooltip-border, #e5e7eb)',
                       borderRadius: '8px',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                      color: 'var(--tooltip-text, #111827)'
                     }}
                   />
                   <Bar
@@ -867,8 +868,8 @@ export function StudentDashboard({ onTabChange }: StudentDashboardProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Quick Access</h2>
-          <p className="text-gray-600 text-sm">Access your most important features with one click</p>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Quick Access</h2>
+          <p className="text-gray-600 dark:text-gray-400 text-sm">Access your most important features with one click</p>
         </motion.div>
         {[
           { icon: FileText, title: "Assignments", subtitle: "View & Submit", variant: "primary", action: "assignments", color: "blue" },
@@ -940,7 +941,7 @@ export function StudentDashboard({ onTabChange }: StudentDashboardProps) {
               {/* Loading indicator */}
               {navigating === action.action && (
                 <motion.div
-                  className="absolute inset-0 bg-white/80 rounded-xl flex items-center justify-center z-20"
+                  className="absolute inset-0 bg-white/80 dark:bg-gray-900/80 rounded-xl flex items-center justify-center z-20"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
@@ -968,13 +969,13 @@ export function StudentDashboard({ onTabChange }: StudentDashboardProps) {
         <DynamicBackground variant="wave-animation" intensity="subtle" colorScheme="ocean" className="absolute inset-0 rounded-xl" />
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-              <FileText className="w-4 h-4 text-blue-600" />
+            <div className="w-8 h-8 bg-blue-100 dark:bg-blue-500/20 rounded-lg flex items-center justify-center">
+              <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             </div>
-            <h2 className="text-xl font-semibold text-gray-900">Recent Assignments</h2>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Recent Assignments</h2>
           </div>
           <motion.button
-            className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline flex items-center space-x-1 group"
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium hover:underline flex items-center space-x-1 group"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => onTabChange && onTabChange('assignments')}
@@ -1008,13 +1009,13 @@ export function StudentDashboard({ onTabChange }: StudentDashboardProps) {
         <DynamicBackground variant="geometric-shapes" intensity="subtle" colorScheme="forest" className="absolute inset-0 rounded-xl" />
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-              <GraduationCap className="w-4 h-4 text-purple-600" />
+            <div className="w-8 h-8 bg-purple-100 dark:bg-purple-500/20 rounded-lg flex items-center justify-center">
+              <GraduationCap className="w-4 h-4 text-purple-600 dark:text-purple-400" />
             </div>
-            <h2 className="text-xl font-semibold text-gray-900">Enrolled Courses</h2>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Enrolled Courses</h2>
           </div>
           <motion.button
-            className="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline flex items-center space-x-1 group"
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium hover:underline flex items-center space-x-1 group"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => onTabChange && onTabChange('academic')}
@@ -1047,19 +1048,19 @@ export function StudentDashboard({ onTabChange }: StudentDashboardProps) {
       >
         {/* Background effect for events */}
         <DynamicBackground variant="gradient-mesh" intensity="subtle" colorScheme="purple" className="absolute inset-0 rounded-2xl" />
-        <Card variant="gradient" className="bg-gradient-to-r from-purple-50 to-blue-50">
+        <Card variant="gradient" className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-500/10 dark:to-blue-500/10">
           <CardHeader>
             <div className="flex items-center space-x-3">
               <motion.div
-                className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center"
+                className="w-10 h-10 bg-purple-100 dark:bg-purple-500/20 rounded-lg flex items-center justify-center"
                 whileHover={{ scale: 1.1, rotate: 5 }}
                 transition={{ type: "spring", stiffness: 300 }}
               >
-                <Calendar className="w-5 h-5 text-purple-600" />
+                <Calendar className="w-5 h-5 text-purple-600 dark:text-purple-400" />
               </motion.div>
               <div>
-                <CardTitle className="text-purple-900">Upcoming Events</CardTitle>
-                <p className="text-sm text-purple-700">Stay updated with important dates</p>
+                <CardTitle className="text-purple-900 dark:text-purple-200">Upcoming Events</CardTitle>
+                <p className="text-sm text-purple-700 dark:text-purple-400">Stay updated with important dates</p>
               </div>
             </div>
           </CardHeader>
@@ -1072,8 +1073,8 @@ export function StudentDashboard({ onTabChange }: StudentDashboardProps) {
                 transition={{ delay: 0.2 }}
               >
                 <Calendar className="w-12 h-12 text-purple-300 mx-auto mb-3" />
-                <p className="text-purple-600 font-medium">No upcoming events</p>
-                <p className="text-purple-500 text-sm">Check back later for updates</p>
+                <p className="text-purple-600 dark:text-purple-400 font-medium">No upcoming events</p>
+                <p className="text-purple-500 dark:text-purple-500 text-sm">Check back later for updates</p>
               </motion.div>
             ) : (
               <motion.div
@@ -1085,7 +1086,7 @@ export function StudentDashboard({ onTabChange }: StudentDashboardProps) {
                 {upcomingEvents.map((event, index) => (
                   <motion.div
                     key={index}
-                    className="flex items-center justify-between p-3 bg-white/60 rounded-lg border border-purple-200/60"
+                    className="flex items-center justify-between p-3 bg-white/60 dark:bg-gray-800/40 rounded-lg border border-purple-200/60 dark:border-purple-500/20"
                     variants={staggerItem}
                     custom={index}
                     whileHover={{ scale: 1.02, x: 5 }}
@@ -1095,8 +1096,8 @@ export function StudentDashboard({ onTabChange }: StudentDashboardProps) {
                         event.type === 'assignment' ? 'bg-yellow-500' : 'bg-blue-500'
                         }`} />
                       <div>
-                        <p className="font-medium text-purple-900">{event.title}</p>
-                        <p className="text-sm text-purple-700">{event.date}</p>
+                        <p className="font-medium text-purple-900 dark:text-purple-200">{event.title}</p>
+                        <p className="text-sm text-purple-700 dark:text-purple-400">{event.date}</p>
                       </div>
                     </div>
                     <Bell className="w-4 h-4 text-purple-400" />

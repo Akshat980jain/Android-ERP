@@ -34,12 +34,8 @@ interface VerificationRequest {
 // Helper to get admin type with fallback
 function getAdminType(user: AppUser | null): 'head' | 'program' | 'branch' | null {
   if (!user || user.role !== 'admin') return null;
-  // Use explicit type if available
   if (user.adminType) return user.adminType as any;
-  // Fallback logic for legacy users
   if (Array.isArray(user.adminPrograms) && user.adminPrograms.length > 0) {
-    // If they have a branch, they might be a branch admin, but let's default to program for safety unless explicit
-    // Actually, in the old system, "Program Admin" was the only type other than Head.
     return 'program';
   }
   return 'head';
@@ -67,7 +63,6 @@ function AdminVerificationPanel() {
     try {
       const data = await apiClient.getVerificationRequests(token || undefined) as { success: boolean; requests: VerificationRequest[]; message?: string };
       if (data.success) {
-        // Backend now handles all filtering based on admin type
         setRequests(data.requests);
       } else {
         setError(data.message || 'Failed to fetch requests');
@@ -106,67 +101,61 @@ function AdminVerificationPanel() {
     adminType === 'program' ? 'Program Admin' :
       adminType === 'branch' ? 'Branch Admin' : 'Admin';
 
-  if (loading) return <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">Loading requests...</div>;
+  if (loading) return <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-600 dark:text-gray-300">Loading requests...</div>;
   if (requests.length === 0) return null;
 
   return (
-    <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-      <div className="font-semibold text-green-800 mb-2 flex items-center justify-between">
+    <div className="mb-6 p-5 bg-emerald-50/80 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 rounded-xl">
+      <div className="font-semibold text-emerald-800 dark:text-emerald-300 mb-3 flex items-center justify-between">
         <div className="flex items-center">
           <Shield className="w-5 h-5 mr-2" />
           Pending Verification Requests ({requests.length})
         </div>
-        <div className="text-sm text-green-700 font-medium px-2 py-1 bg-green-100 rounded">
+        <div className="text-sm font-medium px-3 py-1 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 rounded-lg">
           {typeLabel}
         </div>
       </div>
-      {success && <div className="text-green-700 text-sm mb-2">{success}</div>}
-      {error && <div className="text-red-700 text-sm mb-2">{error}</div>}
-      {/* Scrollable container for many requests */}
+      {success && <div className="text-emerald-700 dark:text-emerald-400 text-sm mb-2">{success}</div>}
+      {error && <div className="text-red-700 dark:text-red-400 text-sm mb-2">{error}</div>}
       <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
         {requests
           .filter(req => req.name && req.email && (req.user || req.password))
           .map(req => {
-            // Permission check for UI button state
             let canApprove = false;
             if (adminType === 'head') {
-              // Head approves Program Admin, Library, Placement
-              // Also unassigned requests
               canApprove = true;
             } else if (adminType === 'program') {
-              // Program Admin approves Branch Admin only
               if (req.requestedRole === 'admin' && (req as any).adminType === 'branch') canApprove = true;
             } else if (adminType === 'branch') {
-              // Branch Admin approves Students and Faculty
               if (req.requestedRole === 'student' || req.requestedRole === 'faculty') canApprove = true;
             }
 
             return (
-              <div key={req._id} className="flex flex-col md:flex-row md:items-center justify-between bg-white p-3 rounded border shadow-sm">
+              <div key={req._id} className="flex flex-col md:flex-row md:items-center justify-between bg-white dark:bg-gray-800/80 p-4 rounded-xl border border-gray-100 dark:border-gray-700/60 shadow-sm dark:shadow-gray-950/20">
                 <div className="mb-2 md:mb-0">
-                  <div className="font-medium flex items-center">
+                  <div className="font-medium text-gray-900 dark:text-gray-100 flex items-center">
                     {req.user?.name || req.name}
-                    <span className="text-gray-500 font-normal text-sm ml-2">({req.user?.email || req.email})</span>
+                    <span className="text-gray-500 dark:text-gray-400 font-normal text-sm ml-2">({req.user?.email || req.email})</span>
                   </div>
-                  <div className="text-xs text-gray-600 mt-1 flex flex-wrap gap-2">
-                    <span className="bg-gray-100 px-1.5 py-0.5 rounded">Role: <span className="font-semibold">{req.requestedRole}</span></span>
+                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-1.5 flex flex-wrap gap-2">
+                    <span className="bg-gray-100 dark:bg-gray-700/60 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-md">Role: <span className="font-semibold">{req.requestedRole}</span></span>
                     {(req as any).adminType && (
-                      <span className="bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded">Type: {(req as any).adminType}</span>
+                      <span className="bg-purple-100 dark:bg-purple-500/20 text-purple-800 dark:text-purple-300 px-2 py-0.5 rounded-md">Type: {(req as any).adminType}</span>
                     )}
-                    {req.program && <span className="bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">Prog: {req.program}</span>}
-                    {req.user?.branch && <span className="bg-orange-50 text-orange-700 px-1.5 py-0.5 rounded">Branch: {req.user.branch}</span>}
+                    {req.program && <span className="bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-md">Prog: {req.program}</span>}
+                    {req.user?.branch && <span className="bg-orange-50 dark:bg-orange-500/15 text-orange-700 dark:text-orange-300 px-2 py-0.5 rounded-md">Branch: {req.user.branch}</span>}
                   </div>
                   <input
                     type="text"
                     placeholder="Remarks (optional)"
-                    className="mt-2 px-2 py-1 border rounded text-sm w-full md:w-64"
+                    className="mt-2 px-3 py-1.5 border border-gray-200 dark:border-gray-600 rounded-lg text-sm w-full md:w-64 bg-white dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={remarksMap[req._id] || ''}
                     onChange={e => setRemarksMap(prev => ({ ...prev, [req._id]: e.target.value }))}
                   />
                 </div>
-                <div className="flex space-x-2">
+                <div className="flex space-x-2 mt-2 md:mt-0">
                   <button
-                    className="px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 flex items-center disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white rounded-lg flex items-center disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors shadow-sm"
                     onClick={() => handleDecision(req._id, 'approved')}
                     disabled={!canApprove}
                     title={!canApprove ? "You do not have permission to approve this role" : "Approve request"}
@@ -174,7 +163,7 @@ function AdminVerificationPanel() {
                     <CheckCircle className="w-4 h-4 mr-1.5" />Approve
                   </button>
                   <button
-                    className="px-3 py-1.5 bg-red-600 text-white rounded hover:bg-red-700 flex items-center disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-500 text-white rounded-lg flex items-center disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors shadow-sm"
                     onClick={() => handleDecision(req._id, 'rejected')}
                     disabled={!canApprove}
                   >
@@ -227,12 +216,12 @@ function ProgramAdminsPanel() {
   }
 
   return (
-    <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-      <div className="font-semibold text-blue-800 mb-2 flex items-center">
+    <div className="mb-6 p-5 bg-blue-50/80 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-xl">
+      <div className="font-semibold text-blue-800 dark:text-blue-300 mb-3 flex items-center">
         <Shield className="w-5 h-5 mr-2" />Program-specific Admins
       </div>
       <select
-        className="border border-gray-300 rounded px-2 py-1 mb-2"
+        className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 mb-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
         value={selectedProgram}
         onChange={e => setSelectedProgram(e.target.value)}
       >
@@ -241,27 +230,28 @@ function ProgramAdminsPanel() {
           <option key={opt.value} value={opt.value}>{opt.label}</option>
         ))}
       </select>
-      {loading && <div>Loading admins...</div>}
-      {error && <div className="text-red-600">{error}</div>}
+      {loading && <div className="text-gray-600 dark:text-gray-400">Loading admins...</div>}
+      {error && <div className="text-red-600 dark:text-red-400">{error}</div>}
       {admins.length > 0 && (
         <ul className="mt-2 space-y-1">
           {admins.map(admin => (
-            <li key={admin._id || admin.id} className="bg-white rounded px-3 py-2 border flex flex-col">
-              <span className="font-medium">{admin.name} ({admin.email})</span>
-              <span className="text-xs text-gray-600">Programs: {admin.adminPrograms?.join(', ')}</span>
+            <li key={admin._id || admin.id} className="bg-white dark:bg-gray-800/80 rounded-lg px-4 py-3 border border-gray-100 dark:border-gray-700/60 flex flex-col">
+              <span className="font-medium text-gray-900 dark:text-gray-100">{admin.name} ({admin.email})</span>
+              <span className="text-xs text-gray-600 dark:text-gray-400">Programs: {admin.adminPrograms?.join(', ')}</span>
             </li>
           ))}
         </ul>
       )}
       {selectedProgram && !loading && admins.length === 0 && !error && (
-        <div className="text-gray-600 mt-2">No admins found for this program.</div>
+        <div className="text-gray-600 dark:text-gray-400 mt-2">No admins found for this program.</div>
       )}
     </div>
   );
 }
 
 export function AdminDashboard() {
-  const { token } = useAuth();
+  const { token, theme } = useAuth();
+  const isDark = theme === 'dark';
   const [stats, setStats] = useState<{ totalStudents: number; totalFaculty: number; totalCourses: number; totalRevenue: number } | null>(null);
   const [departmentData, setDepartmentData] = useState<{ department: string; students: number }[]>([]);
   const [revenueData, setRevenueData] = useState<{ month: string; amount: number }[]>([]);
@@ -294,16 +284,29 @@ export function AdminDashboard() {
   }, [token]);
 
   const quickStats = stats ? [
-    { title: 'Total Students', value: stats.totalStudents, icon: Users, color: 'text-blue-600' },
-    { title: 'Faculty Members', value: stats.totalFaculty, icon: GraduationCap, color: 'text-green-600' },
-    { title: 'Active Courses', value: stats.totalCourses, icon: BookOpen, color: 'text-purple-600' },
-    { title: 'Total Revenue', value: `₹${stats.totalRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-orange-600' },
+    { title: 'Total Students', value: stats.totalStudents, icon: Users, color: 'text-blue-600 dark:text-blue-400', bgColor: 'bg-blue-50 dark:bg-blue-500/15' },
+    { title: 'Faculty Members', value: stats.totalFaculty, icon: GraduationCap, color: 'text-green-600 dark:text-green-400', bgColor: 'bg-green-50 dark:bg-green-500/15' },
+    { title: 'Active Courses', value: stats.totalCourses, icon: BookOpen, color: 'text-purple-600 dark:text-purple-400', bgColor: 'bg-purple-50 dark:bg-purple-500/15' },
+    { title: 'Total Revenue', value: `₹${stats.totalRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-orange-600 dark:text-orange-400', bgColor: 'bg-orange-50 dark:bg-orange-500/15' },
   ] : [];
+
+  // Chart theme colors
+  const chartColors = {
+    grid: isDark ? '#374151' : '#e5e7eb',
+    text: isDark ? '#9ca3af' : '#6b7280',
+    tooltip: {
+      bg: isDark ? '#1f2937' : '#ffffff',
+      border: isDark ? '#374151' : '#e5e7eb',
+      text: isDark ? '#f3f4f6' : '#111827',
+    },
+  };
 
   return (
     <div className="space-y-6">
       <AdminVerificationPanel />
       <ProgramAdminsPanel />
+
+      {/* Permissions Matrix */}
       <Card>
         <CardHeader>
           <CardTitle>Permissions Matrix</CardTitle>
@@ -312,13 +315,13 @@ export function AdminDashboard() {
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
-                <tr className="text-left text-gray-600">
-                  <th className="py-2 pr-4">Module</th>
-                  <th className="py-2 pr-4">Student</th>
-                  <th className="py-2 pr-4">Faculty</th>
-                  <th className="py-2 pr-4">Admin</th>
-                  <th className="py-2 pr-4">Library</th>
-                  <th className="py-2 pr-4">Placement</th>
+                <tr className="text-left text-gray-500 dark:text-gray-400">
+                  <th className="py-2.5 pr-4 font-semibold">Module</th>
+                  <th className="py-2.5 pr-4 font-semibold">Student</th>
+                  <th className="py-2.5 pr-4 font-semibold">Faculty</th>
+                  <th className="py-2.5 pr-4 font-semibold">Admin</th>
+                  <th className="py-2.5 pr-4 font-semibold">Library</th>
+                  <th className="py-2.5 pr-4 font-semibold">Placement</th>
                 </tr>
               </thead>
               <tbody>
@@ -332,13 +335,13 @@ export function AdminDashboard() {
                   { m: 'Placement', s: 'apply', f: 'refer', a: 'manage', l: '-', p: 'manage' },
                   { m: 'Notifications', s: 'view', f: 'create', a: 'create', l: 'create', p: 'create' },
                 ].map(row => (
-                  <tr key={row.m} className="border-t">
-                    <td className="py-2 pr-4 font-medium">{row.m}</td>
-                    <td className="py-2 pr-4">{row.s}</td>
-                    <td className="py-2 pr-4">{row.f}</td>
-                    <td className="py-2 pr-4">{row.a}</td>
-                    <td className="py-2 pr-4">{row.l}</td>
-                    <td className="py-2 pr-4">{row.p}</td>
+                  <tr key={row.m} className="border-t border-gray-100 dark:border-gray-700/50">
+                    <td className="py-2.5 pr-4 font-medium text-gray-900 dark:text-gray-100">{row.m}</td>
+                    <td className="py-2.5 pr-4 text-gray-600 dark:text-gray-400">{row.s}</td>
+                    <td className="py-2.5 pr-4 text-gray-600 dark:text-gray-400">{row.f}</td>
+                    <td className="py-2.5 pr-4 text-gray-600 dark:text-gray-400">{row.a}</td>
+                    <td className="py-2.5 pr-4 text-gray-600 dark:text-gray-400">{row.l}</td>
+                    <td className="py-2.5 pr-4 text-gray-600 dark:text-gray-400">{row.p}</td>
                   </tr>
                 ))}
               </tbody>
@@ -347,13 +350,14 @@ export function AdminDashboard() {
         </CardContent>
       </Card>
 
+      {/* Scheduled Reminders */}
       <Card>
         <CardHeader>
           <CardTitle>Scheduled Reminders</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-600">Generate reminders for fees due, upcoming assignments, and low attendance.</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">Generate reminders for fees due, upcoming assignments, and low attendance.</div>
             <Button
               onClick={async () => {
                 setGenMsg('');
@@ -370,15 +374,18 @@ export function AdminDashboard() {
               Run Now
             </Button>
           </div>
-          {genMsg && <div className="mt-2 text-sm text-gray-700">{genMsg}</div>}
+          {genMsg && <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">{genMsg}</div>}
         </CardContent>
       </Card>
+
+      {/* Stats & Charts */}
       {loading ? (
-        <div className="p-6 text-center text-gray-500">Loading stats...</div>
+        <div className="p-6 text-center text-gray-500 dark:text-gray-400">Loading stats...</div>
       ) : error ? (
-        <div className="p-6 text-center text-red-600">{error}</div>
+        <div className="p-6 text-center text-red-600 dark:text-red-400">{error}</div>
       ) : (
         <>
+          {/* Quick Stats */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {quickStats.map((stat, index) => {
               const Icon = stat.icon;
@@ -386,16 +393,19 @@ export function AdminDashboard() {
                 <Card key={index}>
                   <CardContent className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-gray-600">{stat.title}</p>
+                      <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{stat.title}</p>
                       <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
                     </div>
-                    <Icon className={`w-8 h-8 ${stat.color}`} />
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${stat.bgColor}`}>
+                      <Icon className={`w-6 h-6 ${stat.color}`} />
+                    </div>
                   </CardContent>
                 </Card>
               );
             })}
           </div>
 
+          {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
@@ -405,11 +415,14 @@ export function AdminDashboard() {
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={departmentData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="department" angle={-45} textAnchor="end" height={60} />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="students" fill="#3B82F6" />
+                      <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
+                      <XAxis dataKey="department" angle={-45} textAnchor="end" height={60} tick={{ fill: chartColors.text, fontSize: 12 }} />
+                      <YAxis tick={{ fill: chartColors.text, fontSize: 12 }} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: chartColors.tooltip.bg, border: `1px solid ${chartColors.tooltip.border}`, borderRadius: '8px', color: chartColors.tooltip.text }}
+                        labelStyle={{ color: chartColors.tooltip.text }}
+                      />
+                      <Bar dataKey="students" fill="#3B82F6" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -424,11 +437,15 @@ export function AdminDashboard() {
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={revenueData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
-                      <YAxis />
-                      <Tooltip formatter={(value) => [`₹${value.toLocaleString()}`, 'Revenue']} />
-                      <Line type="monotone" dataKey="amount" stroke="#10B981" strokeWidth={2} />
+                      <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
+                      <XAxis dataKey="month" tick={{ fill: chartColors.text, fontSize: 12 }} />
+                      <YAxis tick={{ fill: chartColors.text, fontSize: 12 }} />
+                      <Tooltip
+                        formatter={(value) => [`₹${value.toLocaleString()}`, 'Revenue']}
+                        contentStyle={{ backgroundColor: chartColors.tooltip.bg, border: `1px solid ${chartColors.tooltip.border}`, borderRadius: '8px', color: chartColors.tooltip.text }}
+                        labelStyle={{ color: chartColors.tooltip.text }}
+                      />
+                      <Line type="monotone" dataKey="amount" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981', r: 4 }} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
