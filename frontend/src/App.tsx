@@ -50,6 +50,7 @@ import { BackgroundControls } from './components/ui/BackgroundControls';
 import { ColorTransition } from './components/ui/ColorTransition';
 import { BackgroundShowcase } from './components/ui/BackgroundShowcase';
 import { LandingPage } from './components/LandingPage';
+import { RoleLoginPage } from './components/auth/RoleLoginPage';
 
 function AppContent() {
   const { user, isLoading } = useAuth();
@@ -85,6 +86,11 @@ function AppContent() {
       <Route path="/verify-email-otp" element={<EmailOtpPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/login" element={user ? <Navigate to="/app" replace /> : <LoginForm />} />
+      <Route path="/login/student" element={user ? <Navigate to="/app" replace /> : <RoleLoginPage role="student" />} />
+      <Route path="/login/faculty" element={user ? <Navigate to="/app" replace /> : <RoleLoginPage role="faculty" />} />
+      <Route path="/login/admin" element={user ? <Navigate to="/app" replace /> : <RoleLoginPage role="admin" />} />
+      <Route path="/login/placement" element={user ? <Navigate to="/app" replace /> : <RoleLoginPage role="placement" />} />
+      <Route path="/login/library" element={user ? <Navigate to="/app" replace /> : <RoleLoginPage role="library" />} />
       <Route path="/landing" element={user ? <Navigate to="/app" replace /> : <LandingPage />} />
       {/* Root route: show mobile landing on phones, cinematic landing on desktop; redirect to app when authenticated */}
       <Route path="/" element={user ? <Navigate to="/app" replace /> : (isMobile ? <MobileLanding /> : <LandingPage />)} />
@@ -145,6 +151,10 @@ function AppContent() {
                             case 'faculty':
                               return <FacultyDashboard />;
                             case 'admin':
+                              return <AdminDashboard />;
+                            case 'placement':
+                              return <AdminDashboard />;
+                            case 'library':
                               return <AdminDashboard />;
                             default:
                               return <StudentDashboard onTabChange={setActiveTab} />;

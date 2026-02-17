@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import {
     CheckCircle, FileText, BarChart3, Calendar, BookOpen, CreditCard,
     MessageCircle, TrendingUp, GraduationCap, Users, Shield, Zap,
-    Globe, Clock, Activity, ChevronRight,
+    Globe, Clock, Activity, ChevronRight, Briefcase,
     Menu, X
 } from 'lucide-react';
 
@@ -149,6 +149,7 @@ const roles = [
         title: 'Student Portal',
         color: '#3B82F6',
         gradient: 'from-blue-500/20 to-blue-600/5',
+        loginPath: '/login/student',
         features: ['View grades & academic progress', 'Submit assignments on time', 'Track attendance records', 'Access library & schedules'],
     },
     {
@@ -156,6 +157,7 @@ const roles = [
         title: 'Faculty Portal',
         color: '#8B5CF6',
         gradient: 'from-purple-500/20 to-purple-600/5',
+        loginPath: '/login/faculty',
         features: ['Mark & manage attendance', 'Grade assignments & exams', 'View teaching schedule', 'Track student performance'],
     },
     {
@@ -163,7 +165,24 @@ const roles = [
         title: 'Admin Portal',
         color: '#06B6D4',
         gradient: 'from-cyan-500/20 to-cyan-600/5',
+        loginPath: '/login/admin',
         features: ['Full system control', 'User & course management', 'Financial operations', 'Advanced analytics & reports'],
+    },
+    {
+        icon: Briefcase,
+        title: 'Placement Officer',
+        color: '#22C55E',
+        gradient: 'from-green-500/20 to-green-600/5',
+        loginPath: '/login/placement',
+        features: ['Post job opportunities', 'Track student placements', 'Company management', 'Generate placement reports'],
+    },
+    {
+        icon: BookOpen,
+        title: 'Librarian Portal',
+        color: '#F59E0B',
+        gradient: 'from-amber-500/20 to-amber-600/5',
+        loginPath: '/login/library',
+        features: ['Manage book catalog', 'Issue & return books', 'Track overdue items', 'Digital library access'],
     },
 ];
 
@@ -447,7 +466,7 @@ export const LandingPage: React.FC = () => {
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.6 }}
                     >
-                        30+ Modules • 3 Portals • 1 Seamless Platform
+                        30+ Modules • 5 Portals • 1 Seamless Platform
                     </motion.div>
 
                     {/* Terminal typing */}
@@ -583,18 +602,18 @@ export const LandingPage: React.FC = () => {
                     <AnimatedSection className="text-center mb-16">
                         <p className="text-sm font-semibold text-purple-400 uppercase tracking-widest mb-3">Role-Based Access</p>
                         <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-b from-white to-gray-400 bg-clip-text text-transparent mb-4">
-                            Three Portals, One Platform
+                            Five Portals, One Platform
                         </h2>
                         <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-                            Tailored experiences for students, faculty, and administrators — each with their own dashboard and tools.
+                            Tailored experiences for students, faculty, administrators, placement officers, and librarians — each with their own dashboard and tools.
                         </p>
                     </AnimatedSection>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
                         {roles.map((role, i) => (
                             <GlowCard key={role.title} delay={i * 0.15} glowColor={`${role.color}25`}>
                                 <div className={`absolute inset-0 rounded-2xl bg-gradient-to-b ${role.gradient} opacity-50`} />
-                                <div className="relative z-10">
+                                <div className="relative z-10 flex flex-col h-full">
                                     <div
                                         className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5"
                                         style={{ background: `${role.color}15` }}
@@ -602,7 +621,7 @@ export const LandingPage: React.FC = () => {
                                         <role.icon className="w-7 h-7" style={{ color: role.color }} />
                                     </div>
                                     <h3 className="text-xl font-bold text-white mb-4">{role.title}</h3>
-                                    <ul className="space-y-3">
+                                    <ul className="space-y-3 flex-1">
                                         {role.features.map((feat) => (
                                             <li key={feat} className="flex items-start gap-3 text-sm text-gray-300">
                                                 <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: role.color }} />
@@ -611,7 +630,7 @@ export const LandingPage: React.FC = () => {
                                         ))}
                                     </ul>
                                     <Link
-                                        to="/login"
+                                        to={role.loginPath}
                                         className="mt-6 w-full py-3 rounded-xl border border-white/[0.1] hover:border-white/[0.2] text-sm font-medium text-gray-300 hover:text-white transition-all hover:bg-white/[0.04] flex items-center justify-center gap-2"
                                     >
                                         Explore Portal <ChevronRight className="w-4 h-4" />
