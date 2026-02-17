@@ -383,12 +383,33 @@ export const LandingPage: React.FC = () => {
 
                         {/* Desktop nav */}
                         <div className="hidden md:flex items-center gap-3">
-                            <Link
-                                to="/login"
-                                className="px-5 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors rounded-lg hover:bg-white/[0.05]"
-                            >
-                                Login
-                            </Link>
+                            {/* Login dropdown */}
+                            <div className="relative group">
+                                <button className="px-5 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors rounded-lg hover:bg-white/[0.05] flex items-center gap-1.5">
+                                    Login
+                                    <ChevronRight className="w-3.5 h-3.5 rotate-90 transition-transform group-hover:-rotate-90" />
+                                </button>
+                                <div className="absolute top-full right-0 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                                    <div className="w-56 bg-[#0d1526]/95 backdrop-blur-xl border border-white/[0.1] rounded-xl shadow-2xl shadow-black/40 overflow-hidden py-1.5">
+                                        {[
+                                            { label: 'Student Portal', path: '/login/student', color: '#3B82F6', icon: '🎓' },
+                                            { label: 'Faculty Portal', path: '/login/faculty', color: '#8B5CF6', icon: '👨‍🏫' },
+                                            { label: 'Admin Portal', path: '/login/admin', color: '#06B6D4', icon: '🛡️' },
+                                            { label: 'Placement Officer', path: '/login/placement', color: '#22C55E', icon: '💼' },
+                                            { label: 'Librarian Portal', path: '/login/library', color: '#F59E0B', icon: '📚' },
+                                        ].map((p) => (
+                                            <Link
+                                                key={p.path}
+                                                to={p.path}
+                                                className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/[0.06] transition-colors"
+                                            >
+                                                <span className="text-base">{p.icon}</span>
+                                                <span>{p.label}</span>
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
                             <Link
                                 to="/request-verification"
                                 className="px-5 py-2.5 text-sm font-semibold rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 transition-all shadow-lg shadow-blue-600/25 hover:shadow-blue-500/40 hover:scale-[1.03] active:scale-[0.98] inline-block"
@@ -412,13 +433,30 @@ export const LandingPage: React.FC = () => {
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
                     >
-                        <Link to="/login" onClick={() => setMobileNav(false)} className="block w-full py-3 text-left text-gray-300 hover:text-white">
-                            Login
-                        </Link>
+                        <p className="text-xs text-gray-500 uppercase tracking-wider mb-2 pt-2">Login as</p>
+                        <div className="space-y-1.5">
+                            {[
+                                { label: 'Student', path: '/login/student', icon: '🎓' },
+                                { label: 'Faculty', path: '/login/faculty', icon: '👨‍🏫' },
+                                { label: 'Admin', path: '/login/admin', icon: '🛡️' },
+                                { label: 'Placement Officer', path: '/login/placement', icon: '💼' },
+                                { label: 'Librarian', path: '/login/library', icon: '📚' },
+                            ].map((p) => (
+                                <Link
+                                    key={p.path}
+                                    to={p.path}
+                                    onClick={() => setMobileNav(false)}
+                                    className="flex items-center gap-3 w-full py-2.5 px-3 rounded-lg text-gray-300 hover:text-white hover:bg-white/[0.06] transition-colors"
+                                >
+                                    <span className="text-base">{p.icon}</span>
+                                    <span className="text-sm font-medium">{p.label}</span>
+                                </Link>
+                            ))}
+                        </div>
                         <Link
                             to="/request-verification"
                             onClick={() => setMobileNav(false)}
-                            className="block w-full mt-2 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-center font-semibold"
+                            className="block w-full mt-3 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-center font-semibold text-sm"
                         >
                             Request Access
                         </Link>
