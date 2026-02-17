@@ -49,6 +49,7 @@ import { DynamicBackground } from './components/ui/DynamicBackground';
 import { BackgroundControls } from './components/ui/BackgroundControls';
 import { ColorTransition } from './components/ui/ColorTransition';
 import { BackgroundShowcase } from './components/ui/BackgroundShowcase';
+import { LandingPage } from './components/LandingPage';
 
 function AppContent() {
   const { user, isLoading } = useAuth();
@@ -84,8 +85,9 @@ function AppContent() {
       <Route path="/verify-email-otp" element={<EmailOtpPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/login" element={user ? <Navigate to="/app" replace /> : <LoginForm />} />
-      {/* Root route: show mobile landing on phones, login on desktop; redirect to app when authenticated */}
-      <Route path="/" element={user ? <Navigate to="/app" replace /> : (isMobile ? <MobileLanding /> : <LoginForm />)} />
+      <Route path="/landing" element={user ? <Navigate to="/app" replace /> : <LandingPage />} />
+      {/* Root route: show mobile landing on phones, cinematic landing on desktop; redirect to app when authenticated */}
+      <Route path="/" element={user ? <Navigate to="/app" replace /> : (isMobile ? <MobileLanding /> : <LandingPage />)} />
       <Route path="/mobile/login" element={<MobileLogin />} />
       <Route path="/mobile/register" element={<MobileRegister />} />
       <Route path="/mobile/forgot-password" element={<MobileForgotPassword />} />
