@@ -635,7 +635,7 @@ export const LandingPage: React.FC = () => {
             </div>
 
             {/* ════════════ ROLE PORTALS SECTION ════════════ */}
-            <div className="relative z-10 py-24 sm:py-32 px-4">
+            <div id="login-portals" className="relative z-10 py-24 sm:py-32 px-4">
                 <div className="max-w-7xl mx-auto">
                     <AnimatedSection className="text-center mb-16">
                         <p className="text-sm font-semibold text-purple-400 uppercase tracking-widest mb-3">Role-Based Access</p>
@@ -858,13 +858,13 @@ export const LandingPage: React.FC = () => {
                                     Join the future of educational management. It takes less than a minute to get started.
                                 </p>
                                 <div className="flex items-center justify-center">
-                                    <Link
-                                        to="/login"
+                                    <button
+                                        onClick={() => document.getElementById('login-portals')?.scrollIntoView({ behavior: 'smooth' })}
                                         className="group px-10 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 font-semibold text-lg shadow-2xl shadow-blue-600/30 hover:shadow-blue-500/50 transition-all hover:scale-[1.04] active:scale-[0.97] flex items-center gap-2"
                                     >
                                         Login Now
                                         <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                                    </Link>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -884,9 +884,12 @@ export const LandingPage: React.FC = () => {
                         </span>
                     </div>
                     <div className="flex items-center gap-6">
-                        <Link to="/login" className="text-sm text-gray-500 hover:text-white transition-colors">
+                        <button
+                            onClick={() => document.getElementById('login-portals')?.scrollIntoView({ behavior: 'smooth' })}
+                            className="text-sm text-gray-500 hover:text-white transition-colors"
+                        >
                             Login
-                        </Link>
+                        </button>
                     </div>
                 </div>
             </footer>

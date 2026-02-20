@@ -114,7 +114,7 @@ function AppContent() {
       <Route path="/mobile/forgot-password" element={<MobileForgotPassword />} />
       <Route path="/mobile/reset-password" element={<MobileResetPassword />} />
       <Route path="/app" element={
-        !user ? <LoginForm /> : (
+        !user ? <Navigate to="/" replace /> : (
           <div className="min-h-screen flex relative overflow-hidden">
             {/* Enhanced Dynamic Background with better positioning */}
             <DynamicBackground variant="floating-orbs" intensity="medium" colorScheme="dynamic" theme={theme} />
@@ -252,7 +252,7 @@ function AppContent() {
         )
       } />
       {/* Fallback: anything else goes to app if logged in, otherwise to login */}
-      <Route path="/*" element={user ? <Navigate to="/app" replace /> : <Navigate to="/login" replace />} />
+      <Route path="/*" element={user ? <Navigate to="/app" replace /> : <Navigate to="/" replace />} />
     </Routes>
   );
 }
