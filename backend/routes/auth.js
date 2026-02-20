@@ -10,20 +10,34 @@ const speakeasy = require('speakeasy');
 const QRCode = require('qrcode');
 const emailService = require('../services/emailService');
 const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
 
 const router = express.Router();
+
+// Strict rate limiter for login/registration — 5 attempts per 15 minutes per IP
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many attempts. Please try again in 15 minutes.' }
+});
+
+// Password strength validation
+function validatePassword(password) {
+  if (!password || password.length < 8) return 'Password must be at least 8 characters';
+  if (!/[A-Z]/.test(password)) return 'Password must contain an uppercase letter';
+  if (!/[a-z]/.test(password)) return 'Password must contain a lowercase letter';
+  if (!/[0-9]/.test(password)) return 'Password must contain a number';
+  if (!/[^A-Za-z0-9]/.test(password)) return 'Password must contain a special character';
+  return null;
+}
 
 // Generate JWT Token
 const generateToken = (id) => {
   try {
-    const secret = process.env.JWT_SECRET || 'your-secret-key';
+    const secret = process.env.JWT_SECRET;
     const expiresIn = process.env.JWT_EXPIRES_IN || '30d';
-
-    console.log('Generating token with:', {
-      id,
-      secret: secret.substring(0, 10) + '...',
-      expiresIn
-    });
 
     return jwt.sign({ id }, secret, {
       expiresIn,
@@ -36,16 +50,18 @@ const generateToken = (id) => {
 
 // Generate short-lived token for pending 2FA verification during login
 const generateTwoFactorTempToken = (id) => {
-  const secret = process.env.JWT_SECRET || 'your-secret-key';
+  const secret = process.env.JWT_SECRET;
   return jwt.sign({ id, twoFactorPending: true }, secret, { expiresIn: '10m' });
 };
 
 // @route   POST /api/auth/dev-login
 // @desc    Development login without OTP (for testing)
 // @access  Public
-router.post('/dev-login', async (req, res) => {
+router.post('/dev-login', authLimiter, async (req, res) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(404).json({ success: false, message: 'Not found' });
+  }
   try {
-    console.log('Dev login request received:', req.body);
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -108,7 +124,7 @@ router.post('/dev-login', async (req, res) => {
 // @route   POST /api/auth/register
 // @desc    Request registration (creates verification request, requires admin approval)
 // @access  Public
-router.post('/register', async (req, res) => {
+router.post('/register', authLimiter, async (req, res) => {
   try {
     const { name, firstName, lastName, email, password, role, profile, department, course, branch, phone, confirmPassword, program, adminType } = req.body;
 
@@ -217,8 +233,7 @@ router.post('/register', async (req, res) => {
 // @route   POST /api/auth/request-registration
 // @desc    Request new user registration (for non-registered users)
 // @access  Public
-router.post('/request-registration', async (req, res) => {
-  console.log('Received registration request with body:', req.body);
+router.post('/request-registration', authLimiter, async (req, res) => {
   try {
     const { name, email, password, confirmPassword, requestedRole, branch, course, program, adminType } = req.body;
 
@@ -248,10 +263,11 @@ router.post('/request-registration', async (req, res) => {
     }
 
     // Password strength validation
-    if (password.length < 6) {
+    const pwError = validatePassword(password);
+    if (pwError) {
       return res.status(400).json({
         success: false,
-        message: 'Password must be at least 6 characters long'
+        message: pwError
       });
     }
 
@@ -379,13 +395,8 @@ router.post('/request-registration', async (req, res) => {
 });
 
 // @route   POST /api/auth/login
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
   try {
-    console.log('Login request received:', {
-      body: req.body,
-      headers: req.headers['content-type']
-    });
-
     const { email, password } = req.body;
 
     // Validate input
@@ -531,7 +542,7 @@ router.post('/2fa/setup', auth, async (req, res) => {
         console.error('SMS send error:', e.message);
       }
 
-      return res.json({ success: true, method: 'sms', maskedPhone: maskPhone(phone), devCode: ((process.env.NODE_ENV || 'development') !== 'production') ? smsCode : undefined });
+      return res.json({ success: true, method: 'sms', maskedPhone: maskPhone(phone) });
     }
 
     // Default TOTP setup
@@ -642,7 +653,7 @@ router.post('/2fa/verify-login', async (req, res) => {
       return res.status(400).json({ success: false, message: 'tempToken and code are required' });
     }
 
-    const secret = process.env.JWT_SECRET || 'your-secret-key';
+    const secret = process.env.JWT_SECRET;
     let decoded;
     try {
       decoded = jwt.verify(tempToken, secret);
@@ -713,7 +724,7 @@ router.post('/2fa/resend', auth, async (req, res) => {
       console.error('SMS send error:', e.message);
     }
 
-    res.json({ success: true, maskedPhone: maskPhone(user.twoFactorPhone), devCode: ((process.env.NODE_ENV || 'development') !== 'production') ? smsCode : undefined });
+    res.json({ success: true, maskedPhone: maskPhone(user.twoFactorPhone) });
   } catch (error) {
     console.error('2FA resend error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -1320,7 +1331,7 @@ router.post('/verification-requests/:id/decision', auth, authorize('admin', 'fac
           const newUser = new User({
             name: request.name.trim(),
             email: request.email.toLowerCase().trim(),
-            password: request.password, // Will be hashed by pre-save middleware
+            password: request.password, // Already hashed by RoleRequest pre-save
             role: request.requestedRole,
             branch: request.branch ? request.branch.trim() : null,
             program: request.program ? request.program.trim() : (request.course ? request.course.trim() : null),
@@ -1350,6 +1361,7 @@ router.post('/verification-requests/:id/decision', auth, authorize('admin', 'fac
 
           while (!userCreated && retryCount < maxRetries) {
             try {
+              newUser._skipPasswordHash = true; // Password already hashed by RoleRequest
               await newUser.save();
               userCreated = true;
               console.log('✅ New user created successfully:', newUser.email);
@@ -1543,6 +1555,7 @@ router.post('/fix-missing-users', auth, authorize('admin'), async (req, res) => 
             }
           }
 
+          newUser._skipPasswordHash = true; // Password already hashed by RoleRequest
           await newUser.save();
 
           // Update request to reference the new user

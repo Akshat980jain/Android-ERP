@@ -1,16 +1,17 @@
 // src/components/modules/CourseModule.tsx
-import React, { useState, useEffect } from 'react';
-import { 
-  BookOpen, 
-  Plus, 
-  Search, 
-  Filter, 
-  Edit, 
-  Trash2, 
-  GraduationCap, 
-  Users, 
-  Calendar, 
-  Clock, 
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import {
+  BookOpen,
+  Plus,
+  Search,
+  Filter,
+  Edit,
+  Trash2,
+  GraduationCap,
+  Users,
+  Calendar,
+  Clock,
   MapPin,
   MessageSquare,
   Star
@@ -71,7 +72,7 @@ export function CourseModule() {
   const [feedbackLoading, setFeedbackLoading] = useState(false);
 
   const departments = ['Computer Science', 'Electronics', 'Mechanical', 'Civil', 'Chemical'];
-  const semesters = ['Odd', 'Even' ];
+  const semesters = ['Odd', 'Even'];
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
   useEffect(() => {
@@ -94,7 +95,7 @@ export function CourseModule() {
       } else {
         data = await apiClient.getCourses() as { success: boolean; courses: Course[]; message?: string };
       }
-      
+
       if (data.success) {
         setCourses(data.courses);
       } else {
@@ -108,26 +109,26 @@ export function CourseModule() {
 
   const filterCourses = () => {
     let filtered = courses;
-    
+
     if (searchTerm) {
-      filtered = filtered.filter(course => 
+      filtered = filtered.filter(course =>
         course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         course.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
         course.department.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    
+
     if (filterDepartment) {
       filtered = filtered.filter(course => course.department === filterDepartment);
     }
-    
+
     setFilteredCourses(filtered);
   };
 
   const handleAddCourse = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateCourse()) return;
-    
+
     setLoading(true);
     setError('');
     setSuccess('');
@@ -138,7 +139,7 @@ export function CourseModule() {
         faculty: user?._id,
         status: 'active'
       }) as { success: boolean; course: Course; message?: string };
-      
+
       if (data.success) {
         setCourses([...courses, data.course]);
         resetForm();
@@ -165,12 +166,12 @@ export function CourseModule() {
       console.log('Attempting to update course:', editingCourse._id);
       console.log('Current user:', user);
       console.log('Update data:', newCourse);
-      
+
       const data = await apiClient.updateCourse(editingCourse._id, newCourse) as { success: boolean; course: Course; message?: string };
       console.log('Update response:', data);
-      
+
       if (data.success) {
-        setCourses(courses.map(course => 
+        setCourses(courses.map(course =>
           course._id === editingCourse._id ? data.course : course
         ));
         resetForm();
@@ -189,11 +190,11 @@ export function CourseModule() {
   const deleteCourse = async (courseId: string) => {
     const course = courses.find(c => c._id === courseId);
     const hasEnrolledStudents = course?.students && course.students.length > 0;
-    
-    const confirmMessage = hasEnrolledStudents 
+
+    const confirmMessage = hasEnrolledStudents
       ? `Are you sure you want to delete this course? This will remove ${course.students.length} enrolled student(s) from the course. This action cannot be undone.`
       : 'Are you sure you want to delete this course? This action cannot be undone.';
-    
+
     if (!window.confirm(confirmMessage)) return;
 
     setLoading(true);
@@ -201,10 +202,10 @@ export function CourseModule() {
       console.log('Attempting to delete course:', courseId);
       console.log('Current user:', user);
       console.log('Course has enrolled students:', hasEnrolledStudents);
-      
+
       const data = await apiClient.deleteCourse(courseId) as { success: boolean; message?: string };
       console.log('Delete response:', data);
-      
+
       if (data.success) {
         setCourses(courses.filter(course => course._id !== courseId));
         setSuccess('Course deleted successfully!');
@@ -284,7 +285,7 @@ export function CourseModule() {
   };
 
   const updateScheduleSlot = (index: number, field: string, value: string) => {
-    const updatedSchedule = newCourse.schedule.map((slot, i) => 
+    const updatedSchedule = newCourse.schedule.map((slot, i) =>
       i === index ? { ...slot, [field]: value } : slot
     );
     setNewCourse({ ...newCourse, schedule: updatedSchedule });
@@ -298,7 +299,7 @@ export function CourseModule() {
 
     setFeedbackLoading(true);
     setError('');
-    
+
     try {
       await apiClient.submitFeedback({
         courseId,
@@ -306,11 +307,11 @@ export function CourseModule() {
         comment: feedbackForm.comment,
         anonymous: feedbackForm.anonymous
       });
-      
+
       setSuccess('Feedback submitted successfully!');
       setShowFeedbackForm(null);
       setFeedbackForm({ rating: 5, comment: '', anonymous: false });
-      
+
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
@@ -336,21 +337,21 @@ export function CourseModule() {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <motion.div className="space-y-6 p-6" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900 flex items-center">
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center">
             <GraduationCap className="w-8 h-8 mr-3 text-blue-600" />
             {user?.role === 'student' ? 'My Enrolled Courses' : 'Course Management'}
           </h2>
-          <p className="text-gray-600 mt-1">
-            {user?.role === 'student' 
-              ? 'View your enrolled courses and schedules' 
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
+            {user?.role === 'student'
+              ? 'View your enrolled courses and schedules'
               : 'Manage and organize your courses'}
           </p>
         </div>
-        
+
         {user?.role !== 'student' && (
           <button
             onClick={() => {
@@ -372,20 +373,20 @@ export function CourseModule() {
 
       {/* Alerts */}
       {error && (
-        <div className="flex items-center bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+        <div className="flex items-center bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg">
           {/* <AlertCircle className="w-5 h-5 mr-2" /> */}
           {error}
         </div>
       )}
       {success && (
-        <div className="flex items-center bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+        <div className="flex items-center bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 px-4 py-3 rounded-lg">
           {/* <CheckCircle className="w-5 h-5 mr-2" /> */}
           {success}
         </div>
       )}
 
       {/* Search and Filter */}
-      <div className="bg-white p-4 rounded-lg shadow-sm border flex flex-col sm:flex-row gap-4">
+      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <input
@@ -393,7 +394,7 @@ export function CourseModule() {
             placeholder="Search courses..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
         <div className="relative">
@@ -401,7 +402,7 @@ export function CourseModule() {
           <select
             value={filterDepartment}
             onChange={(e) => setFilterDepartment(e.target.value)}
-            className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+            className="pl-10 pr-8 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800"
           >
             <option value="">All Departments</option>
             {departments.map(dept => (
@@ -413,44 +414,44 @@ export function CourseModule() {
 
       {/* Add/Edit Form */}
       {showAddForm && (
-        <div className="bg-white p-6 rounded-lg shadow-lg border">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg border">
           <h3 className="text-xl font-semibold mb-6 flex items-center">
             {editingCourse ? <Edit className="w-5 h-5 mr-2" /> : <Plus className="w-5 h-5 mr-2" />}
             {editingCourse ? 'Edit Course' : 'Add New Course'}
           </h3>
-          
+
           <form onSubmit={editingCourse ? handleEditCourse : handleAddCourse} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Course Name *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Course Name *</label>
                 <input
                   type="text"
                   placeholder="e.g., Introduction to Computer Science"
                   value={newCourse.name}
                   onChange={(e) => setNewCourse({ ...newCourse, name: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 />
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Course Code *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Course Code *</label>
                 <input
                   type="text"
                   placeholder="e.g., CS101"
                   value={newCourse.code}
                   onChange={(e) => setNewCourse({ ...newCourse, code: e.target.value.toUpperCase() })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 />
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Department *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Department *</label>
                 <select
                   value={newCourse.department}
                   onChange={(e) => setNewCourse({ ...newCourse, department: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 >
                   <option value="">Select Department</option>
@@ -459,26 +460,26 @@ export function CourseModule() {
                   ))}
                 </select>
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Credits *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Credits *</label>
                 <input
                   type="number"
                   min="1"
                   max="6"
                   value={newCourse.credits || ''}
                   onChange={(e) => setNewCourse({ ...newCourse, credits: parseInt(e.target.value) || 0 })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 />
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Semester</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Semester</label>
                 <select
                   value={newCourse.semester}
                   onChange={(e) => setNewCourse({ ...newCourse, semester: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="">Select Semester</option>
                   {semesters.map(sem => (
@@ -486,35 +487,35 @@ export function CourseModule() {
                   ))}
                 </select>
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Max Students</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Max Students</label>
                 <input
                   type="number"
                   min="1"
                   max="200"
                   value={newCourse.maxStudents || ''}
                   onChange={(e) => setNewCourse({ ...newCourse, maxStudents: parseInt(e.target.value) || 50 })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
               <textarea
                 placeholder="Course description..."
                 value={newCourse.description}
                 onChange={(e) => setNewCourse({ ...newCourse, description: e.target.value })}
                 rows={3}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
             {/* Schedule */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <label className="block text-sm font-medium text-gray-700">Schedule</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Schedule</label>
                 <button
                   type="button"
                   onClick={addScheduleSlot}
@@ -524,13 +525,13 @@ export function CourseModule() {
                   Add Slot
                 </button>
               </div>
-              
+
               {newCourse.schedule.map((slot, index) => (
                 <div key={index} className="flex gap-2 mb-2">
                   <select
                     value={slot.day}
                     onChange={(e) => updateScheduleSlot(index, 'day', e.target.value)}
-                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">Select Day</option>
                     {days.map(day => (
@@ -541,20 +542,20 @@ export function CourseModule() {
                     type="time"
                     value={slot.time}
                     onChange={(e) => updateScheduleSlot(index, 'time', e.target.value)}
-                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   <input
                     type="text"
                     placeholder="Room"
                     value={slot.room || ''}
                     onChange={(e) => updateScheduleSlot(index, 'room', e.target.value)}
-                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   {newCourse.schedule.length > 1 && (
                     <button
                       type="button"
                       onClick={() => removeScheduleSlot(index)}
-                      className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg"
+                      className="px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -564,8 +565,8 @@ export function CourseModule() {
             </div>
 
             <div className="flex gap-3">
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 flex items-center transition-colors"
                 disabled={loading}
               >
@@ -577,7 +578,7 @@ export function CourseModule() {
               <button
                 type="button"
                 onClick={resetForm}
-                className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+                className="bg-gray-50 dark:bg-gray-700/500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors"
               >
                 Cancel
               </button>
@@ -589,31 +590,31 @@ export function CourseModule() {
       {/* Courses Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {filteredCourses.map((course) => (
-          <div key={course._id} className="bg-white rounded-xl shadow-sm border hover:shadow-md transition-shadow overflow-hidden">
+          <div key={course._id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border hover:shadow-md transition-shadow overflow-hidden">
             <div className="p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center">
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
+                  <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mr-4">
                     <BookOpen className="w-6 h-6 text-blue-600" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 leading-tight">{course.name}</h3>
-                    <p className="text-sm text-gray-600 font-medium">{course.code}</p>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 leading-tight">{course.name}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">{course.code}</p>
                   </div>
                 </div>
-                
+
                 {user?.role !== 'student' && (
                   <div className="flex space-x-1">
                     <button
                       onClick={() => startEditing(course)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                       title="Edit Course"
                     >
                       <Edit className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => deleteCourse(course._id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                       title="Delete Course"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -623,33 +624,33 @@ export function CourseModule() {
               </div>
 
               <div className="space-y-3 text-sm">
-                <div className="flex items-center text-gray-600">
+                <div className="flex items-center text-gray-600 dark:text-gray-400">
                   <GraduationCap className="w-4 h-4 mr-2" />
                   <span className="font-medium">Department:</span>
                   <span className="ml-1">{course.department}</span>
                 </div>
-                
-                <div className="flex items-center text-gray-600">
+
+                <div className="flex items-center text-gray-600 dark:text-gray-400">
                   <span className="font-medium">Credits:</span>
-                  <span className="ml-1 bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                  <span className="ml-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 px-2 py-1 rounded-full text-xs font-medium">
                     {course.credits}
                   </span>
                 </div>
 
-                <div className="flex items-center text-gray-600">
+                <div className="flex items-center text-gray-600 dark:text-gray-400">
                   <Users className="w-4 h-4 mr-2" />
                   <span>{course.students?.length || 0}/{course.maxStudents || 'N/A'} Students</span>
                 </div>
 
                 {course.schedule && course.schedule.length > 0 && (
-                  <div className="pt-2 border-t border-gray-100">
-                    <div className="flex items-center text-gray-600 mb-2">
+                  <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
+                    <div className="flex items-center text-gray-600 dark:text-gray-400 mb-2">
                       <Calendar className="w-4 h-4 mr-2" />
                       <span className="font-medium">Schedule:</span>
                     </div>
                     <div className="space-y-1">
                       {course.schedule.map((slot, index) => (
-                        <div key={index} className="flex items-center text-xs text-gray-500 ml-6">
+                        <div key={index} className="flex items-center text-xs text-gray-500 dark:text-gray-400 ml-6">
                           <Clock className="w-3 h-3 mr-1" />
                           <span>{slot.day} at {slot.time}</span>
                           {slot.room && (
@@ -666,7 +667,7 @@ export function CourseModule() {
 
                 {/* Feedback Section */}
                 {user?.role === 'student' && (
-                  <div className="pt-3 border-t border-gray-100">
+                  <div className="pt-3 border-t border-gray-100 dark:border-gray-700">
                     <button
                       onClick={() => setShowFeedbackForm(showFeedbackForm === course._id ? null : course._id)}
                       className="flex items-center text-blue-600 hover:text-blue-700 text-sm font-medium"
@@ -680,11 +681,11 @@ export function CourseModule() {
 
               {/* Feedback Form */}
               {showFeedbackForm === course._id && user?.role === 'student' && (
-                <div className="border-t border-gray-100 p-4 bg-gray-50">
-                  <h4 className="font-medium text-gray-900 mb-3">Course Feedback</h4>
+                <div className="border-t border-gray-100 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-700/50">
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">Course Feedback</h4>
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Rating</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rating</label>
                       <div className="flex items-center space-x-1">
                         {[1, 2, 3, 4, 5].map((star) => (
                           <button
@@ -696,22 +697,22 @@ export function CourseModule() {
                             <Star className="w-5 h-5 fill-current" />
                           </button>
                         ))}
-                        <span className="ml-2 text-sm text-gray-600">{feedbackForm.rating}/5</span>
+                        <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">{feedbackForm.rating}/5</span>
                       </div>
                     </div>
-                    
+
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Comment</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Comment</label>
                       <textarea
                         value={feedbackForm.comment}
                         onChange={(e) => setFeedbackForm(prev => ({ ...prev, comment: e.target.value }))}
                         placeholder="Share your thoughts about this course..."
                         rows={3}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         required
                       />
                     </div>
-                    
+
                     <div className="flex items-center">
                       <input
                         type="checkbox"
@@ -720,11 +721,11 @@ export function CourseModule() {
                         onChange={(e) => setFeedbackForm(prev => ({ ...prev, anonymous: e.target.checked }))}
                         className="mr-2"
                       />
-                      <label htmlFor={`anonymous-${course._id}`} className="text-sm text-gray-700">
+                      <label htmlFor={`anonymous-${course._id}`} className="text-sm text-gray-700 dark:text-gray-300">
                         Submit anonymously
                       </label>
                     </div>
-                    
+
                     <div className="flex gap-2">
                       <button
                         onClick={() => submitFeedback(course._id)}
@@ -735,7 +736,7 @@ export function CourseModule() {
                       </button>
                       <button
                         onClick={resetFeedbackForm}
-                        className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+                        className="px-4 py-2 bg-gray-50 dark:bg-gray-700/500 text-white rounded-lg hover:bg-gray-600"
                       >
                         Cancel
                       </button>
@@ -752,15 +753,15 @@ export function CourseModule() {
       {filteredCourses.length === 0 && !loading && (
         <div className="text-center py-16">
           <BookOpen className="w-20 h-20 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-xl font-medium text-gray-900 mb-2">
+          <h3 className="text-xl font-medium text-gray-900 dark:text-gray-100 mb-2">
             {searchTerm || filterDepartment ? 'No matching courses found' : 'No courses available'}
           </h3>
-          <p className="text-gray-500 mb-6">
-            {searchTerm || filterDepartment 
-              ? 'Try adjusting your search or filter criteria' 
-              : user?.role !== 'student' 
-              ? 'Get started by adding your first course' 
-              : 'No courses are currently assigned to you'
+          <p className="text-gray-500 dark:text-gray-400 mb-6">
+            {searchTerm || filterDepartment
+              ? 'Try adjusting your search or filter criteria'
+              : user?.role !== 'student'
+                ? 'Get started by adding your first course'
+                : 'No courses are currently assigned to you'
             }
           </p>
           {!searchTerm && !filterDepartment && user?.role !== 'student' && (
@@ -774,6 +775,6 @@ export function CourseModule() {
           )}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

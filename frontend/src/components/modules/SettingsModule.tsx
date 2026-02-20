@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Settings, Building, GraduationCap, Bell, Shield, Database, Download, TestTube, Save, QrCode, CheckCircle, XCircle, User as UserIcon, Mail, Phone, MapPin, Edit } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
@@ -426,7 +427,7 @@ export function SettingsModule() {
     if (!systemSettings) return null;
 
     return (
-      <div className="space-y-6">
+      <motion.div className="space-y-6" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         {/* Admin Personal Information */}
         <Card>
           <CardHeader>
@@ -437,7 +438,7 @@ export function SettingsModule() {
               </CardTitle>
               <button
                 onClick={() => setEditingPersonalInfo(!editingPersonalInfo)}
-                className="flex items-center text-sm text-blue-600 hover:text-blue-800"
+                className="flex items-center text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400"
               >
                 <Edit className="w-4 h-4 mr-1" />
                 {editingPersonalInfo ? 'Cancel' : 'Edit'}
@@ -446,12 +447,12 @@ export function SettingsModule() {
           </CardHeader>
           <CardContent className="space-y-4">
             {personalInfoLoading ? (
-              <div className="text-sm text-gray-500">Loading personal info...</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">Loading personal info...</div>
             ) : (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       <UserIcon className="w-3.5 h-3.5 inline mr-1" />Full Name
                     </label>
                     <Input
@@ -462,7 +463,7 @@ export function SettingsModule() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       <Mail className="w-3.5 h-3.5 inline mr-1" />Email Address
                     </label>
                     <Input
@@ -472,7 +473,7 @@ export function SettingsModule() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       <Phone className="w-3.5 h-3.5 inline mr-1" />Phone Number
                     </label>
                     <Input
@@ -483,7 +484,7 @@ export function SettingsModule() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Designation</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Designation</label>
                     <Input
                       value={personalInfo.designation}
                       onChange={(e) => setPersonalInfo(prev => ({ ...prev, designation: e.target.value }))}
@@ -493,7 +494,7 @@ export function SettingsModule() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     <MapPin className="w-3.5 h-3.5 inline mr-1" />Address
                   </label>
                   <Input
@@ -526,7 +527,7 @@ export function SettingsModule() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Institution Name</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Institution Name</label>
                 <Input
                   value={systemSettings.institution.name}
                   onChange={(e) => handleSystemSettingChange('institution', 'name', e.target.value)}
@@ -534,7 +535,7 @@ export function SettingsModule() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
                 <Input
                   type="email"
                   value={systemSettings.institution.email}
@@ -543,7 +544,7 @@ export function SettingsModule() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
                 <Input
                   value={systemSettings.institution.phone}
                   onChange={(e) => handleSystemSettingChange('institution', 'phone', e.target.value)}
@@ -551,7 +552,7 @@ export function SettingsModule() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Website</label>
                 <Input
                   value={systemSettings.institution.website}
                   onChange={(e) => handleSystemSettingChange('institution', 'website', e.target.value)}
@@ -560,7 +561,7 @@ export function SettingsModule() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address</label>
               <Input
                 value={systemSettings.institution.address}
                 onChange={(e) => handleSystemSettingChange('institution', 'address', e.target.value)}
@@ -581,11 +582,11 @@ export function SettingsModule() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Academic Session</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Academic Session</label>
                 <select
                   value={systemSettings.academic.currentAcademicYear}
                   onChange={(e) => handleSystemSettingChange('academic', 'currentAcademicYear', e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md"
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md"
                 >
                   {[2023, 2024, 2025, 2026, 2027, 2028].map(year => (
                     <option key={year} value={`${year}-${(year + 1).toString().slice(-2)}`}>
@@ -595,11 +596,11 @@ export function SettingsModule() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Current Semester</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current Semester</label>
                 <select
                   value={systemSettings.academic.currentSemester}
                   onChange={(e) => handleSystemSettingChange('academic', 'currentSemester', e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md"
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md"
                 >
                   <option value="1st">1st Semester</option>
                   <option value="2nd">2nd Semester</option>
@@ -612,7 +613,7 @@ export function SettingsModule() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Pass Percentage</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Pass Percentage</label>
                 <Input
                   type="number"
                   value={systemSettings.academic.passPercentage}
@@ -621,15 +622,15 @@ export function SettingsModule() {
                 />
               </div>
             </div>
-            <div className="flex items-center space-x-2 mt-2 pt-3 border-t border-gray-100">
+            <div className="flex items-center space-x-2 mt-2 pt-3 border-t border-gray-100 dark:border-gray-700">
               <input
                 type="checkbox"
                 id="semesterPromotionEnabled"
                 checked={systemSettings.academic.semesterPromotionEnabled || false}
                 onChange={(e) => handleSystemSettingChange('academic', 'semesterPromotionEnabled', e.target.checked)}
-                className="rounded border-gray-300"
+                className="rounded border-gray-300 dark:border-gray-600"
               />
-              <label htmlFor="semesterPromotionEnabled" className="text-sm font-medium text-gray-700">
+              <label htmlFor="semesterPromotionEnabled" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 Enable Semester Promotion (allows admins to promote sections to the next semester in bulk)
               </label>
             </div>
@@ -647,7 +648,7 @@ export function SettingsModule() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Password Min Length</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password Min Length</label>
                 <Input
                   type="number"
                   value={systemSettings.security.passwordMinLength}
@@ -656,7 +657,7 @@ export function SettingsModule() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Max Login Attempts</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Max Login Attempts</label>
                 <Input
                   type="number"
                   value={systemSettings.security.maxLoginAttempts}
@@ -671,9 +672,9 @@ export function SettingsModule() {
                 id="twoFactorAuth"
                 checked={systemSettings.security.twoFactorAuth}
                 onChange={(e) => handleSystemSettingChange('security', 'twoFactorAuth', e.target.checked)}
-                className="rounded border-gray-300"
+                className="rounded border-gray-300 dark:border-gray-600"
               />
-              <label htmlFor="twoFactorAuth" className="text-sm font-medium text-gray-700">
+              <label htmlFor="twoFactorAuth" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 Enable Two-Factor Authentication
               </label>
             </div>
@@ -685,7 +686,7 @@ export function SettingsModule() {
               </div>
               {!user?.twoFactorEnabled && !twoFactorSetupInProgress && (
                 <div className="space-y-3">
-                  <p className="text-sm text-gray-600">Add an extra layer of security by requiring a code from an authenticator app when you sign in.</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Add an extra layer of security by requiring a code from an authenticator app when you sign in.</p>
                   <Button onClick={startTwoFactorSetup} disabled={twoFactorLoading}>
                     {twoFactorLoading ? 'Starting…' : 'Enable Two-Factor'}
                   </Button>
@@ -697,9 +698,9 @@ export function SettingsModule() {
                     <img src={qrDataUrl} alt="Scan QR code with authenticator app" className="w-40 h-40" />
                   )}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Enter 6-digit code</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Enter 6-digit code</label>
                     <input
-                      className="w-full p-2 border border-gray-300 rounded-md"
+                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md"
                       inputMode="numeric"
                       pattern="[0-9]*"
                       maxLength={6}
@@ -722,11 +723,11 @@ export function SettingsModule() {
               )}
               {user?.twoFactorEnabled && !twoFactorSetupInProgress && (
                 <div className="space-y-3">
-                  <div className="text-sm text-green-700">Two-factor is enabled on your account.</div>
+                  <div className="text-sm text-green-700 dark:text-green-400">Two-factor is enabled on your account.</div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Enter current 6-digit code to disable</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Enter current 6-digit code to disable</label>
                     <input
-                      className="w-full p-2 border border-gray-300 rounded-md"
+                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md"
                       inputMode="numeric"
                       pattern="[0-9]*"
                       maxLength={6}
@@ -741,7 +742,7 @@ export function SettingsModule() {
                 </div>
               )}
               {twoFactorMessage && (
-                <div className="mt-2 text-sm text-gray-700">{twoFactorMessage}</div>
+                <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">{twoFactorMessage}</div>
               )}
             </div>
           </CardContent>
@@ -753,7 +754,7 @@ export function SettingsModule() {
             {loading ? 'Saving...' : 'Save Settings'}
           </Button>
         </div>
-      </div>
+      </motion.div>
     );
   };
 
@@ -761,7 +762,7 @@ export function SettingsModule() {
     if (!userPreferences) return null;
 
     return (
-      <div className="space-y-6">
+      <motion.div className="space-y-6" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         {/* Theme and Language */}
         <Card>
           <CardHeader>
@@ -770,11 +771,11 @@ export function SettingsModule() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Theme</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Theme</label>
                 <select
                   value={userPreferences.theme}
                   onChange={(e) => handlePreferenceChange('theme', 'theme', e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md"
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md"
                 >
                   <option value="light">Light</option>
                   <option value="dark">Dark</option>
@@ -782,11 +783,11 @@ export function SettingsModule() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Language</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Language</label>
                 <select
                   value={userPreferences.language}
                   onChange={(e) => handlePreferenceChange('language', 'language', e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md"
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md"
                 >
                   <option value="en">English</option>
                   <option value="hi">Hindi</option>
@@ -794,11 +795,11 @@ export function SettingsModule() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Timezone</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Timezone</label>
                 <select
                   value={userPreferences.timezone}
                   onChange={(e) => handlePreferenceChange('timezone', 'timezone', e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md"
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md"
                 >
                   <option value="UTC">UTC</option>
                   <option value="Asia/Kolkata">Asia/Kolkata</option>
@@ -817,11 +818,11 @@ export function SettingsModule() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Default View</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Default View</label>
                 <select
                   value={userPreferences.dashboard.defaultView}
                   onChange={(e) => handlePreferenceChange('dashboard', 'defaultView', e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md"
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md"
                 >
                   <option value="overview">Overview</option>
                   <option value="academic">Academic</option>
@@ -830,7 +831,7 @@ export function SettingsModule() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Refresh Interval (seconds)</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Refresh Interval (seconds)</label>
                 <Input
                   type="number"
                   value={userPreferences.dashboard.refreshInterval}
@@ -848,7 +849,7 @@ export function SettingsModule() {
             {loading ? 'Saving...' : 'Save Preferences'}
           </Button>
         </div>
-      </div>
+      </motion.div>
     );
   };
 
@@ -856,7 +857,7 @@ export function SettingsModule() {
     if (!notificationSettings) return null;
 
     return (
-      <div className="space-y-6">
+      <motion.div className="space-y-6" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         {/* General Notifications */}
         <Card>
           <CardHeader>
@@ -870,9 +871,9 @@ export function SettingsModule() {
                   id="emailNotif"
                   checked={notificationSettings.general.email}
                   onChange={(e) => handleNotificationSettingChange('general', 'email', e.target.checked)}
-                  className="rounded border-gray-300"
+                  className="rounded border-gray-300 dark:border-gray-600"
                 />
-                <label htmlFor="emailNotif" className="text-sm font-medium text-gray-700">
+                <label htmlFor="emailNotif" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Email Notifications
                 </label>
               </div>
@@ -882,9 +883,9 @@ export function SettingsModule() {
                   id="smsNotif"
                   checked={notificationSettings.general.sms}
                   onChange={(e) => handleNotificationSettingChange('general', 'sms', e.target.checked)}
-                  className="rounded border-gray-300"
+                  className="rounded border-gray-300 dark:border-gray-600"
                 />
-                <label htmlFor="smsNotif" className="text-sm font-medium text-gray-700">
+                <label htmlFor="smsNotif" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   SMS Notifications
                 </label>
               </div>
@@ -894,9 +895,9 @@ export function SettingsModule() {
                   id="pushNotif"
                   checked={notificationSettings.general.push}
                   onChange={(e) => handleNotificationSettingChange('general', 'push', e.target.checked)}
-                  className="rounded border-gray-300"
+                  className="rounded border-gray-300 dark:border-gray-600"
                 />
-                <label htmlFor="pushNotif" className="text-sm font-medium text-gray-700">
+                <label htmlFor="pushNotif" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Push Notifications
                 </label>
               </div>
@@ -917,9 +918,9 @@ export function SettingsModule() {
                   id="assignmentNotif"
                   checked={notificationSettings.academic.assignments}
                   onChange={(e) => handleNotificationSettingChange('academic', 'assignments', e.target.checked)}
-                  className="rounded border-gray-300"
+                  className="rounded border-gray-300 dark:border-gray-600"
                 />
-                <label htmlFor="assignmentNotif" className="text-sm font-medium text-gray-700">
+                <label htmlFor="assignmentNotif" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Assignment Updates
                 </label>
               </div>
@@ -929,9 +930,9 @@ export function SettingsModule() {
                   id="examNotif"
                   checked={notificationSettings.academic.exams}
                   onChange={(e) => handleNotificationSettingChange('academic', 'exams', e.target.checked)}
-                  className="rounded border-gray-300"
+                  className="rounded border-gray-300 dark:border-gray-600"
                 />
-                <label htmlFor="examNotif" className="text-sm font-medium text-gray-700">
+                <label htmlFor="examNotif" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Exam Notifications
                 </label>
               </div>
@@ -941,9 +942,9 @@ export function SettingsModule() {
                   id="gradeNotif"
                   checked={notificationSettings.academic.grades}
                   onChange={(e) => handleNotificationSettingChange('academic', 'grades', e.target.checked)}
-                  className="rounded border-gray-300"
+                  className="rounded border-gray-300 dark:border-gray-600"
                 />
-                <label htmlFor="gradeNotif" className="text-sm font-medium text-gray-700">
+                <label htmlFor="gradeNotif" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Grade Updates
                 </label>
               </div>
@@ -957,7 +958,7 @@ export function SettingsModule() {
             {loading ? 'Saving...' : 'Save Notification Settings'}
           </Button>
         </div>
-      </div>
+      </motion.div>
     );
   };
 
@@ -975,26 +976,26 @@ export function SettingsModule() {
   };
 
   return (
-    <div className="space-y-6">
+    <motion.div className="space-y-6" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600">Manage your account preferences and system settings</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Settings</h1>
+        <p className="text-gray-600 dark:text-gray-400">Manage your account preferences and system settings</p>
       </div>
 
       {/* Success/Error Messages */}
       {success && (
-        <div className="bg-green-50 border border-green-200 rounded-md p-4">
-          <div className="text-green-800">{success}</div>
+        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md p-4">
+          <div className="text-green-800 dark:text-green-400">{success}</div>
         </div>
       )}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-4">
-          <div className="text-red-800">{error}</div>
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-4">
+          <div className="text-red-800 dark:text-red-400">{error}</div>
         </div>
       )}
 
       {/* Tabs */}
-      <div className="border-b border-gray-200">
+      <div className="border-b border-gray-200 dark:border-gray-700">
         <nav className="-mb-px flex space-x-8">
           {tabs.map((tab) => (
             <button
@@ -1002,7 +1003,7 @@ export function SettingsModule() {
               onClick={() => setActiveTab(tab.id)}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id
                 ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:border-gray-600'
                 }`}
             >
               <tab.icon className="w-4 h-4 inline mr-2" />
@@ -1014,6 +1015,6 @@ export function SettingsModule() {
 
       {/* Content */}
       {renderContent()}
-    </div>
+    </motion.div>
   );
 }

@@ -1,5 +1,5 @@
 // src/components/modules/AttendanceModule.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Users, Calendar, CheckCircle, Clock, AlertTriangle, Layers,
   ChevronDown, ChevronRight, Search, CheckSquare, Square, RefreshCw

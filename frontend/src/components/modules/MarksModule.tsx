@@ -1,5 +1,5 @@
 // src/components/modules/MarksModule.tsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { GraduationCap, TrendingUp, FileText, Edit, Save, Plus, Trash2, Download, Upload } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -383,13 +383,13 @@ export function MarksModule() {
   const getGradeColor = (grade: string) => {
     switch (grade) {
       case 'A+':
-      case 'A': return 'text-green-600 bg-green-50';
+      case 'A': return 'text-green-600 bg-green-50 dark:bg-green-900/20';
       case 'B+':
-      case 'B': return 'text-blue-600 bg-blue-50';
+      case 'B': return 'text-blue-600 bg-blue-50 dark:bg-blue-900/20';
       case 'C+':
-      case 'C': return 'text-yellow-600 bg-yellow-50';
-      case 'F': return 'text-red-600 bg-red-50';
-      default: return 'text-gray-600 bg-gray-50';
+      case 'C': return 'text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20';
+      case 'F': return 'text-red-600 bg-red-50 dark:bg-red-900/20';
+      default: return 'text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50';
     }
   };
 
@@ -412,9 +412,9 @@ export function MarksModule() {
   const stats = calculateStats();
 
   return (
-    <div className="space-y-6">
+    <motion.div className="space-y-6" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Marks & Grades</h2>
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">Marks & Grades</h2>
         <div className="flex items-center space-x-2">
           {selectedAssessment && (
             <>
@@ -444,13 +444,13 @@ export function MarksModule() {
         </div>
       </div>
 
-      {error && <div className="text-red-700 bg-red-50 p-3 rounded">{error}</div>}
-      {success && <div className="text-green-700 bg-green-50 p-3 rounded">{success}</div>}
+      {error && <div className="text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-3 rounded">{error}</div>}
+      {success && <div className="text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 p-3 rounded">{success}</div>}
 
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Select Course</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Course</label>
             <select
               value={selectedCourse}
               onChange={(e) => setSelectedCourse(e.target.value)}
@@ -466,11 +466,11 @@ export function MarksModule() {
           </div>
           <div>
             <div className="flex justify-between items-center mb-2">
-              <label className="block text-sm font-medium text-gray-700">Select Assessment</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Select Assessment</label>
               {selectedCourse && user?.role !== 'student' && (
                 <button
                   onClick={() => setShowAddAssessment(!showAddAssessment)}
-                  className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                  className="text-blue-600 hover:text-blue-800 dark:text-blue-400 text-sm flex items-center"
                 >
                   <Plus className="w-4 h-4 mr-1" />
                   Add Assessment
@@ -501,7 +501,7 @@ export function MarksModule() {
         </div>
 
         {showAddAssessment && (
-          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 rounded-lg">
             <h3 className="text-lg font-semibold mb-4">Add New Assessment</h3>
             <form onSubmit={addAssessment} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -510,13 +510,13 @@ export function MarksModule() {
                   placeholder="Assessment Name"
                   value={newAssessment.name}
                   onChange={(e) => setNewAssessment({ ...newAssessment, name: e.target.value })}
-                  className="border rounded px-3 py-2"
+                  className="border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   required
                 />
                 <select
                   value={newAssessment.type}
                   onChange={(e) => setNewAssessment({ ...newAssessment, type: e.target.value as any })}
-                  className="border rounded px-3 py-2"
+                  className="border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                 >
                   <option value="quiz">Quiz</option>
                   <option value="assignment">Assignment</option>
@@ -531,14 +531,14 @@ export function MarksModule() {
                   placeholder="Maximum Marks"
                   value={newAssessment.maxMarks || ''}
                   onChange={(e) => setNewAssessment({ ...newAssessment, maxMarks: parseInt(e.target.value) || 0 })}
-                  className="border rounded px-3 py-2"
+                  className="border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   required
                 />
                 <input
                   type="date"
                   value={newAssessment.date}
                   onChange={(e) => setNewAssessment({ ...newAssessment, date: e.target.value })}
-                  className="border rounded px-3 py-2"
+                  className="border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   required
                 />
               </div>
@@ -549,7 +549,7 @@ export function MarksModule() {
                 <button
                   type="button"
                   onClick={() => setShowAddAssessment(false)}
-                  className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                  className="bg-gray-50 dark:bg-gray-700/500 text-white px-4 py-2 rounded hover:bg-gray-600"
                 >
                   Cancel
                 </button>
@@ -561,20 +561,20 @@ export function MarksModule() {
         {selectedAssessment && marks.length > 0 && (
           <>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-              <div className="bg-blue-50 p-4 rounded-lg">
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-blue-600">Average Score</p>
-                    <p className="text-2xl font-bold text-blue-800">{stats.average}%</p>
+                    <p className="text-2xl font-bold text-blue-800 dark:text-blue-400">{stats.average}%</p>
                   </div>
                   <TrendingUp className="w-8 h-8 text-blue-600" />
                 </div>
               </div>
-              <div className="bg-green-50 p-4 rounded-lg">
+              <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-green-600">Highest Score</p>
-                    <p className="text-2xl font-bold text-green-800">{stats.highest}%</p>
+                    <p className="text-2xl font-bold text-green-800 dark:text-green-400">{stats.highest}%</p>
                   </div>
                   <GraduationCap className="w-8 h-8 text-green-600" />
                 </div>
@@ -583,7 +583,7 @@ export function MarksModule() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-orange-600">Lowest Score</p>
-                    <p className="text-2xl font-bold text-orange-800">{stats.lowest}%</p>
+                    <p className="text-2xl font-bold text-orange-800 dark:text-orange-400">{stats.lowest}%</p>
                   </div>
                   <FileText className="w-8 h-8 text-orange-600" />
                 </div>
@@ -592,7 +592,7 @@ export function MarksModule() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-purple-600">Total Students</p>
-                    <p className="text-2xl font-bold text-purple-800">{stats.totalStudents}</p>
+                    <p className="text-2xl font-bold text-purple-800 dark:text-purple-400">{stats.totalStudents}</p>
                   </div>
                   <FileText className="w-8 h-8 text-purple-600" />
                 </div>
@@ -600,35 +600,35 @@ export function MarksModule() {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-700/50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Student
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Marks
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Percentage
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Grade
                     </th>
                     {user?.role !== 'student' && (
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Actions
                       </th>
                     )}
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {marks.map((mark) => (
-                    <tr key={mark._id} className="hover:bg-gray-50">
+                    <tr key={mark._id} className="hover:bg-gray-50 dark:bg-gray-700/50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
-                          <div className="text-sm font-medium text-gray-900">{mark.student.name}</div>
-                          <div className="text-sm text-gray-500">{mark.student.studentId}</div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{mark.student.name}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">{mark.student.studentId}</div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -643,18 +643,18 @@ export function MarksModule() {
                                 ...tempMarks,
                                 [mark._id]: parseInt(e.target.value) || 0
                               })}
-                              className="border rounded px-2 py-1 w-20"
+                              className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-20 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                             />
-                            <span className="text-sm text-gray-500">/ {mark.maxMarks}</span>
+                            <span className="text-sm text-gray-500 dark:text-gray-400">/ {mark.maxMarks}</span>
                           </div>
                         ) : (
-                          <span className="text-sm text-gray-900">
+                          <span className="text-sm text-gray-900 dark:text-gray-100">
                             {mark.marks} / {mark.maxMarks}
                           </span>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm text-gray-900">
+                        <span className="text-sm text-gray-900 dark:text-gray-100">
                           {Math.round((mark.marks / mark.maxMarks) * 100)}%
                         </span>
                       </td>
@@ -678,7 +678,7 @@ export function MarksModule() {
                                   setEditingMark(null);
                                   setTempMarks({});
                                 }}
-                                className="text-gray-600 hover:text-gray-900"
+                                className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:text-gray-100"
                               >
                                 Cancel
                               </button>
@@ -707,17 +707,17 @@ export function MarksModule() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* Regular Assessments */}
               {assessments.map(assessment => (
-                <div key={assessment._id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div key={assessment._id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow bg-white dark:bg-gray-800">
                   <div className="flex justify-between items-start mb-2">
                     <h4 className="font-medium">{assessment.name}</h4>
                     <button
                       onClick={() => deleteAssessment(assessment._id)}
-                      className="text-red-600 hover:text-red-800"
+                      className="text-red-600 hover:text-red-800 dark:text-red-400"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
-                  <div className="text-sm text-gray-600 space-y-1">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                     <div>Type: <span className="capitalize">{assessment.type}</span></div>
                     <div>Max Marks: {assessment.maxMarks}</div>
                     <div>Date: {new Date(assessment.date).toLocaleDateString()}</div>
@@ -727,12 +727,12 @@ export function MarksModule() {
 
               {/* Assignments */}
               {assignments.map(assignment => (
-                <div key={`assignment-${assignment._id}`} className="border rounded-lg p-4 hover:shadow-md transition-shadow bg-blue-50">
+                <div key={`assignment-${assignment._id}`} className="border rounded-lg p-4 hover:shadow-md transition-shadow bg-blue-50 dark:bg-blue-900/20">
                   <div className="flex justify-between items-start mb-2">
                     <h4 className="font-medium">📝 {assignment.title}</h4>
-                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">Assignment</span>
+                    <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 px-2 py-1 rounded">Assignment</span>
                   </div>
-                  <div className="text-sm text-gray-600 space-y-1">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                     <div>Course: {assignment.course?.name || 'Unknown Course'}</div>
                     <div>Max Marks: {assignment.maxMarks}</div>
                     <div>Due: {new Date(assignment.dueDate).toLocaleDateString()}</div>
@@ -750,10 +750,10 @@ export function MarksModule() {
         {!selectedCourse && (
           <div className="text-center py-12">
             <GraduationCap className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">Select a course to view marks and grades</p>
+            <p className="text-gray-500 dark:text-gray-400">Select a course to view marks and grades</p>
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import {
     Calendar, Clock, FileText, CheckCircle, XCircle, Plus,
     AlertCircle, Filter
@@ -22,15 +23,15 @@ interface Leave {
 }
 
 const TYPE_LABELS: Record<string, { label: string; color: string; bg: string }> = {
-    duty: { label: 'Duty Leave', color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200' },
-    medical: { label: 'Medical Leave', color: 'text-red-700', bg: 'bg-red-50 border-red-200' },
+    duty: { label: 'Duty Leave', color: 'text-blue-700', bg: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200' },
+    medical: { label: 'Medical Leave', color: 'text-red-700 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' },
     casual: { label: 'Casual Leave', color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200' },
 };
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string; icon: any }> = {
     pending: { label: 'Pending', color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200', icon: Clock },
-    approved: { label: 'Approved', color: 'text-green-700', bg: 'bg-green-50 border-green-200', icon: CheckCircle },
-    rejected: { label: 'Rejected', color: 'text-red-700', bg: 'bg-red-50 border-red-200', icon: XCircle },
+    approved: { label: 'Approved', color: 'text-green-700 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800', icon: CheckCircle },
+    rejected: { label: 'Rejected', color: 'text-red-700 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800', icon: XCircle },
 };
 
 export function LeaveModule() {
@@ -147,12 +148,12 @@ export function LeaveModule() {
     }
 
     return (
-        <div className="space-y-6">
+        <motion.div className="space-y-6" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Leave Management</h1>
-                    <p className="text-gray-500 mt-1">
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Leave Management</h1>
+                    <p className="text-gray-500 dark:text-gray-400 mt-1">
                         {isStudent ? 'Apply for and track your leave requests' : 'Review and manage leave applications'}
                     </p>
                 </div>
@@ -166,13 +167,13 @@ export function LeaveModule() {
 
             {/* Messages */}
             {error && (
-                <div className="flex items-center p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                <div className="flex items-center p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-400">
                     <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />
                     {error}
                 </div>
             )}
             {success && (
-                <div className="flex items-center p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+                <div className="flex items-center p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-700 dark:text-green-400">
                     <CheckCircle className="w-4 h-4 mr-2 flex-shrink-0" />
                     {success}
                 </div>
@@ -186,12 +187,12 @@ export function LeaveModule() {
                     { label: 'Approved', value: stats.approved, color: 'bg-green-500' },
                     { label: 'Rejected', value: stats.rejected, color: 'bg-red-500' },
                 ].map(s => (
-                    <div key={s.label} className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+                    <div key={s.label} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4 shadow-sm">
                         <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-500">{s.label}</span>
+                            <span className="text-sm text-gray-500 dark:text-gray-400">{s.label}</span>
                             <div className={`w-2.5 h-2.5 rounded-full ${s.color}`} />
                         </div>
-                        <p className="text-2xl font-bold text-gray-900 mt-1">{s.value}</p>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">{s.value}</p>
                     </div>
                 ))}
             </div>
@@ -209,11 +210,11 @@ export function LeaveModule() {
                         <form onSubmit={handleApply} className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Leave Type *</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Leave Type *</label>
                                     <select
                                         value={formData.type}
                                         onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as any }))}
-                                        className="w-full p-2 border border-gray-300 rounded-md"
+                                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md"
                                     >
                                         <option value="casual">Casual Leave</option>
                                         <option value="medical">Medical Leave</option>
@@ -221,7 +222,7 @@ export function LeaveModule() {
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Start Date *</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date *</label>
                                     <Input
                                         type="date"
                                         value={formData.startDate}
@@ -230,7 +231,7 @@ export function LeaveModule() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">End Date *</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date *</label>
                                     <Input
                                         type="date"
                                         value={formData.endDate}
@@ -240,11 +241,11 @@ export function LeaveModule() {
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reason</label>
                                 <textarea
                                     value={formData.reason}
                                     onChange={(e) => setFormData(prev => ({ ...prev, reason: e.target.value }))}
-                                    className="w-full p-3 border border-gray-300 rounded-md resize-none"
+                                    className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md resize-none"
                                     rows={3}
                                     placeholder="Describe the reason for your leave..."
                                 />
@@ -265,14 +266,14 @@ export function LeaveModule() {
             {/* Filter */}
             <div className="flex items-center space-x-2">
                 <Filter className="w-4 h-4 text-gray-400" />
-                <span className="text-sm text-gray-500">Filter:</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">Filter:</span>
                 {(['all', 'pending', 'approved', 'rejected'] as const).map(f => (
                     <button
                         key={f}
                         onClick={() => setFilter(f)}
                         className={`px-3 py-1.5 text-sm rounded-full transition-colors ${filter === f
                             ? 'bg-blue-600 text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200'
                             }`}
                     >
                         {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -297,7 +298,7 @@ export function LeaveModule() {
                         const days = getDays(leave.startDate, leave.endDate);
 
                         return (
-                            <div key={leave._id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 hover:shadow-md transition-shadow">
+                            <div key={leave._id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-4 hover:shadow-md transition-shadow">
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1">
                                         {/* Top row: type badge, status badge */}
@@ -316,7 +317,7 @@ export function LeaveModule() {
 
                                         {/* Student name (for approvers) */}
                                         {isApprover && (
-                                            <p className="text-sm font-semibold text-gray-900 mb-1">
+                                            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">
                                                 {leave.student?.name || 'Unknown Student'}
                                                 {leave.student?.profile?.studentId && (
                                                     <span className="text-gray-400 font-normal ml-2">({leave.student.profile.studentId})</span>
@@ -325,14 +326,14 @@ export function LeaveModule() {
                                         )}
 
                                         {/* Dates */}
-                                        <div className="flex items-center text-sm text-gray-600 mb-1">
+                                        <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mb-1">
                                             <Calendar className="w-3.5 h-3.5 mr-1.5" />
                                             {formatDate(leave.startDate)} — {formatDate(leave.endDate)}
                                         </div>
 
                                         {/* Reason */}
                                         {leave.reason && (
-                                            <p className="text-sm text-gray-500 mt-1">{leave.reason}</p>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{leave.reason}</p>
                                         )}
 
                                         {/* Meta */}
@@ -347,7 +348,7 @@ export function LeaveModule() {
                                             <button
                                                 onClick={() => handleDecision(leave._id, 'approved')}
                                                 disabled={actionLoading === leave._id}
-                                                className="p-2 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg transition-colors"
+                                                className="p-2 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg transition-colors"
                                                 title="Approve"
                                             >
                                                 <CheckCircle className="w-5 h-5" />
@@ -355,7 +356,7 @@ export function LeaveModule() {
                                             <button
                                                 onClick={() => handleDecision(leave._id, 'rejected')}
                                                 disabled={actionLoading === leave._id}
-                                                className="p-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg transition-colors"
+                                                className="p-2 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg transition-colors"
                                                 title="Reject"
                                             >
                                                 <XCircle className="w-5 h-5" />
@@ -368,6 +369,6 @@ export function LeaveModule() {
                     })}
                 </div>
             )}
-        </div>
+        </motion.div>
     );
 }

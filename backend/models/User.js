@@ -135,7 +135,8 @@ userSchema.add({
 // Password hashing middleware
 userSchema.pre('save', async function (next) {
   // Only hash the password if it has been modified (or is new)
-  if (!this.isModified('password')) return next();
+  // Skip if _skipPasswordHash is set (password already hashed, e.g. from RoleRequest)
+  if (!this.isModified('password') || this._skipPasswordHash) return next();
 
   try {
     // Hash password with cost of 12

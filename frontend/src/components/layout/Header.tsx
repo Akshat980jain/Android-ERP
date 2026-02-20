@@ -15,12 +15,12 @@ interface HeaderProps {
 export function Header({ onNotificationClick, unreadCount, onMenuClick }: HeaderProps) {
   const { user, logout } = useAuth();
   const { variant, intensity } = useBackground();
-  
+
   // Dynamic header styling based on background context
-  const headerBgColor = 'bg-glass backdrop-blur-md border-gray-200/50 dark:border-gray-700/50';
+  const headerBgColor = 'bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-gray-200/50 dark:border-gray-700/50';
 
   return (
-    <motion.header 
+    <motion.header
       className={`${headerBgColor} border-b px-4 sm:px-6 py-4 relative z-20`}
       variants={fadeInVariants}
       initial="initial"
@@ -28,9 +28,9 @@ export function Header({ onNotificationClick, unreadCount, onMenuClick }: Header
     >
       {/* Enhanced header background with subtle gradient */}
       <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/80 to-white/90 dark:from-gray-900/90 dark:via-gray-800/80 dark:to-gray-900/90 rounded-b-lg" />
-      
+
       <div className="flex items-center justify-between relative z-10">
-        <motion.div 
+        <motion.div
           className="flex items-center space-x-3 sm:space-x-4"
           variants={slideInRightVariants}
           initial="initial"
@@ -46,7 +46,7 @@ export function Header({ onNotificationClick, unreadCount, onMenuClick }: Header
           >
             <Menu className="w-5 h-5 text-gray-700 dark:text-gray-200" />
           </motion.button>
-          <motion.h2 
+          <motion.h2
             className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100 truncate"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -56,13 +56,13 @@ export function Header({ onNotificationClick, unreadCount, onMenuClick }: Header
           </motion.h2>
         </motion.div>
 
-        <motion.div 
+        <motion.div
           className="flex items-center space-x-3 sm:space-x-4"
           variants={slideInRightVariants}
           initial="initial"
           animate="animate"
         >
-          <motion.div 
+          <motion.div
             className="relative hidden sm:block"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -81,7 +81,7 @@ export function Header({ onNotificationClick, unreadCount, onMenuClick }: Header
           {/* Notification button only if unreadCount is available and > 0 */}
           <AnimatePresence>
             {typeof unreadCount === 'number' && unreadCount > 0 && (
-              <motion.button 
+              <motion.button
                 onClick={onNotificationClick}
                 className="relative p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
                 variants={buttonVariants}
@@ -93,7 +93,7 @@ export function Header({ onNotificationClick, unreadCount, onMenuClick }: Header
                 transition={{ delay: 0.4 }}
               >
                 <Bell className="w-5 h-5" />
-                <motion.span 
+                <motion.span
                   className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center"
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
@@ -107,21 +107,21 @@ export function Header({ onNotificationClick, unreadCount, onMenuClick }: Header
 
           {/* Theme toggle moved to Sidebar */}
 
-          <motion.div 
+          <motion.div
             className="flex items-center space-x-2 sm:space-x-3"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.5 }}
           >
-            <motion.div 
+            <motion.div
               className="w-8 h-8 bg-gray-300 dark:bg-gray-700 rounded-full flex items-center justify-center"
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
             >
               {user?.profile?.avatar ? (
-                <img 
-                  src={user.profile.avatar} 
-                  alt="Profile" 
+                <img
+                  src={user.profile.avatar}
+                  alt="Profile"
                   className="w-8 h-8 rounded-full object-cover"
                 />
               ) : (

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Bell, CheckCircle, AlertTriangle, Info, X, Calendar, BookOpen, CreditCard, Briefcase } from 'lucide-react';
 import { Card, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
@@ -120,11 +121,11 @@ export function NotificationModule() {
   const unreadCount = notifications.filter(n => !n.read && (n.targetRoles ? n.targetRoles.includes(user?.role || '') : true)).length;
 
   return (
-    <div className="space-y-6">
+    <motion.div className="space-y-6" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <Bell className="w-6 h-6 text-blue-600" />
-          <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Notifications</h1>
           {unreadCount > 0 && (
             <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
               {unreadCount}
@@ -144,7 +145,7 @@ export function NotificationModule() {
             className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
               filter === filterType
                 ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200'
             }`}
           >
             {filterType.charAt(0).toUpperCase() + filterType.slice(1)}
@@ -157,38 +158,38 @@ export function NotificationModule() {
           <Card>
             <CardContent className="text-center py-12">
               <Bell className="w-12 h-12 text-gray-400 mx-auto mb-4 animate-spin" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Loading notifications...</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">Loading notifications...</h3>
             </CardContent>
           </Card>
         ) : filteredNotifications.length === 0 ? (
           <Card>
             <CardContent className="text-center py-12">
               <Bell className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No notifications</h3>
-              <p className="text-gray-600">You're all caught up!</p>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No notifications</h3>
+              <p className="text-gray-600 dark:text-gray-400">You're all caught up!</p>
             </CardContent>
           </Card>
         ) : (
           filteredNotifications.map((notification) => (
-            <Card key={notification._id} className={`${!notification.read ? 'border-l-4 border-l-blue-500 bg-blue-50' : ''}`}>
+            <Card key={notification._id} className={`${!notification.read ? 'border-l-4 border-l-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''}`}>
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-3 flex-1">
                     {getTypeIcon(notification.type)}
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-1">
-                        <h3 className={`font-medium ${!notification.read ? 'text-gray-900' : 'text-gray-700'}`}>
+                        <h3 className={`font-medium ${!notification.read ? 'text-gray-900 dark:text-gray-100' : 'text-gray-700 dark:text-gray-300'}`}>
                           {notification.title}
                         </h3>
-                        <div className="flex items-center space-x-1 text-gray-500">
+                        <div className="flex items-center space-x-1 text-gray-500 dark:text-gray-400">
                           {getCategoryIcon(notification.category)}
                           <span className="text-xs capitalize">{notification.category}</span>
                         </div>
                       </div>
-                      <p className={`text-sm ${!notification.read ? 'text-gray-800' : 'text-gray-600'}`}>
+                      <p className={`text-sm ${!notification.read ? 'text-gray-800 dark:text-gray-200' : 'text-gray-600 dark:text-gray-400'}`}>
                         {notification.message}
                       </p>
-                      <div className="flex items-center space-x-2 mt-2 text-xs text-gray-500">
+                      <div className="flex items-center space-x-2 mt-2 text-xs text-gray-500 dark:text-gray-400">
                         <Calendar className="w-3 h-3" />
                         <span>{new Date(notification.createdAt).toLocaleDateString()}</span>
                         <span>{new Date(notification.createdAt).toLocaleTimeString()}</span>
@@ -218,6 +219,6 @@ export function NotificationModule() {
           ))
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }

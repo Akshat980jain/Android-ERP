@@ -11,7 +11,7 @@ router.get('/system', auth, authorize('admin'), async (req, res) => {
   try {
     // Get settings from database, or create default if none exist
     let dbSettings = await Settings.findOne();
-    
+
     if (!dbSettings) {
       // Create default settings if none exist
       dbSettings = await Settings.create({
@@ -66,7 +66,7 @@ router.get('/system', auth, authorize('admin'), async (req, res) => {
     res.json({ success: true, settings: systemSettings });
   } catch (error) {
     console.error('Get system settings error:', error);
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
@@ -79,9 +79,9 @@ router.put('/system', auth, authorize('admin'), async (req, res) => {
 
     // Validate required fields
     if (!institution?.name || !academic?.currentAcademicYear) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Institution name and academic year are required' 
+      return res.status(400).json({
+        success: false,
+        message: 'Institution name and academic year are required'
       });
     }
 
@@ -149,7 +149,7 @@ router.put('/system', auth, authorize('admin'), async (req, res) => {
     const updatedSettings = await Settings.findOneAndUpdate(
       {}, // Find any settings document (should only be one)
       { $set: updateData },
-      { 
+      {
         upsert: true, // Create if doesn't exist
         new: true, // Return updated document
         runValidators: true // Run schema validators
@@ -158,7 +158,7 @@ router.put('/system', auth, authorize('admin'), async (req, res) => {
 
     console.log('Settings saved successfully:', updatedSettings);
 
-    res.json({ 
+    res.json({
       success: true,
       message: 'System settings updated successfully',
       settings: {
@@ -172,10 +172,9 @@ router.put('/system', auth, authorize('admin'), async (req, res) => {
     });
   } catch (error) {
     console.error('Update system settings error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error', 
-      error: error.message 
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
     });
   }
 });
@@ -184,7 +183,7 @@ router.put('/system', auth, authorize('admin'), async (req, res) => {
 router.get('/preferences', auth, checkVerification, async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select('profile preferences');
-    
+
     const userPreferences = {
       theme: user.preferences?.theme || 'light',
       language: user.preferences?.language || 'en',
@@ -250,7 +249,7 @@ router.put('/preferences', auth, checkVerification, async (req, res) => {
       $set: { preferences: updatedPreferences }
     });
 
-    res.json({ 
+    res.json({
       message: 'Preferences updated successfully',
       preferences: updatedPreferences
     });
@@ -264,7 +263,7 @@ router.put('/preferences', auth, checkVerification, async (req, res) => {
 router.get('/notifications', auth, checkVerification, async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select('preferences');
-    
+
     const notificationSettings = {
       general: {
         email: user.preferences?.notifications?.email !== false,
@@ -337,7 +336,7 @@ router.put('/notifications', auth, checkVerification, async (req, res) => {
 
     // Update user notification preferences
     await User.findByIdAndUpdate(req.user._id, {
-      $set: { 
+      $set: {
         'preferences.notifications': {
           email: updatedNotificationSettings.general.email,
           sms: updatedNotificationSettings.general.sms,
@@ -349,7 +348,7 @@ router.put('/notifications', auth, checkVerification, async (req, res) => {
       }
     });
 
-    res.json({ 
+    res.json({
       message: 'Notification settings updated successfully',
       notificationSettings: updatedNotificationSettings
     });
@@ -400,7 +399,7 @@ async function getDatabaseStats() {
   try {
     const collections = await mongoose.connection.db.listCollections().toArray();
     const stats = {};
-    
+
     for (const collection of collections) {
       try {
         const count = await mongoose.connection.db.collection(collection.name).countDocuments();
@@ -409,7 +408,7 @@ async function getDatabaseStats() {
         stats[collection.name] = 'Error';
       }
     }
-    
+
     return stats;
   } catch (error) {
     return { error: 'Unable to fetch database stats' };
@@ -451,7 +450,7 @@ router.put('/backup', auth, authorize('admin'), async (req, res) => {
     // In a real application, these would be saved to environment variables or database
     // For now, we'll just return success
 
-    res.json({ 
+    res.json({
       message: 'Backup settings updated successfully',
       backupSettings: updatedBackupSettings
     });
@@ -486,7 +485,7 @@ router.post('/test-config', auth, authorize('admin'), async (req, res) => {
         return res.status(400).json({ message: 'Invalid test type' });
     }
 
-    res.json({ 
+    res.json({
       message: 'Configuration test completed',
       results
     });
@@ -502,7 +501,7 @@ async function testDatabaseConnection() {
     const startTime = Date.now();
     await mongoose.connection.db.admin().ping();
     const responseTime = Date.now() - startTime;
-    
+
     return {
       status: 'success',
       responseTime: `${responseTime}ms`,

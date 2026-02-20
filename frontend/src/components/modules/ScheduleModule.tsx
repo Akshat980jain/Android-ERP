@@ -1,5 +1,5 @@
 // src/components/modules/ScheduleModule.tsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Calendar, Clock, MapPin, Plus, Edit, Trash2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import apiClient from '../../utils/api';
@@ -302,18 +302,18 @@ export function ScheduleModule() {
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'lecture': return 'bg-blue-100 text-blue-800';
-      case 'lab': return 'bg-green-100 text-green-800';
-      case 'tutorial': return 'bg-yellow-100 text-yellow-800';
-      case 'seminar': return 'bg-purple-100 text-purple-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'lecture': return 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400';
+      case 'lab': return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400';
+      case 'tutorial': return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300';
+      case 'seminar': return 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400';
+      default: return 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200';
     }
   };
 
   return (
-    <div className="space-y-6">
+    <motion.div className="space-y-6" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Schedule</h2>
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">Schedule</h2>
         {user?.role === 'admin' && (
           <button
             onClick={() => {
@@ -336,18 +336,18 @@ export function ScheduleModule() {
         )}
       </div>
 
-      {error && <div className="text-red-700 bg-red-50 p-3 rounded">{error}</div>}
-      {success && <div className="text-green-700 bg-green-50 p-3 rounded">{success}</div>}
+      {error && <div className="text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-3 rounded">{error}</div>}
+      {success && <div className="text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 p-3 rounded">{success}</div>}
 
       {showAddForm && (
-        <div className="bg-white p-6 rounded-lg shadow border">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border">
           <h3 className="text-lg font-semibold mb-4">
             {editingItem ? 'Edit Schedule Item' : 'Add New Schedule Item'}
           </h3>
           <form onSubmit={editingItem ? updateScheduleItem : addScheduleItem} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Course</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Course</label>
                 <select
                   value={newScheduleItem.course}
                   onChange={(e) => setNewScheduleItem({ ...newScheduleItem, course: e.target.value })}
@@ -363,7 +363,7 @@ export function ScheduleModule() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Type</label>
                 <select
                   value={newScheduleItem.type}
                   onChange={(e) => setNewScheduleItem({ ...newScheduleItem, type: e.target.value as 'lecture' | 'lab' | 'tutorial' | 'seminar' })}
@@ -378,7 +378,7 @@ export function ScheduleModule() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Day</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Day</label>
                 <select
                   value={newScheduleItem.dayOfWeek}
                   onChange={(e) => setNewScheduleItem({ ...newScheduleItem, dayOfWeek: e.target.value })}
@@ -390,7 +390,7 @@ export function ScheduleModule() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Time</label>
                 <div className="flex gap-2">
                   <input
                     type="time"
@@ -434,10 +434,10 @@ export function ScheduleModule() {
                     ))}
                   </select>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Enter custom time or use quick select</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Enter custom time or use quick select</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Time</label>
                 <div className="flex gap-2">
                   <input
                     type="time"
@@ -460,7 +460,7 @@ export function ScheduleModule() {
                     ))}
                   </select>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   {newScheduleItem.startTime && newScheduleItem.endTime &&
                     !isValidTimeRange(newScheduleItem.startTime, newScheduleItem.endTime)
                     ? '⚠️ End time must be after start time'
@@ -470,7 +470,7 @@ export function ScheduleModule() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Room</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Room</label>
               <input
                 type="text"
                 placeholder="Room number or location"
@@ -490,7 +490,7 @@ export function ScheduleModule() {
                   setShowAddForm(false);
                   setEditingItem(null);
                 }}
-                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                className="bg-gray-50 dark:bg-gray-700/500 text-white px-4 py-2 rounded hover:bg-gray-600"
               >
                 Cancel
               </button>
@@ -499,43 +499,43 @@ export function ScheduleModule() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="grid grid-cols-1 lg:grid-cols-7 divide-y lg:divide-y-0 lg:divide-x divide-gray-200">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-7 divide-y lg:divide-y-0 lg:divide-x divide-gray-200 dark:divide-gray-700">
           {DAYS_OF_WEEK.map(day => (
             <div key={day} className="p-4">
-              <h3 className="font-semibold text-lg text-gray-800 mb-4 flex items-center justify-between">
+              <h3 className="font-semibold text-lg text-gray-800 dark:text-gray-200 mb-4 flex items-center justify-between">
                 <div className="flex items-center">
                   <Calendar className="w-5 h-5 mr-2" />
                   {day}
                 </div>
-                <span className="text-sm text-gray-500 font-normal">
+                <span className="text-sm text-gray-500 dark:text-gray-400 font-normal">
                   {getTotalDayDuration(day)}
                 </span>
               </h3>
               <div className="space-y-2">
                 {getScheduleForDay(day).map((item, index) => (
-                  <div key={`${item._id}-${index}`} className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors">
+                  <div key={`${item._id}-${index}`} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 hover:bg-gray-100 dark:bg-gray-700 transition-colors">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <div className="font-medium text-sm text-gray-900 mb-1">
+                        <div className="font-medium text-sm text-gray-900 dark:text-gray-100 mb-1">
                           {item.course?.name || 'Unknown Course'}
                         </div>
-                        <div className="text-xs text-gray-600 mb-2">
+                        <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
                           {item.course?.code || 'N/A'}
                         </div>
-                        <div className="flex items-center text-xs text-gray-500 mb-1">
+                        <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mb-1">
                           <Clock className="w-3 h-3 mr-1" />
                           {item.startTime} - {item.endTime}
                           <span className="ml-2 text-gray-400">
                             ({getDuration(item.startTime, item.endTime)})
                           </span>
                           {item.lectureCount && item.lectureCount > 1 && (
-                            <span className="ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                            <span className="ml-2 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 text-xs px-2 py-1 rounded-full">
                               {item.lectureCount} lectures
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center text-xs text-gray-500 mb-2">
+                        <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mb-2">
                           <MapPin className="w-3 h-3 mr-1" />
                           {item.room}
                         </div>
@@ -547,14 +547,14 @@ export function ScheduleModule() {
                         <div className="flex space-x-1 ml-2">
                           <button
                             onClick={() => startEditing(item)}
-                            className="text-blue-600 hover:text-blue-800 p-1"
+                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 p-1"
                             title="Edit"
                           >
                             <Edit className="w-3 h-3" />
                           </button>
                           <button
                             onClick={() => deleteScheduleItem(item)}
-                            className="text-red-600 hover:text-red-800 p-1"
+                            className="text-red-600 hover:text-red-800 dark:text-red-400 p-1"
                             title="Delete"
                           >
                             <Trash2 className="w-3 h-3" />
@@ -575,6 +575,6 @@ export function ScheduleModule() {
           ))}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

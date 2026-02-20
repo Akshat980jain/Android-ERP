@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
 // Role Request Schema
 const roleRequestSchema = new mongoose.Schema({
@@ -68,6 +69,17 @@ const roleRequestSchema = new mongoose.Schema({
   adminType: {
     type: String,
     enum: ['head', 'program', 'branch'],
+  }
+});
+
+// Hash password before saving (same pattern as User model)
+roleRequestSchema.pre('save', async function (next) {
+  if (!this.isModified('password') || !this.password) return next();
+  try {
+    this.password = await bcrypt.hash(this.password, 12);
+    next();
+  } catch (error) {
+    next(error);
   }
 });
 

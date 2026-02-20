@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { Card } from '../ui/Card';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
@@ -26,9 +27,9 @@ interface VerificationRequest {
 }
 
 const statusColors: Record<string, string> = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  approved: 'bg-green-100 text-green-800',
-  rejected: 'bg-red-100 text-red-800',
+  pending: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300',
+  approved: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400',
+  rejected: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400',
 };
 
 const API_URL = import.meta.env.VITE_API_URL || '';
@@ -133,7 +134,7 @@ const UserManagement: React.FC = () => {
   };
 
   return (
-    <div>
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
       <h2 className="text-2xl font-bold mb-4">User Management</h2>
       <Card>
         <div className="p-4">
@@ -165,9 +166,9 @@ const UserManagement: React.FC = () => {
             <div className="text-red-600">{error}</div>
           ) : (
             <div className="overflow-x-auto rounded-lg shadow">
-              <table className="min-w-full border text-sm bg-white">
+              <table className="min-w-full border text-sm bg-white dark:bg-gray-800">
                 <thead>
-                  <tr className="bg-gray-50">
+                  <tr className="bg-gray-50 dark:bg-gray-700/50">
                     <th className="px-3 py-2 border">User</th>
                     <th className="px-3 py-2 border">Email</th>
                     <th className="px-3 py-2 border">Requested Role</th>
@@ -183,9 +184,9 @@ const UserManagement: React.FC = () => {
                     <tr><td colSpan={8} className="text-center py-4">No requests found.</td></tr>
                   ) : (
                     filteredRequests.map(req => (
-                      <tr key={req._id} className="hover:bg-gray-50 transition">
+                      <tr key={req._id} className="hover:bg-gray-50 dark:bg-gray-700/50 transition">
                         <td className="border px-3 py-2 flex items-center gap-2">
-                          <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold text-base">
+                          <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 font-bold text-base">
                             {getInitials(req.user?.name || req.name, req.user?.email || req.email)}
                           </span>
                           <span>{req.user?.name || req.name || '-'}</span>
@@ -193,7 +194,7 @@ const UserManagement: React.FC = () => {
                         <td className="border px-3 py-2">{req.user?.email || req.email || '-'}</td>
                         <td className="border px-3 py-2 font-medium">{req.requestedRole}</td>
                         <td className="border px-3 py-2">
-                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${statusColors[req.status || 'pending'] || 'bg-gray-100 text-gray-800'}`}>
+                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${statusColors[req.status || 'pending'] || 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'}`}>
                             {req.status || 'pending'}
                           </span>
                         </td>
@@ -257,7 +258,7 @@ const UserManagement: React.FC = () => {
       {toast && (
         <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
       )}
-    </div>
+    </motion.div>
   );
 };
 

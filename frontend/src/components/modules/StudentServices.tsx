@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { FileText, Download, Clock, CheckCircle, XCircle, Calendar } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
@@ -64,8 +65,8 @@ export function StudentServices() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="border-b border-gray-200">
+    <motion.div className="space-y-6" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+      <div className="border-b border-gray-200 dark:border-gray-700">
         <nav className="flex space-x-8">
           {tabs.map((tab) => (
             <button
@@ -74,7 +75,7 @@ export function StudentServices() {
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === tab.id
                   ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:border-gray-600'
               }`}
             >
               {tab.label}
@@ -90,11 +91,11 @@ export function StudentServices() {
             </CardHeader>
             <CardContent>
             {loading ? (
-              <div className="text-center py-8 text-gray-500">Loading services...</div>
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">Loading services...</div>
             ) : error ? (
               <div className="text-center py-8 text-red-500">{error}</div>
             ) : services.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">No services available.</div>
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">No services available.</div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {services.map((service) => (
@@ -102,11 +103,11 @@ export function StudentServices() {
                     <div className="flex items-start space-x-3">
                       <FileText className="w-6 h-6 text-blue-600 mt-1" />
                       <div className="flex-1">
-                        <h3 className="font-medium text-gray-900">{service.type}</h3>
-                        <p className="text-sm text-gray-600 mt-1">Status: {service.status}</p>
-                        <p className="text-sm text-gray-600 mt-1">Requested: {service.requestDate}</p>
-                        {service.approvedDate && <p className="text-sm text-gray-600 mt-1">Approved: {service.approvedDate}</p>}
-                        {service.remarks && <p className="text-sm text-gray-600 mt-1">Remarks: {service.remarks}</p>}
+                        <h3 className="font-medium text-gray-900 dark:text-gray-100">{service.type}</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Status: {service.status}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Requested: {service.requestDate}</p>
+                        {service.approvedDate && <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Approved: {service.approvedDate}</p>}
+                        {service.remarks && <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Remarks: {service.remarks}</p>}
                       </div>
                     </div>
                   </div>
@@ -124,28 +125,28 @@ export function StudentServices() {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="text-center py-8 text-gray-500">Loading applications...</div>
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">Loading applications...</div>
             ) : error ? (
               <div className="text-center py-8 text-red-500">{error}</div>
             ) : services.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">No applications found.</div>
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">No applications found.</div>
             ) : (
             <div className="space-y-4">
                 {services.map((app) => (
-                <div key={app._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div key={app._id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                   <div className="flex items-center space-x-4">
                       {app.status === 'approved' ? <CheckCircle className="w-5 h-5 text-green-500" /> : app.status === 'pending' ? <Clock className="w-5 h-5 text-yellow-500" /> : <XCircle className="w-5 h-5 text-red-500" />}
                     <div>
-                      <h4 className="font-medium text-gray-900">{app.type}</h4>
-                        <p className="text-sm text-gray-600">Applied on: {app.requestDate}</p>
-                        {app.approvedDate && <p className="text-sm text-gray-600">Approved on: {app.approvedDate}</p>}
-                        {app.remarks && <p className="text-sm text-gray-600">Remarks: {app.remarks}</p>}
+                      <h4 className="font-medium text-gray-900 dark:text-gray-100">{app.type}</h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Applied on: {app.requestDate}</p>
+                        {app.approvedDate && <p className="text-sm text-gray-600 dark:text-gray-400">Approved on: {app.approvedDate}</p>}
+                        {app.remarks && <p className="text-sm text-gray-600 dark:text-gray-400">Remarks: {app.remarks}</p>}
                       </div>
                     </div>
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      app.status === 'approved' ? 'bg-green-100 text-green-800' :
-                      app.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                      app.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
+                      app.status === 'approved' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400' :
+                      app.status === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300' :
+                      app.status === 'rejected' ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
                     }`}>
                       {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
                     </span>
@@ -164,20 +165,20 @@ export function StudentServices() {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="text-center py-8 text-gray-500">Loading downloads...</div>
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">Loading downloads...</div>
             ) : error ? (
               <div className="text-center py-8 text-red-500">{error}</div>
             ) : downloads.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">No downloads found.</div>
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">No downloads found.</div>
             ) : (
             <div className="space-y-4">
               {downloads.map((file, index) => (
-                <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div key={index} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                   <div className="flex items-center space-x-4">
                     <FileText className="w-8 h-8 text-blue-600" />
                     <div>
-                      <h4 className="font-medium text-gray-900">{file.name}</h4>
-                      <div className="flex items-center space-x-4 text-sm text-gray-600">
+                      <h4 className="font-medium text-gray-900 dark:text-gray-100">{file.name}</h4>
+                      <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
                         <span>{file.type}</span>
                         <span>•</span>
                         <span>{file.size}</span>
@@ -200,6 +201,6 @@ export function StudentServices() {
           </CardContent>
         </Card>
       )}
-    </div>
+    </motion.div>
   );
 }

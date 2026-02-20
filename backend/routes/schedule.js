@@ -25,7 +25,7 @@ const migrateScheduleItem = (slot) => {
 router.get('/', auth, async (req, res) => {
   try {
     let courses;
-    
+
     switch (req.user.role) {
       case 'admin':
         // Admin can see all courses
@@ -47,7 +47,7 @@ router.get('/', auth, async (req, res) => {
       default:
         courses = [];
     }
-    
+
     // Transform courses into schedule items
     const schedule = [];
     courses.forEach(course => {
@@ -55,7 +55,7 @@ router.get('/', auth, async (req, res) => {
         course.schedule.forEach(slot => {
           // Migrate the slot to ensure it has all required fields
           const migratedSlot = migrateScheduleItem(slot);
-          
+
           // Calculate lecture count based on duration
           const startMinutes = timeToMinutes(migratedSlot.time);
           const endMinutes = timeToMinutes(migratedSlot.endTime);
@@ -84,11 +84,11 @@ router.get('/', auth, async (req, res) => {
         });
       }
     });
-    
+
     res.json({ success: true, schedule });
   } catch (error) {
     console.error('Error fetching schedule:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch schedule', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to fetch schedule' });
   }
 });
 
@@ -96,24 +96,24 @@ router.get('/', auth, async (req, res) => {
 router.post('/', auth, async (req, res) => {
   try {
     const { courseId, dayOfWeek, startTime, endTime, room, type } = req.body;
-    
+
     if (!courseId || !dayOfWeek || !startTime) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
-    
+
     const course = await Course.findById(courseId);
     if (!course) {
       return res.status(404).json({ success: false, message: 'Course not found' });
     }
-    
+
     // Check if user has permission to modify this course
     const isAdmin = req.user.role === 'admin';
     const isCourseFaculty = course.faculty.toString() === req.user._id.toString();
-    
+
     if (!isAdmin && !isCourseFaculty) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
-    
+
     // Add schedule slot to course with complete data
     course.schedule.push({
       day: dayOfWeek,
@@ -122,13 +122,13 @@ router.post('/', auth, async (req, res) => {
       room: room || '',
       type: type || 'lecture' // Default to lecture if type not provided
     });
-    
+
     await course.save();
-    
+
     res.json({ success: true, message: 'Schedule item added successfully' });
   } catch (error) {
     console.error('Error adding schedule item:', error);
-    res.status(500).json({ success: false, message: 'Failed to add schedule item', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to add schedule item' });
   }
 });
 
@@ -221,7 +221,7 @@ router.put('/:id', auth, async (req, res) => {
     return res.json({ success: true, message: 'Schedule item moved and updated successfully' });
   } catch (error) {
     console.error('Error updating schedule item:', error);
-    res.status(500).json({ success: false, message: 'Failed to update schedule item', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to update schedule item' });
   }
 });
 
@@ -229,35 +229,35 @@ router.put('/:id', auth, async (req, res) => {
 router.delete('/:id', auth, async (req, res) => {
   try {
     const { courseId, dayOfWeek, startTime } = req.body;
-    
+
     if (!courseId || !dayOfWeek || !startTime) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
-    
+
     const course = await Course.findById(courseId);
     if (!course) {
       return res.status(404).json({ success: false, message: 'Course not found' });
     }
-    
+
     // Check if user has permission to modify this course
     const isAdmin = req.user.role === 'admin';
     const isCourseFaculty = course.faculty.toString() === req.user._id.toString();
-    
+
     if (!isAdmin && !isCourseFaculty) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
-    
+
     // Remove schedule slot from course
-    course.schedule = course.schedule.filter(slot => 
+    course.schedule = course.schedule.filter(slot =>
       !(slot.day === dayOfWeek && slot.time === startTime)
     );
-    
+
     await course.save();
-    
+
     res.json({ success: true, message: 'Schedule item deleted successfully' });
   } catch (error) {
     console.error('Error deleting schedule item:', error);
-    res.status(500).json({ success: false, message: 'Failed to delete schedule item', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to delete schedule item' });
   }
 });
 

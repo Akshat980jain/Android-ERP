@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth, AuthProvider } from './contexts/AuthContext';
@@ -17,6 +17,7 @@ import { StudentDashboard } from './components/dashboard/StudentDashboard';
 import { FacultyDashboard } from './components/dashboard/FacultyDashboard';
 import { AdminDashboard } from './components/dashboard/AdminDashboard';
 import { AcademicModule } from './components/modules/AcademicModule';
+import { AnalyticsModule } from './components/modules/AnalyticsModule';
 import { CourseModule } from './components/modules/CourseModule'; // Add this import
 import UserManagement from './components/modules/UserManagement';
 import RequestVerificationPage from './components/auth/RequestVerificationPage';
@@ -59,7 +60,21 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const unreadNotificationCount = 5;
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+
+  useEffect(() => {
+    if (user) {
+      const fetchNotifications = async () => {
+        try {
+          const res = await import('./utils/api').then(m => m.default.getNotifications({ read: 'false' })) as any;
+          setUnreadNotificationCount(res?.notifications?.length ?? 0);
+        } catch {
+          setUnreadNotificationCount(0);
+        }
+      };
+      fetchNotifications();
+    }
+  }, [user]);
 
   const handleNotificationClick = () => {
     setActiveTab('notifications');
@@ -71,10 +86,10 @@ function AppContent() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
         </div>
       </div>
     );
@@ -199,14 +214,8 @@ function AppContent() {
                           return <ParentPortal />;
                         case 'leaves':
                           return <LeaveModule />;
-                        case 'analytics': // Admin only
-                          // TODO: Replace with AnalyticsModule if available
-                          return (
-                            <div className="text-center py-12">
-                              <h2 className="text-2xl font-semibold text-gray-900 mb-4">Analytics</h2>
-                              <p className="text-gray-600">This module is under development...</p>
-                            </div>
-                          );
+                        case 'analytics':
+                          return <AnalyticsModule />;
                         case 'users': // Admin: User Management
                           return <UserManagement />;
                         case 'request-approval': // Admin: Request Approval
@@ -224,8 +233,8 @@ function AppContent() {
                         default:
                           return (
                             <div className="text-center py-12">
-                              <h2 className="text-2xl font-semibold text-gray-900 mb-4">{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h2>
-                              <p className="text-gray-600">This module is under development...</p>
+                              <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-4">{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h2>
+                              <p className="text-gray-600 dark:text-gray-400">This module is under development...</p>
                             </div>
                           );
                       }

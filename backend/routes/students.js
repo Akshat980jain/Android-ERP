@@ -1,5 +1,8 @@
 const express = require('express');
 const router = express.Router();
+
+// Escape special regex characters to prevent ReDoS
+const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const User = require('../models/User');
 const Course = require('../models/Course');
 const { auth } = require('../middleware/auth');
@@ -53,9 +56,9 @@ router.get('/', auth, async (req, res) => {
         if (branchName) {
           query.$and.push({
             $or: [
-              { branch: { $regex: new RegExp(`^${branchName.trim()}$`, 'i') } },
-              { department: { $regex: new RegExp(`^${branchName.trim()}$`, 'i') } },
-              { 'profile.branch': { $regex: new RegExp(`^${branchName.trim()}$`, 'i') } }
+              { branch: { $regex: new RegExp(`^${escapeRegex(branchName.trim())}$`, 'i') } },
+              { department: { $regex: new RegExp(`^${escapeRegex(branchName.trim())}$`, 'i') } },
+              { 'profile.branch': { $regex: new RegExp(`^${escapeRegex(branchName.trim())}$`, 'i') } }
             ]
           });
         }
@@ -122,9 +125,9 @@ router.get('/', auth, async (req, res) => {
           if (facultyBranch) {
             conditions.push({
               $or: [
-                { branch: { $regex: new RegExp(`^${facultyBranch.trim()}$`, 'i') } },
-                { department: { $regex: new RegExp(`^${facultyBranch.trim()}$`, 'i') } },
-                { 'profile.branch': { $regex: new RegExp(`^${facultyBranch.trim()}$`, 'i') } }
+                { branch: { $regex: new RegExp(`^${escapeRegex(facultyBranch.trim())}$`, 'i') } },
+                { department: { $regex: new RegExp(`^${escapeRegex(facultyBranch.trim())}$`, 'i') } },
+                { 'profile.branch': { $regex: new RegExp(`^${escapeRegex(facultyBranch.trim())}$`, 'i') } }
               ]
             });
           }
@@ -175,7 +178,7 @@ router.get('/', auth, async (req, res) => {
     res.json({ success: true, students });
   } catch (error) {
     console.error('Error fetching students:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch students', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to fetch students' });
   }
 });
 
@@ -223,7 +226,7 @@ router.get('/course/:courseId', auth, async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching course students:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch course students', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to fetch course students' });
   }
 });
 

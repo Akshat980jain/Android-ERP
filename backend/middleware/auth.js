@@ -3,31 +3,29 @@ const User = require('../models/User');
 
 const auth = async (req, res, next) => {
   try {
-    console.log('Auth middleware - Headers:', req.headers);
     const token = req.header('Authorization')?.replace('Bearer ', '');
 
     if (!token) {
-      console.log('No token provided');
       return res.status(401).json({ message: 'No token, authorization denied' });
     }
 
-    console.log('Token received:', token.substring(0, 20) + '...');
-    const secret = process.env.JWT_SECRET || 'your-secret-key';
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      console.error('JWT_SECRET not configured');
+      return res.status(500).json({ message: 'Server configuration error' });
+    }
     const decoded = jwt.verify(token, secret);
-    console.log('Token decoded:', { id: decoded.id });
 
     const user = await User.findById(decoded.id).select('-password');
 
     if (!user) {
-      console.log('User not found for token');
       return res.status(401).json({ message: 'Token is not valid' });
     }
 
-    console.log('User authenticated:', { id: user._id, role: user.role, email: user.email });
     req.user = user;
     next();
   } catch (error) {
-    console.error('Token verification error:', error);
+    console.error('Token verification error:', error.message);
     res.status(401).json({ message: 'Token is not valid' });
   }
 };

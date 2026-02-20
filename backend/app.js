@@ -13,6 +13,15 @@ const { cacheMiddleware, getCacheStats, clearCache, clearAllCache } = require('.
 // Load environment variables
 dotenv.config();
 
+// ========== ENVIRONMENT VALIDATION ==========
+const REQUIRED_ENV = ['MONGODB_URI', 'JWT_SECRET', 'BREVO_API_KEY'];
+for (const key of REQUIRED_ENV) {
+  if (!process.env[key]) {
+    console.error(`❌ Missing required environment variable: ${key}`);
+    process.exit(1);
+  }
+}
+
 // Initialize Express app
 const app = express();
 
@@ -57,23 +66,16 @@ const configuredOrigins = (process.env.CORS_ORIGINS || process.env.CLIENT_URL ||
 
 const corsOptions = {
   origin: (origin, callback) => {
-    console.log('CORS request from origin:', origin); // Log incoming origin
     // Allow non-browser requests or same-origin
     if (!origin) return callback(null, true);
     if (configuredOrigins.includes('*') || configuredOrigins.includes(origin)) {
       return callback(null, true);
     }
-    // Allow localhost on any port for development (Metro bundler, etc.)
-    if (origin && origin.startsWith('http://localhost:')) {
-      return callback(null, true);
-    }
-    // Allow any 192.168.* LAN IP for local development (Android emulator/device)
-    if (origin && /^https?:\/\/192\.168\.\d+\.\d+(:\d+)?$/.test(origin)) {
-      return callback(null, true);
-    }
-    // Allow 10.0.2.2 for Android emulator
-    if (origin && origin.startsWith('http://10.0.2.2:')) {
-      return callback(null, true);
+    // In development, allow localhost and LAN IPs
+    if (process.env.NODE_ENV !== 'production') {
+      if (origin.startsWith('http://localhost:')) return callback(null, true);
+      if (/^https?:\/\/192\.168\.\d+\.\d+(:\d+)?$/.test(origin)) return callback(null, true);
+      if (origin.startsWith('http://10.0.2.2:')) return callback(null, true);
     }
     return callback(new Error('Not allowed by CORS'));
   },
@@ -105,18 +107,24 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// Trust proxy (useful when deploying behind reverse proxies)
-app.set('trust proxy', 1);
+// Trust proxy only in production (behind reverse proxy)
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
 
 // Body parser
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Auth middleware (used for uploads and cache endpoints)
+const { auth: authMiddleware, authorize: authorizeMiddleware } = require('./middleware/auth');
+
+// Serve uploaded files (auth required)
+app.use('/uploads', authMiddleware, express.static(path.join(__dirname, 'uploads')));
 
 // ========== DATABASE CONNECTION ==========
 // Optimized connection with connection pooling for better scalability
-mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://akshat980jain:zm3aHd1m1a4pxU7q@cluster0.nkrpubg.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0', {
+mongoose.connect(process.env.MONGODB_URI, {
   maxPoolSize: 50,              // Maximum number of connections in the pool
   minPoolSize: 10,              // Minimum number of connections to maintain
   serverSelectionTimeoutMS: 5000, // Timeout for server selection
@@ -149,14 +157,14 @@ app.get('/api/test', (req, res) => {
   res.json({ success: true, message: 'Backend is running!', timestamp: new Date().toISOString() });
 });
 
-// Cache statistics endpoint (admin only in production)
-app.get('/api/cache/stats', (req, res) => {
+// Cache statistics endpoint (admin only)
+app.get('/api/cache/stats', authMiddleware, authorizeMiddleware('admin'), (req, res) => {
   const stats = getCacheStats();
   res.json({ success: true, cache: stats });
 });
 
-// Clear cache endpoint (admin only in production)
-app.post('/api/cache/clear', (req, res) => {
+// Clear cache endpoint (admin only)
+app.post('/api/cache/clear', authMiddleware, authorizeMiddleware('admin'), (req, res) => {
   const { pattern } = req.body;
   const cleared = pattern ? clearCache(pattern) : clearAllCache();
   res.json({ success: true, message: `Cleared ${cleared} cache entries`, pattern: pattern || 'all' });
@@ -291,16 +299,28 @@ try {
 } catch (e) {
   console.warn('Cron not initialized:', e?.message);
 }
-io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
+const jwt = require('jsonwebtoken');
 
+io.on('connection', (socket) => {
   socket.on('join-room', (userId) => {
-    socket.join(userId);
-    console.log(`User ${userId} joined room`);
+    // Verify JWT before allowing room join
+    const token = socket.handshake.auth?.token;
+    if (!token) {
+      return socket.emit('error', { message: 'Authentication required' });
+    }
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      if (decoded.id !== userId) {
+        return socket.emit('error', { message: 'Unauthorized room access' });
+      }
+      socket.join(userId);
+    } catch (err) {
+      socket.emit('error', { message: 'Invalid token' });
+    }
   });
 
   socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
+    // cleanup if needed
   });
 });
 

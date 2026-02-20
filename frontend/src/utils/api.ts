@@ -10,7 +10,6 @@ class ApiClient {
   private getAuthHeaders(token?: string): HeadersInit {
     // If an explicit empty string is provided, skip attaching Authorization
     const authToken = token === '' ? undefined : (token || localStorage.getItem('educonnect_token'));
-    console.log('Getting auth headers, token:', authToken ? authToken.substring(0, 20) + '...' : 'No token');
     return {
       'Content-Type': 'application/json',
       ...(authToken && { Authorization: `Bearer ${authToken}` })
@@ -28,34 +27,13 @@ class ApiClient {
       ...options
     };
 
-    // Add debugging for login requests
-    if (endpoint === '/auth/login' && options.body) {
-      console.log('Login request body:', options.body);
-    }
-
     try {
-      console.log(`Making API Request: ${options.method || 'GET'} ${url}`);
-      console.log('Request config:', {
-        headers: config.headers,
-        method: config.method,
-        body: options.body ? 'Request body present' : 'No body'
-      });
-
       const response = await fetch(url, config);
-
-      // Log response details for debugging
-      console.log(`Response status: ${response.status}`);
-      console.log(`Response ok: ${response.ok}`);
-      console.log(`Response headers:`, Object.fromEntries(response.headers.entries()));
 
       // Check if response is ok before trying to parse JSON
       if (!response.ok) {
-        console.log(`HTTP ${response.status}: ${response.statusText}`);
-        console.log(`Content-Type: ${response.headers.get('content-type')}`);
-
-        // Try to get the response text for debugging
+        // Try to get the response text for error handling
         const errorText = await response.text();
-        console.log('Raw response text:', errorText);
 
         let errorData;
         try {
@@ -64,23 +42,13 @@ class ApiClient {
           errorData = { message: errorText };
         }
 
-        console.log('Parsed response data:', errorData);
-
         throw new Error(`HTTP ${response.status}: ${errorData.message || response.statusText}`);
       }
 
       const data = await response.json();
-      console.log('Response data:', data);
 
       return data;
     } catch (error) {
-      console.error('API Error Response:', {
-        status: error instanceof Response ? error.status : 'Unknown',
-        statusText: error instanceof Response ? error.statusText : 'Unknown',
-        data: error,
-        url,
-        config
-      });
       throw error;
     }
   }
@@ -751,6 +719,45 @@ class ApiClient {
 
   async getSettings() {
     return this.request('/settings/system');
+  }
+
+  // Events
+  async getEvents(params?: { upcoming?: string; type?: string }) {
+    const queryString = params ? `?${new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined))).toString()}` : '';
+    return this.request(`/events${queryString}`);
+  }
+
+  async registerForEvent(eventId: string) {
+    return this.request(`/events/${eventId}/register`, { method: 'POST' });
+  }
+
+  // Chat
+  async getChats() {
+    return this.request('/chat');
+  }
+
+  async getChatMessages(chatId: string) {
+    return this.request(`/chat/${chatId}/messages`);
+  }
+
+  async sendChatMessage(chatId: string, content: string) {
+    return this.request(`/chat/${chatId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content })
+    });
+  }
+
+  async markChatRead(chatId: string) {
+    return this.request(`/chat/${chatId}/read`, { method: 'PATCH' });
+  }
+
+  // Analytics
+  async getStudentAnalytics() {
+    return this.request('/analytics/student');
+  }
+
+  async getDepartmentAnalytics(department: string) {
+    return this.request(`/analytics/department/${encodeURIComponent(department)}`);
   }
 }
 
