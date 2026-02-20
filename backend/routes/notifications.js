@@ -14,7 +14,7 @@ const router = express.Router();
 router.get('/', auth, async (req, res) => {
   try {
     const { category, read } = req.query;
-    
+
     let query = {
       $or: [
         { targetRoles: req.user.role },
@@ -34,14 +34,14 @@ router.get('/', auth, async (req, res) => {
     // Filter by read status if specified
     let filteredNotifications = notifications;
     if (read === 'false') {
-      filteredNotifications = notifications.filter(notification => 
+      filteredNotifications = notifications.filter(notification =>
         !notification.readBy.some(read => read.user.toString() === req.user._id.toString())
       );
     }
 
     // Add read status to each notification
     const notificationsWithReadStatus = filteredNotifications.map(notification => {
-      const isRead = notification.readBy.some(read => 
+      const isRead = notification.readBy.some(read =>
         read.user.toString() === req.user._id.toString()
       );
       return {
@@ -120,13 +120,13 @@ router.post('/', auth, authorize('admin', 'faculty', 'library', 'placement'), as
 router.put('/:id/read', auth, async (req, res) => {
   try {
     const notification = await Notification.findById(req.params.id);
-    
+
     if (!notification) {
       return res.status(404).json({ message: 'Notification not found' });
     }
 
     // Check if already read by user
-    const alreadyRead = notification.readBy.some(read => 
+    const alreadyRead = notification.readBy.some(read =>
       read.user.toString() === req.user._id.toString()
     );
 
@@ -162,7 +162,7 @@ router.put('/mark-all-read', auth, async (req, res) => {
     });
 
     for (let notification of notifications) {
-      const alreadyRead = notification.readBy.some(read => 
+      const alreadyRead = notification.readBy.some(read =>
         read.user.toString() === req.user._id.toString()
       );
 
@@ -186,7 +186,7 @@ router.put('/mark-all-read', auth, async (req, res) => {
 });
 
 module.exports = router;
- 
+
 // @route   POST /api/notifications/generate-reminders
 // @desc    Generate scheduled reminders (fees due, assignment due, attendance shortfall)
 // @access  Private (admin/faculty)
@@ -209,10 +209,11 @@ router.post('/generate-reminders', auth, authorize('admin', 'faculty'), async (r
     for (const fee of pendingFees) {
       if (!fee.student) continue;
       // Avoid duplicate reminders within last 1 day per fee
+      const escapedType = fee.type.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const recent = await Notification.findOne({
         category: 'finance',
         'targetUsers': fee.student._id,
-        title: { $regex: new RegExp(`${fee.type}`, 'i') },
+        title: { $regex: new RegExp(escapedType, 'i') },
         createdAt: { $gte: inDays(-1) }
       });
       if (recent) continue;
@@ -249,7 +250,7 @@ router.post('/generate-reminders', auth, authorize('admin', 'faculty'), async (r
           targetRoles: ['student'],
           createdBy: req.user._id,
         });
-        try { if (global.io) { global.io.emit('notification', { _id: doc._id, title: doc.title, message: doc.message, type: doc.type, category: doc.category, createdAt: doc.createdAt, targetRoles: doc.targetRoles, read: false }); } } catch {}
+        try { if (global.io) { global.io.emit('notification', { _id: doc._id, title: doc.title, message: doc.message, type: doc.type, category: doc.category, createdAt: doc.createdAt, targetRoles: doc.targetRoles, read: false }); } } catch { }
         createdCount += 1;
       }
     }
@@ -257,7 +258,8 @@ router.post('/generate-reminders', auth, authorize('admin', 'faculty'), async (r
     // 3) Attendance shortfall: last 30 days < 75%
     const pipeline = [
       { $match: { createdAt: { $gte: thirtyDaysAgo } } },
-      { $group: {
+      {
+        $group: {
           _id: { student: '$student' },
           total: { $sum: 1 },
           presents: { $sum: { $cond: [{ $eq: ['$status', 'present'] }, 1, 0] } }
@@ -288,7 +290,7 @@ router.post('/generate-reminders', auth, authorize('admin', 'faculty'), async (r
           targetUsers: [sid],
           createdBy: req.user._id,
         });
-        try { if (global.io) { global.io.to(String(sid)).emit('notification', { title: 'Low attendance alert', message: 'Your attendance in the last 30 days is below 75%. Please improve attendance.', type: 'warning', category: 'academic', createdAt: new Date(), targetRoles: [], read: false }); } } catch {}
+        try { if (global.io) { global.io.to(String(sid)).emit('notification', { title: 'Low attendance alert', message: 'Your attendance in the last 30 days is below 75%. Please improve attendance.', type: 'warning', category: 'academic', createdAt: new Date(), targetRoles: [], read: false }); } } catch { }
         createdCount += 1;
       }
     }

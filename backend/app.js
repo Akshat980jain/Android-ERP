@@ -253,7 +253,8 @@ try {
       const pendingFees = await Fee.find({ status: { $in: ['pending', 'overdue'] }, dueDate: { $lte: sevenDays } }).populate('student', '_id');
       for (const fee of pendingFees) {
         if (!fee.student) continue;
-        const recent = await Notification.findOne({ category: 'finance', 'targetUsers': fee.student._id, title: { $regex: new RegExp(`${fee.type}`, 'i') }, createdAt: { $gte: inDays(-1) } });
+        const escapedFeeType = fee.type.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const recent = await Notification.findOne({ category: 'finance', 'targetUsers': fee.student._id, title: { $regex: new RegExp(escapedFeeType, 'i') }, createdAt: { $gte: inDays(-1) } });
         if (recent) continue;
         const doc = await Notification.create({
           title: `Fee ${fee.status === 'overdue' ? 'overdue' : 'due soon'}: ${fee.type}`,

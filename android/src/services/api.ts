@@ -59,7 +59,7 @@ function getCandidateBaseUrls(): string[] {
 class ApiService {
   private baseURL: string;
   private cachedToken: string | null = null;
-  private static readonly VERBOSE_LOGS: boolean = true; // TEMP: enabled for debugging
+  private static readonly VERBOSE_LOGS: boolean = __DEV__; // Only log in dev builds
 
   private debugLog(...args: any[]) {
     if (ApiService.VERBOSE_LOGS) {

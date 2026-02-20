@@ -11,8 +11,6 @@ const { auth } = require('../middleware/auth'); // Adjust path as needed
 // GET all courses (Admin access or filtered by role)
 router.get('/', auth, async (req, res) => {
   try {
-    console.log('GET /courses - User:', { id: req.user._id, role: req.user.role, email: req.user.email });
-
     let courses;
 
     switch (req.user.role) {
@@ -22,12 +20,10 @@ router.get('/', auth, async (req, res) => {
         const effectiveAdminType = adminType || ((!adminPrograms || !adminPrograms.length) ? 'head' : 'program');
 
         if (effectiveAdminType === 'head') {
-          console.log('Fetching all courses for head admin');
           courses = await Course.find()
             .populate('faculty', 'name email')
             .populate('students', 'name email');
         } else if (effectiveAdminType === 'program') {
-          console.log('Fetching courses for program admin:', adminPrograms);
           courses = await Course.find({
             $or: [
               { department: { $in: adminPrograms } },
@@ -37,7 +33,6 @@ router.get('/', auth, async (req, res) => {
             .populate('faculty', 'name email')
             .populate('students', 'name email');
         } else if (effectiveAdminType === 'branch') {
-          console.log('Fetching courses for branch admin:', adminPrograms, req.user.branch);
           const query = {
             $or: [
               { department: { $in: adminPrograms } },
@@ -58,23 +53,19 @@ router.get('/', auth, async (req, res) => {
         break;
       case 'faculty':
         // Faculty can see courses they teach
-        console.log('Fetching courses for faculty:', req.user._id);
         courses = await Course.find({ faculty: req.user._id })
           .populate('faculty', 'name email')
           .populate('students', 'name email');
         break;
       case 'student':
         // Students can see courses they're enrolled in
-        console.log('Fetching enrolled courses for student:', req.user._id);
         courses = await Course.find({ students: req.user._id })
           .populate('faculty', 'name email');
         break;
       default:
-        console.log('Unknown role:', req.user.role);
         courses = [];
     }
 
-    console.log(`Found ${courses.length} courses for user ${req.user.role}`);
     res.json({ success: true, courses });
   } catch (error) {
     console.error('Error fetching courses:', error);
@@ -218,13 +209,6 @@ router.put('/:id', auth, async (req, res) => {
     }
 
     // Debug logging
-    console.log('UPDATE Course - User:', {
-      userId: req.user._id,
-      userRole: req.user.role,
-      courseFaculty: course.faculty.toString(),
-      courseId: course._id
-    });
-
     // Check permissions
     const isAdmin = req.user.role === 'admin';
     const isCourseFaculty = course.faculty.toString() === req.user._id.toString();
@@ -312,14 +296,6 @@ router.delete('/:id', auth, async (req, res) => {
     }
 
     // Debug logging
-    console.log('DELETE Course - User:', {
-      userId: req.user._id,
-      userRole: req.user.role,
-      courseFaculty: course.faculty.toString(),
-      courseId: course._id,
-      enrolledStudents: course.students?.length || 0
-    });
-
     // Check permissions
     const isAdmin = req.user.role === 'admin';
     const isCourseFaculty = course.faculty.toString() === req.user._id.toString();
@@ -359,7 +335,6 @@ router.delete('/:id', auth, async (req, res) => {
 
     // If faculty is deleting and there are enrolled students, log it but allow deletion
     if (course.students && course.students.length > 0 && (isAnyFaculty || isCourseFaculty)) {
-      console.log(`Faculty ${req.user._id} is deleting course ${course._id} with ${course.students.length} enrolled students`);
     }
 
     await Course.findByIdAndDelete(req.params.id);

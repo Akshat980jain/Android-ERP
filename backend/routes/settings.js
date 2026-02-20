@@ -75,8 +75,6 @@ router.put('/system', auth, authorize('admin'), async (req, res) => {
   try {
     const { institution, academic, notifications, security, features, attendancePolicy } = req.body;
 
-    console.log('Updating system settings:', { institution, academic, notifications, security, features, attendancePolicy });
-
     // Validate required fields
     if (!institution?.name || !academic?.currentAcademicYear) {
       return res.status(400).json({
@@ -143,8 +141,6 @@ router.put('/system', auth, authorize('admin'), async (req, res) => {
       updateData.attendancePolicy = attendancePolicy;
     }
 
-    console.log('Update data:', updateData);
-
     // Update or create settings in database
     const updatedSettings = await Settings.findOneAndUpdate(
       {}, // Find any settings document (should only be one)
@@ -155,8 +151,6 @@ router.put('/system', auth, authorize('admin'), async (req, res) => {
         runValidators: true // Run schema validators
       }
     );
-
-    console.log('Settings saved successfully:', updatedSettings);
 
     res.json({
       success: true,
@@ -511,7 +505,7 @@ async function testDatabaseConnection() {
     return {
       status: 'error',
       message: 'Database connection failed',
-      error: error.message
+      error: 'Internal error'
     };
   }
 }
@@ -529,7 +523,7 @@ async function testEmailService() {
     return {
       status: 'error',
       message: 'Email service test failed',
-      error: error.message
+      error: 'Internal error'
     };
   }
 }
@@ -547,7 +541,7 @@ async function testFileUpload() {
     return {
       status: 'error',
       message: 'File upload test failed',
-      error: error.message
+      error: 'Internal error'
     };
   }
 }

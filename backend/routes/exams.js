@@ -140,7 +140,7 @@ router.post('/', auth, authorize('faculty', 'admin'), async (req, res) => {
     console.error('Create exam error:', error);
     // Surface validation errors clearly
     if (error?.name === 'ValidationError') {
-      return res.status(400).json({ success: false, message: error.message, details: error.errors });
+      return res.status(400).json({ success: false, message: 'Validation failed' });
     }
     res.status(500).json({ success: false, message: 'Failed to create exam' });
   }
@@ -169,7 +169,7 @@ router.get('/my-attempts', auth, authorize('student'), async (req, res) => {
         feedback: a.feedback || '',
       }));
     })
-    .sort((x, y) => new Date(y.submittedAt || 0).getTime() - new Date(x.submittedAt || 0).getTime());
+      .sort((x, y) => new Date(y.submittedAt || 0).getTime() - new Date(x.submittedAt || 0).getTime());
 
     res.json({ success: true, attempts });
   } catch (error) {
@@ -311,7 +311,7 @@ router.put('/:id', auth, authorize('faculty', 'admin'), async (req, res) => {
   } catch (error) {
     console.error('Update exam error:', error);
     if (error?.name === 'ValidationError') {
-      return res.status(400).json({ success: false, message: error.message, details: error.errors });
+      return res.status(400).json({ success: false, message: 'Validation failed' });
     }
     res.status(500).json({ success: false, message: 'Failed to update exam' });
   }

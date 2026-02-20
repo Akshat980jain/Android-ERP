@@ -159,6 +159,15 @@ router.post('/register', authLimiter, async (req, res) => {
       });
     }
 
+    // Password strength validation
+    const pwError = validatePassword(password);
+    if (pwError) {
+      return res.status(400).json({
+        success: false,
+        message: pwError
+      });
+    }
+
     // Check if user already exists
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
@@ -207,14 +216,6 @@ router.post('/register', authLimiter, async (req, res) => {
     });
 
     await roleRequest.save();
-
-    console.log('✅ Registration request created:', {
-      name: fullName,
-      email: email.toLowerCase(),
-      requestedRole: requestedRole,
-      program: requestProgram,
-      branch: branch
-    });
 
     res.status(201).json({
       success: true,
@@ -343,12 +344,6 @@ router.post('/request-registration', authLimiter, async (req, res) => {
 
       await existingRejectedRequest.save();
 
-      console.log('✅ Rejected request updated and resubmitted:', {
-        name: existingRejectedRequest.name,
-        email: existingRejectedRequest.email,
-        requestedRole: existingRejectedRequest.requestedRole
-      });
-
       res.json({
         success: true,
         message: 'Registration request resubmitted successfully. Please wait for admin approval.'
@@ -374,13 +369,6 @@ router.post('/request-registration', authLimiter, async (req, res) => {
     const roleRequest = new RoleRequest(roleRequestData);
     await roleRequest.save();
 
-    console.log('✅ Registration request created successfully:', {
-      name: roleRequest.name,
-      email: roleRequest.email,
-      requestedRole: roleRequest.requestedRole,
-      hasPassword: !!roleRequest.password
-    });
-
     res.json({
       success: true,
       message: 'Registration request submitted successfully. Please wait for admin approval.'
@@ -401,7 +389,6 @@ router.post('/login', authLimiter, async (req, res) => {
 
     // Validate input
     if (!email || !password) {
-      console.log('Missing email or password');
       return res.status(400).json({
         success: false,
         message: 'Email and password are required'
@@ -411,56 +398,38 @@ router.post('/login', authLimiter, async (req, res) => {
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      console.log('Invalid email format:', email);
       return res.status(400).json({
         success: false,
         message: 'Please enter a valid email address'
       });
     }
 
-    console.log('Looking for user with email:', email.toLowerCase());
-
     // Find user by email (case-insensitive) and include password field
     const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
 
     if (!user) {
-      console.log('User not found for email:', email);
       return res.status(400).json({
         success: false,
         message: 'Invalid credentials'
       });
     }
 
-    console.log('User found:', {
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      isVerified: user.isVerified,
-      hasPassword: !!user.password
-    });
-
     // Check if user is verified
     if (!user.isVerified) {
-      console.log('User not verified:', email);
       return res.status(400).json({
         success: false,
         message: 'Account not verified. Please contact administrator.'
       });
     }
 
-    console.log('Attempting password comparison...');
-
     // Compare password using the model method
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      console.log('Password mismatch for user:', email);
       return res.status(400).json({
         success: false,
         message: 'Invalid credentials'
       });
     }
-
-    console.log('Password match successful');
 
     // Always require email OTP before granting access
     const tempToken = generateTwoFactorTempToken(user._id);
@@ -527,7 +496,8 @@ router.post('/2fa/setup', auth, async (req, res) => {
       }
       user.twoFactorPhone = phone;
       const smsCode = String(Math.floor(100000 + Math.random() * 900000));
-      user.twoFactorSMSCode = smsCode;
+      const smsCodeHash = crypto.createHash('sha256').update(smsCode).digest('hex');
+      user.twoFactorSMSCode = smsCodeHash;
       user.twoFactorSMSExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
       await user.save();
 
@@ -536,7 +506,6 @@ router.post('/2fa/setup', auth, async (req, res) => {
           const twilio = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
           await twilio.messages.create({ to: phone, from: process.env.TWILIO_FROM_NUMBER, body: `Your EduConnect verification code is ${smsCode}` });
         } else {
-          console.log('Twilio not configured. SMS code:', smsCode);
         }
       } catch (e) {
         console.error('SMS send error:', e.message);
@@ -576,7 +545,8 @@ router.post('/2fa/verify-setup', auth, async (req, res) => {
       if (!user.twoFactorSMSExpiresAt || user.twoFactorSMSExpiresAt < new Date()) {
         return res.status(400).json({ success: false, message: 'Code expired' });
       }
-      if (user.twoFactorSMSCode !== code) {
+      const codeHash = crypto.createHash('sha256').update(code).digest('hex');
+      if (user.twoFactorSMSCode !== codeHash) {
         return res.status(400).json({ success: false, message: 'Invalid code' });
       }
       user.twoFactorEnabled = true;
@@ -621,7 +591,8 @@ router.post('/2fa/disable', auth, async (req, res) => {
 
     let verified = false;
     if (user.twoFactorMethod === 'sms') {
-      if (!user.twoFactorSMSCode || !user.twoFactorSMSExpiresAt || user.twoFactorSMSExpiresAt < new Date() || user.twoFactorSMSCode !== code) {
+      const smsHash = crypto.createHash('sha256').update(code).digest('hex');
+      if (!user.twoFactorSMSCode || !user.twoFactorSMSExpiresAt || user.twoFactorSMSExpiresAt < new Date() || user.twoFactorSMSCode !== smsHash) {
         return res.status(400).json({ success: false, message: 'Invalid or expired code' });
       }
       verified = true;
@@ -672,7 +643,8 @@ router.post('/2fa/verify-login', async (req, res) => {
 
     let verified = false;
     if (user.twoFactorMethod === 'sms') {
-      if (!user.twoFactorSMSCode || !user.twoFactorSMSExpiresAt || user.twoFactorSMSExpiresAt < new Date() || user.twoFactorSMSCode !== code) {
+      const smsHash2 = crypto.createHash('sha256').update(code).digest('hex');
+      if (!user.twoFactorSMSCode || !user.twoFactorSMSExpiresAt || user.twoFactorSMSExpiresAt < new Date() || user.twoFactorSMSCode !== smsHash2) {
         return res.status(400).json({ success: false, message: 'Invalid or expired code' });
       }
       verified = true;
@@ -709,7 +681,8 @@ router.post('/2fa/resend', auth, async (req, res) => {
       return res.status(400).json({ success: false, message: 'SMS 2FA not configured' });
     }
     const smsCode = String(Math.floor(100000 + Math.random() * 900000));
-    user.twoFactorSMSCode = smsCode;
+    const smsCodeHash2 = crypto.createHash('sha256').update(smsCode).digest('hex');
+    user.twoFactorSMSCode = smsCodeHash2;
     user.twoFactorSMSExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
     await user.save();
 
@@ -718,7 +691,6 @@ router.post('/2fa/resend', auth, async (req, res) => {
         const twilio = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
         await twilio.messages.create({ to: user.twoFactorPhone, from: process.env.TWILIO_FROM_NUMBER, body: `Your EduConnect verification code is ${smsCode}` });
       } else {
-        console.log('Twilio not configured. SMS code:', smsCode);
       }
     } catch (e) {
       console.error('SMS send error:', e.message);
@@ -776,9 +748,6 @@ router.put('/profile', auth, async (req, res) => {
       });
     }
 
-    console.log('Profile update - Current user email:', user.email);
-    console.log('Profile update - Requested email:', email);
-
     // Update basic fields with validation
     if (name && name.trim()) {
       user.name = name.trim();
@@ -794,8 +763,6 @@ router.put('/profile', auth, async (req, res) => {
           message: 'Please enter a valid email address'
         });
       }
-
-      console.log('Email is being changed from', user.email, 'to', email);
 
       // Check if email is already taken by another user
       const existingUser = await User.findOne({
@@ -826,7 +793,6 @@ router.put('/profile', auth, async (req, res) => {
     if (section !== undefined) user.profile.section = section;
     if (department !== undefined) user.department = department;
 
-    console.log('Saving user with updated data');
     await user.save();
 
     // Return updated user data without password
@@ -888,7 +854,6 @@ router.post('/send-password-otp', auth, async (req, res) => {
         }
       );
     } catch (emailError) {
-      console.log('Email service not configured. Password OTP:', otp);
     }
 
     // Mask email for response
@@ -1157,13 +1122,6 @@ router.post('/verification-requests/:id/decision', auth, authorize('admin', 'fac
   try {
     const { status, remarks } = req.body;
 
-    console.log(`\n🔄 Processing verification request decision:`, {
-      requestId: req.params.id,
-      status,
-      reviewer: req.user.email,
-      reviewerRole: req.user.role
-    });
-
     if (!['approved', 'rejected'].includes(status)) {
       return res.status(400).json({
         success: false,
@@ -1173,23 +1131,13 @@ router.post('/verification-requests/:id/decision', auth, authorize('admin', 'fac
 
     const request = await RoleRequest.findById(req.params.id).populate('user');
     if (!request) {
-      console.log('❌ Request not found:', req.params.id);
       return res.status(404).json({
         success: false,
         message: 'Request not found'
       });
     }
 
-    console.log('📋 Request details:', {
-      name: request.name,
-      email: request.email,
-      requestedRole: request.requestedRole,
-      currentStatus: request.status,
-      hasUser: !!request.user
-    });
-
     if (request.status !== 'pending') {
-      console.log('❌ Request already processed:', request.status);
       return res.status(400).json({
         success: false,
         message: 'Request already processed'
@@ -1251,11 +1199,8 @@ router.post('/verification-requests/:id/decision', auth, authorize('admin', 'fac
 
     // Process approval with guaranteed user creation
     if (status === 'approved') {
-      console.log('✅ Processing approval...');
-
       if (request.user) {
         // Existing user role change
-        console.log('🔄 Updating existing user role...');
         const updateData = {
           role: request.requestedRole
         };
@@ -1273,18 +1218,10 @@ router.post('/verification-requests/:id/decision', auth, authorize('admin', 'fac
         }
 
         await User.findByIdAndUpdate(request.user._id, updateData, { new: true });
-        console.log('✅ Existing user updated successfully');
       } else {
         // New user registration - GUARANTEED CREATION
-        console.log('🆕 Creating new user from approved request...');
-
         // Validate required data
         if (!request.name || !request.email || !request.password) {
-          console.log('❌ Missing required user data:', {
-            hasName: !!request.name,
-            hasEmail: !!request.email,
-            hasPassword: !!request.password
-          });
           return res.status(400).json({
             success: false,
             message: 'Cannot approve request: missing required user data'
@@ -1294,7 +1231,6 @@ router.post('/verification-requests/:id/decision', auth, authorize('admin', 'fac
         // Check if user already exists (double-check)
         const existingUser = await User.findOne({ email: request.email.toLowerCase() });
         if (existingUser) {
-          console.log('⚠️ User already exists, updating instead of creating');
           existingUser.role = request.requestedRole;
           existingUser.isVerified = true;
           existingUser.branch = request.branch;
@@ -1316,18 +1252,8 @@ router.post('/verification-requests/:id/decision', auth, authorize('admin', 'fac
 
           await existingUser.save();
           request.user = existingUser._id;
-          console.log('✅ Existing user updated successfully');
         } else {
           // Create new user with comprehensive data
-          console.log('🆕 Creating new user with data:', {
-            name: request.name,
-            email: request.email,
-            requestedRole: request.requestedRole,
-            branch: request.branch,
-            program: request.program,
-            course: request.course
-          });
-
           const newUser = new User({
             name: request.name.trim(),
             email: request.email.toLowerCase().trim(),
@@ -1364,8 +1290,6 @@ router.post('/verification-requests/:id/decision', auth, authorize('admin', 'fac
               newUser._skipPasswordHash = true; // Password already hashed by RoleRequest
               await newUser.save();
               userCreated = true;
-              console.log('✅ New user created successfully:', newUser.email);
-
               // Update the request to reference the new user
               request.user = newUser._id;
 
@@ -1374,8 +1298,6 @@ router.post('/verification-requests/:id/decision', auth, authorize('admin', 'fac
               if (!verifyUser) {
                 throw new Error('User creation verification failed');
               }
-              console.log('✅ User creation verified in database');
-
             } catch (error) {
               retryCount++;
               console.error(`❌ User creation attempt ${retryCount} failed:`, error.message);
@@ -1397,7 +1319,6 @@ router.post('/verification-requests/:id/decision', auth, authorize('admin', 'fac
     }
 
     // Update request status with comprehensive logging
-    console.log('📝 Updating request status...');
     request.status = status;
     request.reviewedBy = req.user._id;
     request.reviewedAt = new Date();
@@ -1406,8 +1327,6 @@ router.post('/verification-requests/:id/decision', auth, authorize('admin', 'fac
     }
 
     await request.save();
-    console.log('✅ Request status updated successfully');
-
     // Final verification - ensure user exists if approved
     if (status === 'approved' && request.user) {
       const finalUserCheck = await User.findById(request.user);
@@ -1418,10 +1337,7 @@ router.post('/verification-requests/:id/decision', auth, authorize('admin', 'fac
           message: 'User creation verification failed. Please contact administrator.'
         });
       }
-      console.log('✅ Final user verification passed');
     }
-
-    console.log('🎉 Verification process completed successfully');
 
     res.json({
       success: true,
@@ -1432,7 +1348,7 @@ router.post('/verification-requests/:id/decision', auth, authorize('admin', 'fac
     console.error('❌ Error processing verification request:', error);
     res.status(500).json({
       success: false,
-      message: error.message || 'Server error during verification process'
+      message: 'Server error during verification process'
     });
   }
 });
@@ -1442,12 +1358,8 @@ router.post('/verification-requests/:id/decision', auth, authorize('admin', 'fac
 // @access  Private (admin only)
 router.get('/verification-status', auth, authorize('admin'), async (req, res) => {
   try {
-    console.log('🔍 Checking verification status...');
-
     // Get all approved requests
     const approvedRequests = await RoleRequest.find({ status: 'approved' });
-    console.log(`Found ${approvedRequests.length} approved requests`);
-
     const verificationResults = [];
 
     for (const request of approvedRequests) {
@@ -1466,17 +1378,12 @@ router.get('/verification-status', auth, authorize('admin'), async (req, res) =>
         reviewedAt: request.reviewedAt
       });
 
-      console.log(`${status} - ${request.email} (${request.requestedRole})`);
     }
 
     // Get all pending requests
     const pendingRequests = await RoleRequest.find({ status: 'pending' });
-    console.log(`Found ${pendingRequests.length} pending requests`);
-
     // Get all rejected requests
     const rejectedRequests = await RoleRequest.find({ status: 'rejected' });
-    console.log(`Found ${rejectedRequests.length} rejected requests`);
-
     res.json({
       success: true,
       summary: {
@@ -1517,8 +1424,6 @@ router.get('/verification-status', auth, authorize('admin'), async (req, res) =>
 // @access  Private (admin only)
 router.post('/fix-missing-users', auth, authorize('admin'), async (req, res) => {
   try {
-    console.log('🔧 Fixing missing users...');
-
     const approvedRequests = await RoleRequest.find({ status: 'approved' });
     const fixedUsers = [];
     const errors = [];
@@ -1528,8 +1433,6 @@ router.post('/fix-missing-users', auth, authorize('admin'), async (req, res) => 
 
       if (!existingUser) {
         try {
-          console.log(`🔄 Creating missing user for ${request.email}...`);
-
           const newUser = new User({
             name: request.name.trim(),
             email: request.email.toLowerCase().trim(),
@@ -1568,8 +1471,6 @@ router.post('/fix-missing-users', auth, authorize('admin'), async (req, res) => 
             role: request.requestedRole
           });
 
-          console.log(`✅ Fixed user for ${request.email}`);
-
         } catch (error) {
           console.error(`❌ Failed to fix user for ${request.email}:`, error.message);
           errors.push({
@@ -1601,13 +1502,9 @@ router.post('/fix-missing-users', auth, authorize('admin'), async (req, res) => 
 // @access  Private (admin only)
 router.get('/all-users', auth, authorize('admin'), async (req, res) => {
   try {
-    console.log('🔍 Admin requesting all users...');
-
     const users = await User.find({})
       .select('-password') // Don't send passwords
       .sort({ createdAt: -1 });
-
-    console.log(`Found ${users.length} users`);
 
     res.json({
       success: true,
@@ -1654,13 +1551,9 @@ router.get('/departments', auth, async (req, res) => {
 router.get('/users-by-role/:role', auth, authorize('admin'), async (req, res) => {
   try {
     const { role } = req.params;
-    console.log(`🔍 Admin requesting users with role: ${role}`);
-
     const users = await User.find({ role })
       .select('-password')
       .sort({ createdAt: -1 });
-
-    console.log(`Found ${users.length} users with role: ${role}`);
 
     res.json({
       success: true,
@@ -2028,16 +1921,9 @@ router.post('/request-otp', async (req, res) => {
 // @access  Public
 router.post('/verify-otp', async (req, res) => {
   try {
-    console.log('Verify OTP request received:', {
-      body: req.body,
-      hasEmail: !!req.body?.email,
-      hasOtp: !!req.body?.otp
-    });
-
     const { email, otp, tempToken, issueToken = true } = req.body;
 
     if (!email || !otp) {
-      console.log('Missing email or OTP:', { email: !!email, otp: !!otp });
       return res.status(400).json({ success: false, message: 'Email and OTP are required' });
     }
 
@@ -2126,7 +2012,6 @@ router.post('/forgot-password', async (req, res) => {
       }
     );
 
-    console.log(`Password reset email sent to ${user.email}`);
     res.json({ success: true, message: 'If an account exists with that email, a reset link has been sent.' });
   } catch (error) {
     console.error('Forgot password error:', error);
@@ -2168,7 +2053,6 @@ router.post('/reset-password', async (req, res) => {
     user.passwordResetExpiresAt = undefined;
     await user.save();
 
-    console.log(`Password reset successfully for ${user.email}`);
     res.json({ success: true, message: 'Password has been reset successfully. You can now log in with your new password.' });
   } catch (error) {
     console.error('Reset password error:', error);
