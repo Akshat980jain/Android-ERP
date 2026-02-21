@@ -34,6 +34,8 @@ const ACADEMIC_YEARS = [`${CURRENT_YEAR - 1}-${String(CURRENT_YEAR).slice(2)}`, 
 
 export function SectionModule() {
     const { user } = useAuth();
+    // Program admins can view sections but cannot create, edit, archive, or manage students
+    const canManage = !(user?.role === 'admin' && (user as any)?.adminType === 'program');
     const [sections, setSections] = useState<Section[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -294,21 +296,25 @@ export function SectionModule() {
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage semesters, sections & student assignments</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <button
-                        onClick={() => { setBulkMode(!bulkMode); setBulkSelected(new Set()); }}
-                        className={`px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition ${bulkMode ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                            }`}
-                    >
-                        <Layers className="w-4 h-4" />
-                        {bulkMode ? 'Cancel Bulk' : 'Bulk Select'}
-                    </button>
-                    <button
-                        onClick={() => { resetForm(); setShowCreateModal(true); }}
-                        className="px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 flex items-center gap-2 shadow-lg shadow-indigo-500/25 transition"
-                    >
-                        <Plus className="w-4 h-4" />
-                        New Section
-                    </button>
+                    {canManage && (
+                        <button
+                            onClick={() => { setBulkMode(!bulkMode); setBulkSelected(new Set()); }}
+                            className={`px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition ${bulkMode ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                                }`}
+                        >
+                            <Layers className="w-4 h-4" />
+                            {bulkMode ? 'Cancel Bulk' : 'Bulk Select'}
+                        </button>
+                    )}
+                    {canManage && (
+                        <button
+                            onClick={() => { resetForm(); setShowCreateModal(true); }}
+                            className="px-4 py-2 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 flex items-center gap-2 shadow-lg shadow-indigo-500/25 transition"
+                        >
+                            <Plus className="w-4 h-4" />
+                            New Section
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -451,21 +457,23 @@ export function SectionModule() {
                                             className="overflow-hidden"
                                         >
                                             <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                                                {/* Actions */}
-                                                <div className="flex gap-2 mb-4">
-                                                    <button onClick={() => openStudentModal(section)}
-                                                        className="px-3 py-2 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold flex items-center gap-1.5 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition">
-                                                        <UserPlus className="w-3.5 h-3.5" />Add Students
-                                                    </button>
-                                                    <button onClick={() => { setSelectedSection(section); setFormName(section.name); setFormSemester(section.semester); setFormMaxStudents(String(section.maxStudents)); setShowEditModal(true); }}
-                                                        className="px-3 py-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 text-xs font-semibold flex items-center gap-1.5 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition">
-                                                        <Edit3 className="w-3.5 h-3.5" />Edit
-                                                    </button>
-                                                    <button onClick={() => handleArchive(section)}
-                                                        className="px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 text-xs font-semibold flex items-center gap-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 transition">
-                                                        <Archive className="w-3.5 h-3.5" />Archive
-                                                    </button>
-                                                </div>
+                                                {/* Actions — hidden for program admins (read-only) */}
+                                                {canManage && (
+                                                    <div className="flex gap-2 mb-4">
+                                                        <button onClick={() => openStudentModal(section)}
+                                                            className="px-3 py-2 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold flex items-center gap-1.5 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition">
+                                                            <UserPlus className="w-3.5 h-3.5" />Add Students
+                                                        </button>
+                                                        <button onClick={() => { setSelectedSection(section); setFormName(section.name); setFormSemester(section.semester); setFormMaxStudents(String(section.maxStudents)); setShowEditModal(true); }}
+                                                            className="px-3 py-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 text-xs font-semibold flex items-center gap-1.5 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition">
+                                                            <Edit3 className="w-3.5 h-3.5" />Edit
+                                                        </button>
+                                                        <button onClick={() => handleArchive(section)}
+                                                            className="px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 text-xs font-semibold flex items-center gap-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 transition">
+                                                            <Archive className="w-3.5 h-3.5" />Archive
+                                                        </button>
+                                                    </div>
+                                                )}
 
                                                 {/* Student list */}
                                                 {section.students && section.students.length > 0 ? (

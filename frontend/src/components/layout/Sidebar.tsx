@@ -521,6 +521,7 @@ export function Sidebar({
   // Gate items by role-based matrix (coarse-grained): hide modules not relevant to the user's role
   const filteredMenuItems = useMemo(() => {
     const role = user?.role;
+    const adminType = (user as any)?.adminType as string | undefined;
     const allowed = new Set<string>([
       'dashboard', 'notifications', 'background-showcase', 'profile'
     ]);
@@ -529,7 +530,10 @@ export function Sidebar({
     } else if (role === 'faculty') {
       ['courses', 'exams', 'feedback', 'calendar', 'assignments', 'attendance', 'marks', 'students', 'schedule', 'sections'].forEach(id => allowed.add(id));
     } else if (role === 'admin') {
-      ['analytics', 'users', 'request-approval', 'courses', 'finance', 'reports', 'settings', 'security', 'hostel', 'transport', 'sections'].forEach(id => allowed.add(id));
+      // Program admins cannot manage sections — exclude it from their sidebar
+      const adminItems = ['analytics', 'users', 'request-approval', 'courses', 'finance', 'reports', 'settings', 'security', 'hostel', 'transport'];
+      if (adminType !== 'program') adminItems.push('sections');
+      adminItems.forEach(id => allowed.add(id));
     }
     return menuItems.filter(mi => allowed.has(mi.id));
   }, [menuItems, user]);
