@@ -119,7 +119,10 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Auth middleware (used for uploads and cache endpoints)
 const { auth: authMiddleware, authorize: authorizeMiddleware } = require('./middleware/auth');
 
-// Serve uploaded files (auth required)
+// Assignment question files are public (students/faculty must be able to view them without re-authing)
+app.use('/uploads/assignments/questions', express.static(path.join(__dirname, 'uploads', 'assignments', 'questions')));
+
+// All other uploaded files require authentication
 app.use('/uploads', authMiddleware, express.static(path.join(__dirname, 'uploads')));
 
 // ========== DATABASE CONNECTION ==========

@@ -1,5 +1,6 @@
 // src/components/modules/ScheduleModule.tsx
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Calendar, Clock, MapPin, Plus, Edit, Trash2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import apiClient from '../../utils/api';

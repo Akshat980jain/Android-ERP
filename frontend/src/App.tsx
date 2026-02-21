@@ -125,7 +125,7 @@ function AppContent() {
 
             {/* Sidebar */}
             <div className={mobileMenuOpen ? 'block md:block' : 'hidden md:block'}>
-              <div className="fixed left-0 top-0 h-full z-40 md:z-30">
+              <div className="fixed left-0 top-0 h-full z-40 md:z-30" data-sidebar>
                 <Sidebar
                   activeTab={activeTab}
                   onTabChange={(tab) => { setActiveTab(tab); setMobileMenuOpen(false); }}
@@ -147,7 +147,7 @@ function AppContent() {
               />
 
               {/* Main content */}
-              <main className="flex-1 p-6 overflow-y-auto relative z-10">
+              <main id="main-content" className="flex-1 p-6 overflow-y-auto relative z-10">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={activeTab}

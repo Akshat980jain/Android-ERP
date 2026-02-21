@@ -1,12 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Upload, Calendar, Clock, CheckCircle, AlertTriangle, Eye, Download, X } from 'lucide-react';
+import { FileText, Upload, Calendar, Clock, CheckCircle, AlertTriangle, Eye, Download, X, Lock, ChevronDown, ChevronUp, Users, GraduationCap, Star } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
-// Remove problematic PDF viewer imports
-// import { Worker, Viewer } from '@react-pdf-viewer/core';
-// import '@react-pdf-viewer/core/lib/styles/index.css';
-// import '@react-pdf-viewer/default-layout/lib/styles/index.css';
+import { PdfViewer } from '../ui/PdfViewer';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -47,18 +44,268 @@ interface Submission {
     studentId?: string;
     profile?: {
       studentId?: string;
+      section?: string;
     };
   };
+  section?: string;
   marks?: number;
   feedback?: string;
   status: string;
   submissionDate?: string;
   content?: string;
   files?: Array<{
-    filename: string; // original name
+    filename: string;
     url: string;
     size: number;
   }>;
+}
+
+// ── Submissions Section List (faculty view) ─────────────────────────────────
+interface SubmissionsSectionListProps {
+  sectionMap: Record<string, Submission[]>;
+  sectionKeys: string[];
+  viewSubmissionsFor: { maxMarks: number; title: string };
+  gradesDraft: Record<string, { marks: number | ''; feedback: string; saving?: boolean }>;
+  setGradesDraft: React.Dispatch<React.SetStateAction<Record<string, { marks: number | ''; feedback: string; saving?: boolean }>>>;
+  handleSaveGrade: (studentId: string) => void;
+  openPdfModal: (url: string, filename: string) => void;
+  downloadSubmissionFile: (file: { url: string; filename: string }) => void;
+  onGradeStudent: (submission: Submission) => void;
+}
+
+function SubmissionsSectionList({
+  sectionMap, sectionKeys, viewSubmissionsFor, openPdfModal, downloadSubmissionFile, onGradeStudent
+}: SubmissionsSectionListProps) {
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  const toggleSection = (sec: string) =>
+    setCollapsed(prev => ({ ...prev, [sec]: !prev[sec] }));
+
+  return (
+    <div className="divide-y divide-gray-100">
+      {sectionKeys.map(sec => {
+        const students = sectionMap[sec];
+        const isOpen = !collapsed[sec];
+        const gradedCount = students.filter(s => s.status === 'graded').length;
+
+        return (
+          <div key={sec}>
+            {/* Section header */}
+            <button
+              className="w-full flex items-center justify-between px-6 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+              onClick={() => toggleSection(sec)}
+            >
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-blue-600" />
+                <span className="font-semibold text-gray-800 text-sm">Section: {sec}</span>
+                <span className="text-xs text-gray-500 bg-white border rounded-full px-2 py-0.5">
+                  {students.length} student{students.length !== 1 ? 's' : ''}
+                </span>
+                <span className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
+                  {gradedCount} graded
+                </span>
+              </div>
+              {isOpen
+                ? <ChevronUp className="w-4 h-4 text-gray-400" />
+                : <ChevronDown className="w-4 h-4 text-gray-400" />}
+            </button>
+
+            {/* Student list for this section */}
+            {isOpen && (
+              <div className="divide-y divide-gray-50">
+                {students.map(submission => {
+                  const sid = submission.student._id;
+                  const name = submission.student.name
+                    || `${submission.student.firstName || ''} ${submission.student.lastName || ''}`.trim()
+                    || 'Unknown Student';
+                  const studentId = submission.student.studentId || submission.student.profile?.studentId;
+                  const isGraded = submission.status === 'graded';
+
+                  return (
+                    <div key={sid} className="px-6 py-3 flex items-center gap-3">
+                      {/* Avatar */}
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                        <GraduationCap className="w-4 h-4 text-blue-600" />
+                      </div>
+
+                      {/* Name + meta */}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 text-sm truncate">{name}</p>
+                        <div className="flex items-center gap-3 text-xs text-gray-400 mt-0.5">
+                          {studentId && <span>ID: {studentId}</span>}
+                          {submission.submissionDate && (
+                            <span>
+                              {new Date(submission.submissionDate).toLocaleString('en-US', {
+                                month: 'short', day: 'numeric',
+                                hour: '2-digit', minute: '2-digit'
+                              })}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Grade badge */}
+                      <span className={`shrink-0 text-xs font-medium px-2.5 py-1 rounded-full ${isGraded ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                        }`}>
+                        {isGraded ? `${submission.marks ?? '?'}/${viewSubmissionsFor.maxMarks}` : 'Pending'}
+                      </span>
+
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        {submission.files && submission.files.length > 0 && (
+                          <>
+                            {submission.files[0].filename.toLowerCase().endsWith('.pdf') && (
+                              <Button variant="outline" size="sm"
+                                onClick={() => openPdfModal(submission.files![0].url, submission.files![0].filename)}>
+                                <Eye className="w-3.5 h-3.5 mr-1" /> View
+                              </Button>
+                            )}
+                            <Button variant="outline" size="sm"
+                              onClick={() => submission.files && downloadSubmissionFile(submission.files[0])}>
+                              <Download className="w-3.5 h-3.5 mr-1" />
+                              {submission.files.length > 1 ? `${submission.files.length} files` : 'Download'}
+                            </Button>
+                          </>
+                        )}
+                        {/* Grade → navigates to grade page */}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onGradeStudent(submission)}
+                          className={isGraded ? 'border-green-300 text-green-700 hover:bg-green-50' : ''}
+                        >
+                          <Star className={`w-3.5 h-3.5 mr-1 ${isGraded ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+                          {isGraded ? 'Edit Grade' : 'Grade'}
+                        </Button>
+                      </div>
+
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Grade View (full screen within modal) ────────────────────────────────────
+interface GradeViewProps {
+  submission: Submission;
+  maxMarks: number;
+  gradesDraft: Record<string, { marks: number | ''; feedback: string; saving?: boolean }>;
+  setGradesDraft: React.Dispatch<React.SetStateAction<Record<string, { marks: number | ''; feedback: string; saving?: boolean }>>>;
+  handleSaveGrade: (studentId: string) => void;
+  openPdfModal: (url: string, filename: string) => void;
+  downloadSubmissionFile: (file: { url: string; filename: string }) => void;
+}
+
+function GradeView({ submission, maxMarks, gradesDraft, setGradesDraft, handleSaveGrade, openPdfModal, downloadSubmissionFile }: GradeViewProps) {
+  const sid = submission.student._id;
+  const name = submission.student.name
+    || `${submission.student.firstName || ''} ${submission.student.lastName || ''}`.trim()
+    || 'Unknown Student';
+  const isGraded = submission.status === 'graded';
+
+  return (
+    <div className="p-6 space-y-5">
+      {/* Student info bar */}
+      <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border">
+        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+          <GraduationCap className="w-5 h-5 text-blue-600" />
+        </div>
+        <div className="flex-1">
+          <p className="font-semibold text-gray-900">{name}</p>
+          {(submission.student.studentId || submission.student.profile?.studentId) && (
+            <p className="text-xs text-gray-500">ID: {submission.student.studentId || submission.student.profile?.studentId}</p>
+          )}
+        </div>
+        <span className={`text-xs font-medium px-3 py-1.5 rounded-full ${isGraded ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+          }`}>
+          {isGraded ? `Graded: ${submission.marks}/${maxMarks}` : 'Not yet graded'}
+        </span>
+      </div>
+
+      {/* Submission text */}
+      {submission.content && (
+        <div>
+          <h4 className="text-sm font-semibold text-gray-700 mb-2">Submission Text</h4>
+          <div className="p-4 bg-white rounded-lg border text-sm text-gray-700 whitespace-pre-wrap max-h-48 overflow-y-auto">
+            {submission.content}
+          </div>
+        </div>
+      )}
+
+      {/* Submitted files */}
+      {submission.files && submission.files.length > 0 && (
+        <div>
+          <h4 className="text-sm font-semibold text-gray-700 mb-2">Submitted Files</h4>
+          <div className="space-y-2">
+            {submission.files.map((file, fi) => (
+              <div key={fi} className="flex items-center justify-between bg-white p-3 rounded-lg border">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm font-medium">{file.filename}</span>
+                  <span className="text-xs text-gray-400">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+                </div>
+                <div className="flex gap-2">
+                  {file.filename.toLowerCase().endsWith('.pdf') && (
+                    <Button variant="outline" size="sm" onClick={() => openPdfModal(file.url, file.filename)}>
+                      <Eye className="w-3.5 h-3.5 mr-1" /> View
+                    </Button>
+                  )}
+                  <Button variant="outline" size="sm" onClick={() => downloadSubmissionFile(file)}>
+                    <Download className="w-3.5 h-3.5 mr-1" /> Download
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Grade form */}
+      <div className="p-5 bg-blue-50 rounded-xl border border-blue-100">
+        <h4 className="text-sm font-semibold text-blue-900 mb-4 flex items-center gap-2">
+          <Star className="w-4 h-4 text-yellow-500 fill-yellow-400" />
+          Grade Assignment
+        </h4>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Marks (out of {maxMarks})</label>
+            <input
+              type="number" min={0} max={maxMarks}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              value={gradesDraft[sid]?.marks ?? (submission.marks ?? '')}
+              onChange={(e) => {
+                const val = e.target.value === '' ? '' : Number(e.target.value);
+                setGradesDraft(prev => ({ ...prev, [sid]: { marks: val as number | '', feedback: prev[sid]?.feedback ?? '', saving: false } }));
+              }}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Feedback</label>
+            <textarea
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              rows={3}
+              value={gradesDraft[sid]?.feedback ?? (submission.feedback ?? '')}
+              placeholder="Provide feedback to the student..."
+              onChange={(e) => {
+                setGradesDraft(prev => ({ ...prev, [sid]: { marks: prev[sid]?.marks ?? '', feedback: e.target.value, saving: false } }));
+              }}
+            />
+          </div>
+        </div>
+        <div className="mt-4 flex justify-end">
+          <Button onClick={() => handleSaveGrade(sid)} disabled={gradesDraft[sid]?.saving} className="px-6">
+            {gradesDraft[sid]?.saving ? 'Saving…' : 'Save Grade'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function AssignmentModule() {
@@ -91,13 +338,17 @@ export function AssignmentModule() {
   const [submissionsError, setSubmissionsError] = useState('');
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [gradesDraft, setGradesDraft] = useState<Record<string, { marks: number | ''; feedback: string; saving?: boolean }>>({});
+  const [gradingSubmission, setGradingSubmission] = useState<Submission | null>(null);
 
-  // Keep state for PDF modal
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfFilename, setPdfFilename] = useState<string>('document.pdf');
   const [pdfModalOpen, setPdfModalOpen] = useState(false);
 
-  const openPdfModal = (url: string) => {
-    setPdfUrl(url);
+  const openPdfModal = (url: string, filename?: string) => {
+    // Ensure the URL is absolute — relative paths like /uploads/... point to Vite not the backend
+    const absoluteUrl = url.startsWith('http') ? url : `${API_URL}${url}`;
+    setPdfUrl(absoluteUrl);
+    setPdfFilename(filename || 'document.pdf');
     setPdfModalOpen(true);
   };
   const closePdfModal = () => {
@@ -717,134 +968,161 @@ export function AssignmentModule() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {assignments.map((assignment) => (
-            <Card key={assignment._id} className="hover:shadow-lg transition-all duration-200">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">{assignment.title}</h3>
-                    <p className="text-sm text-blue-600 mb-2 font-medium">{assignment.course?.name || 'Unknown Course'} ({assignment.course?.code || 'N/A'})</p>
-                    <p className="text-sm text-gray-700 line-clamp-3">{assignment.description}</p>
-                  </div>
-                  <div className="ml-2 flex flex-col items-center">
-                    {getStatusIcon(assignment)}
-                    <span className={`text-xs font-medium mt-1 ${getStatusColor(assignment)}`}>
-                      {getStatusText(assignment)}
-                    </span>
-                  </div>
-                </div>
+          {assignments.map((assignment) => {
+            // For students: hide content before the assignment's start date
+            const isLocked = user?.role === 'student' && new Date() < new Date(assignment.startDate);
 
-                <div className="space-y-3 text-sm">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <span className="text-gray-600 block">Start:</span>
-                      <span className="font-medium text-green-600">
-                        {new Date(assignment.startDate).toLocaleDateString('en-US', {
-                          month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                        })}
-                      </span>
+            return (
+              <Card key={assignment._id} className="hover:shadow-lg transition-all duration-200">
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">{assignment.title}</h3>
+                      <p className="text-sm text-blue-600 mb-2 font-medium">{assignment.course?.name || 'Unknown Course'} ({assignment.course?.code || 'N/A'})</p>
+                      {/* Description: hidden for students before start */}
+                      {!isLocked && (
+                        <p className="text-sm text-gray-700 line-clamp-3">{assignment.description}</p>
+                      )}
                     </div>
-                    <div>
-                      <span className="text-gray-600 block">Due:</span>
-                      <span className={`font-medium ${getStatusColor(assignment)}`}>
-                        {new Date(assignment.dueDate).toLocaleDateString('en-US', {
-                          month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                        })}
+                    <div className="ml-2 flex flex-col items-center">
+                      {isLocked
+                        ? <Lock className="w-4 h-4 text-gray-400" />
+                        : getStatusIcon(assignment)
+                      }
+                      <span className={`text-xs font-medium mt-1 ${isLocked ? 'text-gray-400' : getStatusColor(assignment)}`}>
+                        {isLocked ? 'Locked' : getStatusText(assignment)}
                       </span>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Max Marks:</span>
-                    <span className="font-semibold">{assignment.maxMarks}</span>
-                  </div>
-
-                  {assignment.hasSubmitted && (
-                    <>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Status:</span>
-                        <span className={`font-medium ${getStatusColor(assignment)}`}>
-                          {assignment.submissionStatus === 'graded' ? 'Graded' : 'Submitted'}
-                        </span>
+                  {/* Lock banner shown to students before start date */}
+                  {isLocked && (
+                    <div className="mb-4 flex items-center gap-2 px-3 py-2.5 rounded-lg bg-amber-50 border border-amber-200">
+                      <Lock className="w-4 h-4 text-amber-500 shrink-0" />
+                      <div>
+                        <p className="text-xs font-semibold text-amber-700">Content locked</p>
+                        <p className="text-xs text-amber-600">
+                          Unlocks on {new Date(assignment.startDate).toLocaleString('en-US', {
+                            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                          })}
+                        </p>
                       </div>
-                      {assignment.marks !== undefined && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">Score:</span>
-                          <span className="font-semibold text-green-600">
-                            {assignment.marks}/{assignment.maxMarks}
-                          </span>
-                        </div>
-                      )}
-                      {assignment.feedback && (
-                        <div className="mt-2 p-3 bg-blue-50 rounded-lg border">
-                          <p className="text-xs font-medium text-blue-800 mb-1">Feedback:</p>
-                          <p className="text-xs text-blue-700">{assignment.feedback}</p>
-                        </div>
-                      )}
-                    </>
+                    </div>
                   )}
 
-                  {/* Question Files */}
-                  {assignment.attachments && assignment.attachments.length > 0 && (
-                    <div className="mt-3">
-                      <p className="text-xs font-medium text-gray-600 mb-2">Question Files:</p>
-                      <div className="space-y-1">
-                        {assignment.attachments.map((file, index) => (
-                          <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
-                            <div className="flex items-center">
-                              <FileText className="w-3 h-3 mr-2 text-gray-500" />
-                              <span className="text-xs font-medium">{file.filename}</span>
-                            </div>
-                            <div className="flex gap-2">
-                              {file.filename.toLowerCase().endsWith('.pdf') && (
+                  <div className="space-y-3 text-sm">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <span className="text-gray-600 block">Start:</span>
+                        <span className="font-medium text-green-600">
+                          {new Date(assignment.startDate).toLocaleDateString('en-US', {
+                            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600 block">Due:</span>
+                        <span className={`font-medium ${getStatusColor(assignment)}`}>
+                          {new Date(assignment.dueDate).toLocaleDateString('en-US', {
+                            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Max Marks:</span>
+                      <span className="font-semibold">{isLocked ? '—' : assignment.maxMarks}</span>
+                    </div>
+
+                    {!isLocked && assignment.hasSubmitted && (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Status:</span>
+                          <span className={`font-medium ${getStatusColor(assignment)}`}>
+                            {assignment.submissionStatus === 'graded' ? 'Graded' : 'Submitted'}
+                          </span>
+                        </div>
+                        {assignment.marks !== undefined && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-600">Score:</span>
+                            <span className="font-semibold text-green-600">
+                              {assignment.marks}/{assignment.maxMarks}
+                            </span>
+                          </div>
+                        )}
+                        {assignment.feedback && (
+                          <div className="mt-2 p-3 bg-blue-50 rounded-lg border">
+                            <p className="text-xs font-medium text-blue-800 mb-1">Feedback:</p>
+                            <p className="text-xs text-blue-700">{assignment.feedback}</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {/* Question Files — hidden for students before start */}
+                    {!isLocked && assignment.attachments && assignment.attachments.length > 0 && (
+                      <div className="mt-3">
+                        <p className="text-xs font-medium text-gray-600 mb-2">Question Files:</p>
+                        <div className="space-y-1">
+                          {assignment.attachments.map((file, index) => (
+                            <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
+                              <div className="flex items-center">
+                                <FileText className="w-3 h-3 mr-2 text-gray-500" />
+                                <span className="text-xs font-medium">{file.filename}</span>
+                              </div>
+                              <div className="flex gap-2">
+                                {file.filename.toLowerCase().endsWith('.pdf') && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => openPdfModal(file.url, file.filename)}
+                                  >
+                                    View
+                                  </Button>
+                                )}
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => openPdfModal(file.url)}
+                                  onClick={() => downloadQuestionFile(file)}
                                 >
-                                  View
+                                  <Download className="w-3 h-3" />
                                 </Button>
-                              )}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => downloadQuestionFile(file)}
-                              >
-                                <Download className="w-3 h-3" />
-                              </Button>
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
 
-                <div className="mt-4 flex space-x-2">
-                  {user?.role === 'student' && canSubmit(assignment) && (
-                    <Button
-                      size="sm"
-                      onClick={() => setSelectedAssignment(assignment)}
-                      className="flex-1"
-                    >
-                      Submit Assignment
-                    </Button>
-                  )}
-                  {(user?.role === 'faculty' || user?.role === 'admin') && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openSubmissions(assignment)}
-                      className="flex-1"
-                    >
-                      <Eye className="w-4 h-4 mr-2" />
-                      View Submissions
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  <div className="mt-4 flex space-x-2">
+                    {/* Submit button only visible to students after start */}
+                    {user?.role === 'student' && !isLocked && canSubmit(assignment) && (
+                      <Button
+                        size="sm"
+                        onClick={() => setSelectedAssignment(assignment)}
+                        className="flex-1"
+                      >
+                        Submit Assignment
+                      </Button>
+                    )}
+                    {(user?.role === 'faculty' || user?.role === 'admin') && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openSubmissions(assignment)}
+                        className="flex-1"
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        View Submissions
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
@@ -980,203 +1258,126 @@ export function AssignmentModule() {
 
       {/* View Submissions Modal */}
       {viewSubmissionsFor && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <Card className="w-full max-w-6xl max-h-[90vh] overflow-y-auto">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Submissions: {viewSubmissionsFor.title}</CardTitle>
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
+            <CardHeader className="flex flex-row items-center gap-3 shrink-0 border-b">
+              {/* ← Back button */}
+              <button
+                onClick={() => {
+                  if (gradingSubmission) {
+                    // Go back to student list
+                    setGradingSubmission(null);
+                  } else {
+                    // Close the modal
+                    setViewSubmissionsFor(null);
+                    setSubmissions([]);
+                  }
+                }}
+                className="flex items-center gap-1.5 text-gray-500 hover:text-gray-800 transition-colors text-sm font-medium shrink-0"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 12H5M12 5l-7 7 7 7" />
+                </svg>
+                Back
+              </button>
+
+              {/* Divider */}
+              <div className="w-px h-6 bg-gray-200 shrink-0" />
+
+              {/* Title */}
+              <div className="flex-1 min-w-0">
+                {gradingSubmission ? (
+                  <>
+                    <CardTitle className="truncate">
+                      Grade — {gradingSubmission.student.name
+                        || `${gradingSubmission.student.firstName || ''} ${gradingSubmission.student.lastName || ''}`.trim()
+                        || 'Student'}
+                    </CardTitle>
+                    <p className="text-sm text-gray-500 mt-0.5">{viewSubmissionsFor.title}</p>
+                  </>
+                ) : (
+                  <>
+                    <CardTitle className="truncate">Submissions — {viewSubmissionsFor.title}</CardTitle>
+                    <p className="text-sm text-gray-500 mt-0.5">
+                      {submissions.length} submission{submissions.length !== 1 ? 's' : ''} · Max {viewSubmissionsFor.maxMarks} marks
+                    </p>
+                  </>
+                )}
+              </div>
+
+              {/* Close X */}
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  setViewSubmissionsFor(null);
-                  setSubmissions([]);
-                }}
+                onClick={() => { setViewSubmissionsFor(null); setSubmissions([]); setGradingSubmission(null); }}
               >
                 <X className="w-4 h-4" />
               </Button>
             </CardHeader>
-            <CardContent>
+
+            <CardContent className="overflow-y-auto flex-1 p-0">
               {submissionsLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  <span className="ml-2">Loading submissions...</span>
+                <div className="flex items-center justify-center py-16">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                  <span className="ml-3 text-gray-600">Loading submissions…</span>
                 </div>
               ) : submissionsError ? (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                  {submissionsError}
-                </div>
+                <div className="m-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">{submissionsError}</div>
               ) : submissions.length === 0 ? (
-                <div className="text-center py-12">
-                  <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No submissions yet</h3>
-                  <p className="text-gray-600">Students haven't submitted their work yet.</p>
+                <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+                  <FileText className="w-12 h-12 mb-3" />
+                  <h3 className="text-lg font-medium text-gray-700">No submissions yet</h3>
+                  <p className="text-sm">Students haven't submitted their work yet.</p>
                 </div>
-              ) : (
-                <div className="space-y-6">
-                  {submissions.map((submission) => (
-                    <div key={submission.student._id} className="border rounded-lg p-6 bg-gray-50">
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <h4 className="font-semibold text-gray-900">
-                            {submission.student.name ||
-                              `${submission.student.firstName || ''} ${submission.student.lastName || ''}`.trim() ||
-                              'Unknown Student'}
-                          </h4>
-                          {(submission.student.studentId || submission.student.profile?.studentId) && (
-                            <p className="text-sm text-gray-600">ID: {submission.student.studentId || submission.student.profile?.studentId}</p>
-                          )}
-                          {submission.submissionDate && (
-                            <p className="text-sm text-gray-600">
-                              Submitted: {new Date(submission.submissionDate).toLocaleDateString('en-US', {
-                                weekday: 'short',
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </p>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${submission.status === 'graded'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-blue-100 text-blue-800'
-                            }`}>
-                            {submission.status === 'graded' ? 'Graded' : 'Submitted'}
-                          </span>
-                        </div>
-                      </div>
+              ) : (() => {
+                // Group by section
+                const sectionMap: Record<string, Submission[]> = {};
+                submissions.forEach(sub => {
+                  const sec = sub.section
+                    || sub.student.profile?.section
+                    || 'General';
+                  if (!sectionMap[sec]) sectionMap[sec] = [];
+                  sectionMap[sec].push(sub);
+                });
+                const sectionKeys = Object.keys(sectionMap).sort();
 
-                      {submission.content && (
-                        <div className="mb-4">
-                          <h5 className="font-medium text-gray-900 mb-2">Submission Content:</h5>
-                          <div className="bg-white p-4 rounded-lg border">
-                            <p className="text-sm text-gray-700 whitespace-pre-wrap">{submission.content}</p>
-                          </div>
-                        </div>
-                      )}
-
-                      {submission.files && submission.files.length > 0 && (
-                        <div className="mb-4">
-                          <h5 className="font-medium text-gray-900 mb-2">Submitted Files:</h5>
-                          <div className="space-y-2">
-                            {submission.files.map((file, fileIndex) => (
-                              <div key={fileIndex} className="flex items-center justify-between bg-white p-3 rounded-lg border">
-                                <div className="flex items-center">
-                                  <FileText className="w-4 h-4 mr-2 text-blue-600" />
-                                  <span className="text-sm font-medium">{file.filename}</span>
-                                  <span className="text-xs text-gray-500 ml-2">
-                                    ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                                  </span>
-                                </div>
-                                <div className="flex gap-2">
-                                  {file.filename.toLowerCase().endsWith('.pdf') && (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => openPdfModal(file.url)}
-                                    >
-                                      View
-                                    </Button>
-                                  )}
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => downloadSubmissionFile(file)}
-                                  >
-                                    <Download className="w-4 h-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Grading Section */}
-                      <div className="border-t pt-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Marks (out of {viewSubmissionsFor.maxMarks})
-                            </label>
-                            <input
-                              type="number"
-                              min={0}
-                              max={viewSubmissionsFor.maxMarks}
-                              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              value={gradesDraft[submission.student._id]?.marks ?? ''}
-                              onChange={(e) => {
-                                const val = e.target.value === '' ? '' : Number(e.target.value);
-                                setGradesDraft(prev => ({
-                                  ...prev,
-                                  [submission.student._id]: {
-                                    ...prev[submission.student._id],
-                                    marks: val
-                                  }
-                                }));
-                              }}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Feedback
-                            </label>
-                            <textarea
-                              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              rows={3}
-                              value={gradesDraft[submission.student._id]?.feedback ?? ''}
-                              placeholder="Provide feedback to the student..."
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setGradesDraft(prev => ({
-                                  ...prev,
-                                  [submission.student._id]: {
-                                    ...prev[submission.student._id],
-                                    feedback: val
-                                  }
-                                }));
-                              }}
-                            />
-                          </div>
-                        </div>
-                        <div className="mt-3 flex justify-end">
-                          <Button
-                            size="sm"
-                            onClick={() => handleSaveGrade(submission.student._id)}
-                            disabled={gradesDraft[submission.student._id]?.saving}
-                          >
-                            {gradesDraft[submission.student._id]?.saving ? 'Saving...' : 'Save Grade'}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                return gradingSubmission ? (
+                  <GradeView
+                    submission={gradingSubmission}
+                    maxMarks={viewSubmissionsFor.maxMarks}
+                    gradesDraft={gradesDraft}
+                    setGradesDraft={setGradesDraft}
+                    handleSaveGrade={handleSaveGrade}
+                    openPdfModal={openPdfModal}
+                    downloadSubmissionFile={downloadSubmissionFile}
+                  />
+                ) : (
+                  <SubmissionsSectionList
+                    sectionMap={sectionMap}
+                    sectionKeys={sectionKeys}
+                    viewSubmissionsFor={viewSubmissionsFor}
+                    gradesDraft={gradesDraft}
+                    setGradesDraft={setGradesDraft}
+                    handleSaveGrade={handleSaveGrade}
+                    openPdfModal={openPdfModal}
+                    downloadSubmissionFile={downloadSubmissionFile}
+                    onGradeStudent={(sub) => setGradingSubmission(sub)}
+                  />
+                );
+              })()}
             </CardContent>
           </Card>
         </div>
       )}
 
-      {/* PDF Modal using native browser viewer */}
+      {/* ── Custom in-app PDF Viewer (no iframe — canvas-based, no CSP issues) ── */}
       {pdfModalOpen && pdfUrl && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-4 w-[95vw] h-[95vh] max-w-none max-h-none flex flex-col">
-            <div className="flex justify-between items-center mb-2">
-              <span className="font-semibold">PDF Viewer</span>
-              <Button variant="outline" size="sm" onClick={closePdfModal}><X className="w-4 h-4" /></Button>
-            </div>
-            <div className="flex-1 overflow-hidden border rounded">
-              <iframe
-                src={pdfUrl}
-                title="PDF"
-                className="w-full h-full"
-              />
-            </div>
-          </div>
-        </div>
+        <PdfViewer
+          url={pdfUrl}
+          token={token ?? undefined}
+          filename={pdfFilename}
+          onClose={closePdfModal}
+        />
       )}
     </div>
   );
