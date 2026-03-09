@@ -170,6 +170,13 @@ export function LoginForm() {
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotMessage, setForgotMessage] = useState<{ text: string; isError: boolean } | null>(null);
+  const [resetStep, setResetStep] = useState<'email' | 'otp' | 'password'>('email');
+  const [resetOtp, setResetOtp] = useState('');
+  const [resetNewPassword, setResetNewPassword] = useState('');
+  const [resetConfirmPassword, setResetConfirmPassword] = useState('');
+  const [resetShowPassword, setResetShowPassword] = useState(false);
+  const [otpTimer, setOtpTimer] = useState(0);
+  const otpTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const {
     register,
@@ -339,26 +346,69 @@ export function LoginForm() {
     }
   }, [showToast]);
 
-  const handleForgotPassword = async () => {
+  const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+  const startOtpTimer = () => {
+    if (otpTimerRef.current) clearInterval(otpTimerRef.current);
+    const expiry = Number(import.meta.env.VITE_OTP_EXPIRY_MINUTES || 10) * 60;
+    setOtpTimer(expiry);
+    otpTimerRef.current = setInterval(() => {
+      setOtpTimer(prev => { if (prev <= 1) { clearInterval(otpTimerRef.current!); return 0; } return prev - 1; });
+    }, 1000);
+  };
+
+  const closeForgotModal = () => {
+    setShowForgotPassword(false); setForgotMessage(null);
+    setResetStep('email'); setResetOtp(''); setResetNewPassword(''); setResetConfirmPassword('');
+    if (otpTimerRef.current) clearInterval(otpTimerRef.current);
+  };
+
+  const handleSendOtp = async () => {
     if (!forgotEmail.trim()) { setForgotMessage({ text: 'Please enter your email address.', isError: true }); return; }
     setForgotLoading(true); setForgotMessage(null);
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/forgot-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch(`${API}/api/auth/forgot-password`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: forgotEmail.trim().toLowerCase() }),
       });
       const data = await res.json();
+      if (res.ok && data.success) { setResetStep('otp'); startOtpTimer(); }
+      else setForgotMessage({ text: data.message || 'Failed to send OTP.', isError: true });
+    } catch { setForgotMessage({ text: 'Network error. Please try again.', isError: true }); }
+    finally { setForgotLoading(false); }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (resetOtp.length < 6) { setForgotMessage({ text: 'Please enter the complete 6-digit OTP.', isError: true }); return; }
+    setForgotLoading(true); setForgotMessage(null);
+    try {
+      const res = await fetch(`${API}/api/auth/verify-reset-otp`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail.trim().toLowerCase(), otp: resetOtp }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) { setResetStep('password'); }
+      else setForgotMessage({ text: data.message || 'Invalid OTP.', isError: true });
+    } catch { setForgotMessage({ text: 'Network error. Please try again.', isError: true }); }
+    finally { setForgotLoading(false); }
+  };
+
+  const handleResetPassword = async () => {
+    if (resetNewPassword.length < 6) { setForgotMessage({ text: 'Password must be at least 6 characters.', isError: true }); return; }
+    if (resetNewPassword !== resetConfirmPassword) { setForgotMessage({ text: 'Passwords do not match.', isError: true }); return; }
+    setForgotLoading(true); setForgotMessage(null);
+    try {
+      const res = await fetch(`${API}/api/auth/reset-password`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail.trim().toLowerCase(), otp: resetOtp, newPassword: resetNewPassword }),
+      });
+      const data = await res.json();
       if (res.ok && data.success) {
-        setForgotMessage({ text: 'Password reset link sent! Check your email inbox.', isError: false });
-      } else {
-        setForgotMessage({ text: data.message || 'Failed to send reset email.', isError: true });
-      }
-    } catch {
-      setForgotMessage({ text: 'Network error. Please check your connection.', isError: true });
-    } finally {
-      setForgotLoading(false);
-    }
+        setForgotMessage({ text: '✅ Password reset! You can now log in.', isError: false });
+        setTimeout(() => closeForgotModal(), 2500);
+      } else setForgotMessage({ text: data.message || 'Failed to reset password.', isError: true });
+    } catch { setForgotMessage({ text: 'Network error. Please try again.', isError: true }); }
+    finally { setForgotLoading(false); }
   };
 
   return (
@@ -366,51 +416,94 @@ export function LoginForm() {
       {/* Forgot Password Modal */}
       <AnimatePresence>
         {showForgotPassword && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4"
-            onClick={() => { setShowForgotPassword(false); setForgotMessage(null); }}
+            onClick={closeForgotModal}
           >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
               className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center space-x-2">
-                <Mail className="w-6 h-6 text-blue-600" />
-                <h3 className="text-xl font-bold text-gray-900">Reset Password</h3>
+              {/* Header + step dots */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Mail className="w-6 h-6 text-blue-600" />
+                  <h3 className="text-xl font-bold text-gray-900">Reset Password</h3>
+                </div>
+                <div className="flex gap-1.5">
+                  {(['email', 'otp', 'password'] as const).map((s) => (
+                    <div key={s} className="w-2 h-2 rounded-full transition-all"
+                      style={{ background: s === resetStep ? '#2563eb' : '#d1d5db' }} />
+                  ))}
+                </div>
               </div>
-              <p className="text-sm text-gray-600">Enter your email address and we'll send you a link to reset your password.</p>
-              <input
-                type="email"
-                value={forgotEmail}
-                onChange={(e) => setForgotEmail(e.target.value)}
-                placeholder="Enter your email"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-                onKeyDown={(e) => e.key === 'Enter' && handleForgotPassword()}
-              />
-              {forgotMessage && (
-                <p className={`text-sm ${forgotMessage.isError ? 'text-red-600' : 'text-green-600'}`}>{forgotMessage.text}</p>
-              )}
-              <div className="flex space-x-3">
-                <button
-                  onClick={() => { setShowForgotPassword(false); setForgotMessage(null); }}
-                  className="flex-1 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleForgotPassword}
-                  disabled={forgotLoading}
-                  className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition disabled:opacity-50"
-                >
-                  {forgotLoading ? 'Sending...' : 'Send Reset Link'}
-                </button>
-              </div>
+
+              {/* Step 1: Email */}
+              {resetStep === 'email' && (<>
+                <p className="text-sm text-gray-600">Enter your email and we'll send a 6-digit OTP to reset your password.</p>
+                <input type="email" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)}
+                  placeholder="Enter your email" onKeyDown={(e) => e.key === 'Enter' && handleSendOtp()}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900" />
+                {forgotMessage && <p className={`text-sm ${forgotMessage.isError ? 'text-red-600' : 'text-green-600'}`}>{forgotMessage.text}</p>}
+                <div className="flex space-x-3">
+                  <button onClick={closeForgotModal} className="flex-1 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition">Cancel</button>
+                  <button onClick={handleSendOtp} disabled={forgotLoading}
+                    className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:opacity-90 transition disabled:opacity-50">
+                    {forgotLoading ? 'Sending...' : 'Send OTP'}
+                  </button>
+                </div>
+              </>)}
+
+              {/* Step 2: OTP */}
+              {resetStep === 'otp' && (<>
+                <div>
+                  <p className="text-sm text-gray-600">Enter the 6-digit OTP sent to <span className="font-semibold text-gray-900">{forgotEmail}</span></p>
+                  {otpTimer > 0 && <p className="text-xs text-gray-400 mt-1">Expires in {Math.floor(otpTimer / 60)}:{String(otpTimer % 60).padStart(2, '0')}</p>}
+                  {otpTimer === 0 && <p className="text-xs text-red-500 mt-1">OTP expired. Please resend.</p>}
+                </div>
+                <input type="text" inputMode="numeric" maxLength={6} value={resetOtp}
+                  onChange={(e) => setResetOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  onKeyDown={(e) => e.key === 'Enter' && handleVerifyOtp()}
+                  placeholder="• • • • • •"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900 text-center text-2xl tracking-[0.5em] placeholder-gray-300" />
+                {forgotMessage && <p className={`text-sm ${forgotMessage.isError ? 'text-red-600' : 'text-green-600'}`}>{forgotMessage.text}</p>}
+                <div className="text-center">
+                  <button onClick={() => { setResetStep('email'); setResetOtp(''); setForgotMessage(null); }} className="text-xs text-gray-400 hover:text-gray-600 underline">Resend OTP</button>
+                </div>
+                <div className="flex space-x-3">
+                  <button onClick={closeForgotModal} className="flex-1 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition">Cancel</button>
+                  <button onClick={handleVerifyOtp} disabled={forgotLoading || resetOtp.length < 6}
+                    className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:opacity-90 transition disabled:opacity-50">
+                    {forgotLoading ? 'Verifying...' : 'Verify OTP'}
+                  </button>
+                </div>
+              </>)}
+
+              {/* Step 3: New Password */}
+              {resetStep === 'password' && (<>
+                <p className="text-sm text-gray-600">OTP verified ✅ — enter your new password below.</p>
+                <div className="relative">
+                  <input type={resetShowPassword ? 'text' : 'password'} value={resetNewPassword}
+                    onChange={(e) => setResetNewPassword(e.target.value)} placeholder="New password (min 6 chars)"
+                    className="w-full px-4 py-3 pr-16 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900" />
+                  <button type="button" onClick={() => setResetShowPassword(p => !p)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-600">
+                    {resetShowPassword ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+                <input type={resetShowPassword ? 'text' : 'password'} value={resetConfirmPassword}
+                  onChange={(e) => setResetConfirmPassword(e.target.value)} placeholder="Confirm new password"
+                  onKeyDown={(e) => e.key === 'Enter' && handleResetPassword()}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900" />
+                {forgotMessage && <p className={`text-sm ${forgotMessage.isError ? 'text-red-600' : 'text-green-600'}`}>{forgotMessage.text}</p>}
+                <div className="flex space-x-3">
+                  <button onClick={closeForgotModal} className="flex-1 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition">Cancel</button>
+                  <button onClick={handleResetPassword} disabled={forgotLoading}
+                    className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:opacity-90 transition disabled:opacity-50">
+                    {forgotLoading ? 'Resetting...' : 'Reset Password'}
+                  </button>
+                </div>
+              </>)}
             </motion.div>
           </motion.div>
         )}
