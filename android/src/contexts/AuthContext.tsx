@@ -14,7 +14,8 @@ interface AuthContextType {
   logout: () => Promise<void>;
   updateUser: (userData: User) => void;
   forgotPassword: (email: string) => Promise<any>;
-  resetPassword: (token: string, password: string) => Promise<any>;
+  verifyResetOtp: (email: string, otp: string) => Promise<any>;
+  resetPassword: (email: string, otp: string, password: string) => Promise<any>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -80,11 +81,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Do NOT toggle global isLoading here to avoid replacing navigation tree during transitions
     try {
       const response = await apiService.login(email, password);
-      
+
       if (response.success && response.user && response.token) {
         setUser(response.user);
       }
-      
+
       return response;
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -117,11 +118,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setIsLoading(true);
     try {
       const response = await apiService.verifyOtp(email, otp);
-      
+
       if (response.success && response.user && response.token) {
         setUser(response.user);
       }
-      
+
       return response;
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -139,11 +140,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setIsLoading(true);
     try {
       const response = await apiService.verifyLogin2FA(tempToken, code);
-      
+
       if (response.success && response.user && response.token) {
         setUser(response.user);
       }
-      
+
       return response;
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -185,9 +186,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const resetPassword = async (token: string, password: string) => {
+  const verifyResetOtp = async (email: string, otp: string) => {
     try {
-      return await apiService.resetPassword(token, password);
+      return await apiService.verifyResetOtp(email, otp);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.warn('Verify reset OTP error');
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Verification failed',
+      };
+    }
+  };
+
+  const resetPassword = async (email: string, otp: string, password: string) => {
+    try {
+      return await apiService.resetPassword(email, otp, password);
     } catch (error) {
       // eslint-disable-next-line no-console
       console.warn('Reset password error');
@@ -209,6 +223,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     logout,
     updateUser,
     forgotPassword,
+    verifyResetOtp,
     resetPassword,
   };
 

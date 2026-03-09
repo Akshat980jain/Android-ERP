@@ -335,10 +335,17 @@ class ApiService {
     });
   }
 
-  async resetPassword(token: string, password: string): Promise<ApiResponse<any>> {
+  async verifyResetOtp(email: string, otp: string): Promise<ApiResponse<any>> {
+    return this.request('/auth/verify-reset-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp }),
+    });
+  }
+
+  async resetPassword(email: string, otp: string, newPassword: string): Promise<ApiResponse<any>> {
     return this.request('/auth/reset-password', {
       method: 'POST',
-      body: JSON.stringify({ token, password }),
+      body: JSON.stringify({ email, otp, newPassword }),
     });
   }
 
