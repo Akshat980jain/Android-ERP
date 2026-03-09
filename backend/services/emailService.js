@@ -39,7 +39,7 @@ const loadTemplate = (templateName, data = {}) => {
     const defaultData = {
         institutionName: 'EduConnect',
         currentYear: new Date().getFullYear(),
-        clientUrl: process.env.CLIENT_URL || 'http://localhost:5173'
+        clientUrl: process.env.CLIENT_URL || 'https://educonnect.dpdns.org'
     };
 
     const allData = { ...defaultData, ...data };
@@ -150,7 +150,7 @@ const sendGeneralNotification = async (user, notification) => {
         title: notification.title,
         message: notification.message,
         category: notification.category || 'general',
-        actionUrl: notification.actionUrl || process.env.CLIENT_URL || 'http://localhost:5173'
+        actionUrl: notification.actionUrl || process.env.CLIENT_URL || 'https://educonnect.dpdns.org'
     };
 
     return sendEmail(
@@ -168,7 +168,7 @@ const sendGeneralNotification = async (user, notification) => {
  * @returns {Promise<object>} Result of sending
  */
 const sendPasswordResetEmail = async (user, resetToken) => {
-    const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
+    const resetUrl = `${process.env.CLIENT_URL || 'https://educonnect.dpdns.org'}/reset-password?token=${resetToken}`;
 
     const data = {
         name: user.firstName || user.name || 'User',
@@ -193,7 +193,7 @@ const sendWelcomeEmail = async (user) => {
     const data = {
         name: user.firstName || user.name || 'User',
         email: user.email,
-        loginUrl: process.env.CLIENT_URL || 'http://localhost:5173'
+        loginUrl: process.env.CLIENT_URL || 'https://educonnect.dpdns.org'
     };
 
     return sendEmail(
