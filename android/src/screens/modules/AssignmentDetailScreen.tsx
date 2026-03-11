@@ -18,7 +18,8 @@ import apiService from '../../services/api';
 import { API_CONFIG } from '../../config/api.config';
 
 function getFileUrl(relativePath: string): string {
-    const base = API_CONFIG.BASE_URL.replace(/\/api\/?$/, '');
+    // Always use HTTPS production URL for downloads (Android blocks HTTP cleartext)
+    const base = API_CONFIG.PRODUCTION_URL.replace(/\/api\/?$/, '');
     return `${base}${relativePath}`;
 }
 
