@@ -9,8 +9,9 @@ import {
     ActivityIndicator,
     Alert,
     TextInput,
-    Linking,
 } from 'react-native';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import apiService from '../../services/api';
@@ -87,6 +88,33 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
     const onRefresh = () => {
         setRefreshing(true);
         loadAssignment();
+    };
+
+    const downloadFile = async (filename: string, relativeUrl: string) => {
+        try {
+            const fullUrl = getFileUrl(relativeUrl);
+            const fileUri = (FileSystem as any).documentDirectory + filename;
+
+            Alert.alert('Downloading', `Downloading ${filename}...`);
+
+            const downloadResult = await FileSystem.downloadAsync(fullUrl, fileUri);
+
+            if (downloadResult.status === 200) {
+                const canShare = await Sharing.isAvailableAsync();
+                if (canShare) {
+                    await Sharing.shareAsync(downloadResult.uri, {
+                        mimeType: downloadResult.headers['content-type'] || 'application/octet-stream',
+                        dialogTitle: filename,
+                    });
+                } else {
+                    Alert.alert('Downloaded', `File saved to: ${downloadResult.uri}`);
+                }
+            } else {
+                Alert.alert('Error', 'Failed to download the file.');
+            }
+        } catch (e: any) {
+            Alert.alert('Error', 'Could not download the file. Please try again.');
+        }
     };
 
     const handleSubmit = async () => {
@@ -261,7 +289,7 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
                                         { backgroundColor: theme.colors.surface },
                                         idx < assignment.attachments.length - 1 && { marginBottom: 8 },
                                     ]}
-                                    onPress={() => Linking.openURL(getFileUrl(file.url))}
+                                    onPress={() => downloadFile(file.filename, file.url)}
                                     activeOpacity={0.7}
                                 >
                                     <Ionicons name={icon as any} size={24} color={color} />
