@@ -15,37 +15,49 @@ function getCandidateBaseUrls(): string[] {
     return urls;
   }
 
-  // Development: Try multiple fallback URLs
-  // Prefer the configured base first
-  urls.push(API_BASE_URL);
-
-  // Try using the Metro bundler host IP (useful in Expo/React Native dev)
-  try {
-    const scriptURL: string | undefined = (NativeModules as any)?.SourceCode?.scriptURL;
-    if (scriptURL) {
-      const parsed = new URL(scriptURL);
-      const host = parsed.hostname;
-      if (host && host !== 'localhost' && host !== '127.0.0.1') {
-        urls.push(`http://${host}:5000/api`);
-      }
-    }
-  } catch (_) { }
-
-  // If running on Android emulator, 10.0.2.2 maps to host machine
+  // On Android: try hosted backend FIRST, then local fallbacks.
+  // Local IPs/emulator addresses rarely work on physical Android devices
+  // outside a controlled dev network, so we avoid long timeouts by checking
+  // the always-reachable hosted URL before anything local.
   if (Platform.OS === 'android') {
+    // 1. Hosted production backend (primary for Android)
+    urls.push(API_CONFIG.PRODUCTION_URL);
+
+    // 2. Android emulator → host machine alias
     urls.push('http://10.0.2.2:5000/api');
-  }
 
-  // Fallback to configured local IP
-  urls.push(`http://${API_CONFIG.LOCAL_IP}:5000/api`);
+    // 3. Configured local network IP
+    urls.push(`http://${API_CONFIG.LOCAL_IP}:5000/api`);
 
-  // 'localhost' only makes sense on iOS simulator or web; exclude on Android
-  if (Platform.OS !== 'android') {
+    // 4. Metro bundler host (useful when running via Expo in dev)
+    try {
+      const scriptURL: string | undefined = (NativeModules as any)?.SourceCode?.scriptURL;
+      if (scriptURL) {
+        const parsed = new URL(scriptURL);
+        const host = parsed.hostname;
+        if (host && host !== 'localhost' && host !== '127.0.0.1') {
+          urls.push(`http://${host}:5000/api`);
+        }
+      }
+    } catch (_) { }
+  } else {
+    // Non-Android (iOS simulator, web): try local first, hosted as fallback
+    urls.push(API_BASE_URL);
+
+    try {
+      const scriptURL: string | undefined = (NativeModules as any)?.SourceCode?.scriptURL;
+      if (scriptURL) {
+        const parsed = new URL(scriptURL);
+        const host = parsed.hostname;
+        if (host && host !== 'localhost' && host !== '127.0.0.1') {
+          urls.push(`http://${host}:5000/api`);
+        }
+      }
+    } catch (_) { }
+
     urls.push('http://localhost:5000/api');
+    urls.push(API_CONFIG.PRODUCTION_URL);
   }
-
-  // Final fallback: hosted production URL (always reachable when local is down)
-  urls.push(API_CONFIG.PRODUCTION_URL);
 
   // De-duplicate while preserving order
   const seen = new Set<string>();
