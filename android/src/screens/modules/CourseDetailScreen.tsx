@@ -61,24 +61,16 @@ export default function CourseDetailScreen({ route, navigation }: any) {
     const loadCourse = useCallback(async () => {
         try {
             setError(null);
-            const response: any = await apiService.getStudentCourses();
+            const response: any = await apiService.getCourseById(courseId);
 
-            const list: any[] = Array.isArray(response)
-                ? response
-                : Array.isArray(response?.courses)
-                    ? response.courses
-                    : Array.isArray(response?.data)
-                        ? response.data
-                        : [];
-
-            const found = list.find(
-                (c: any) => c._id === courseId || c.id === courseId,
-            );
-
-            if (found) {
-                setCourse(found as CourseDetail);
+            // Backend returns: { success: true, course: {...} }
+            const data = response?.course || response?.data?.course || response?.data;
+            if (data && (data._id || data.id)) {
+                setCourse(data as CourseDetail);
+            } else if (response?.success === false) {
+                setError(response.error || response.message || 'Course not found.');
             } else {
-                setError('Course details could not be found.');
+                setError('Course details could not be loaded.');
             }
         } catch (e: any) {
             setError('Failed to load course details. Please try again.');

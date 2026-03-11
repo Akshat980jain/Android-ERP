@@ -572,6 +572,10 @@ class ApiService {
     return this.request('/courses');
   }
 
+  async getCourseById(courseId: string): Promise<ApiResponse<any>> {
+    return this.request(`/courses/${courseId}`);
+  }
+
   async getAdminStats(): Promise<ApiResponse<any>> {
     return this.request('/auth/admin-stats');
   }
