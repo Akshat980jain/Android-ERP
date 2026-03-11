@@ -74,6 +74,8 @@ export default function AssignmentsScreen({ navigation }: any) {
     switch (status) {
       case 'submitted':
         return '#10B981';
+      case 'graded':
+        return '#10B981';
       case 'pending':
         return '#F59E0B';
       case 'overdue':
@@ -87,12 +89,14 @@ export default function AssignmentsScreen({ navigation }: any) {
     switch (status) {
       case 'submitted':
         return 'check-circle';
+      case 'graded':
+        return 'star-circle';
       case 'pending':
-        return 'time';
+        return 'clock-outline';
       case 'overdue':
         return 'alert-circle';
       default:
-        return 'help-circle';
+        return 'information';
     }
   };
 
