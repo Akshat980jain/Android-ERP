@@ -92,28 +92,47 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
 
     const downloadFile = async (filename: string, relativeUrl: string) => {
         try {
-            const fullUrl = getFileUrl(relativeUrl);
-            const fileUri = (FileSystem as any).documentDirectory + filename;
+            // Encode URL (handles filenames with spaces/special chars)
+            const rawUrl = getFileUrl(relativeUrl);
+            const fullUrl = encodeURI(rawUrl);
 
-            Alert.alert('Downloading', `Downloading ${filename}...`);
+            // Sanitise filename: replace spaces with underscores for the local file
+            const safeFilename = filename.replace(/\s+/g, '_');
 
-            const downloadResult = await FileSystem.downloadAsync(fullUrl, fileUri);
+            // Use the new File-based API (SDK 54)
+            const destFile = new FileSystem.File(FileSystem.Paths.cache, safeFilename);
 
-            if (downloadResult.status === 200) {
-                const canShare = await Sharing.isAvailableAsync();
-                if (canShare) {
-                    await Sharing.shareAsync(downloadResult.uri, {
-                        mimeType: downloadResult.headers['content-type'] || 'application/octet-stream',
-                        dialogTitle: filename,
-                    });
-                } else {
-                    Alert.alert('Downloaded', `File saved to: ${downloadResult.uri}`);
-                }
-            } else {
-                Alert.alert('Error', 'Failed to download the file.');
+            // Download via fetch → write to file
+            const response = await fetch(fullUrl);
+            if (!response.ok) {
+                Alert.alert('Error', `Download failed (HTTP ${response.status}).`);
+                return;
             }
+
+            const blob = await response.blob();
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+                try {
+                    const base64 = (reader.result as string).split(',')[1];
+                    destFile.write(base64, { encoding: 'base64' });
+
+                    const canShare = await Sharing.isAvailableAsync();
+                    if (canShare) {
+                        await Sharing.shareAsync(destFile.uri, {
+                            dialogTitle: filename,
+                        });
+                    } else {
+                        Alert.alert('Downloaded', `File saved successfully.`);
+                    }
+                } catch (writeErr: any) {
+                    console.error('File write error:', writeErr);
+                    Alert.alert('Error', 'Failed to save the file.');
+                }
+            };
+            reader.readAsDataURL(blob);
         } catch (e: any) {
-            Alert.alert('Error', 'Could not download the file. Please try again.');
+            console.error('Download error:', e);
+            Alert.alert('Error', `Could not download the file: ${e.message || 'Unknown error'}`);
         }
     };
 
