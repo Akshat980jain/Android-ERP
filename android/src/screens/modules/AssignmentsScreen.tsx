@@ -33,14 +33,14 @@ export default function AssignmentsScreen({ navigation }: any) {
     try {
       const response: any = await apiService.getStudentAssignments();
       console.log('Assignments API response:', response);
-      
+
       // Backend returns: { assignments: [...] }
       const list = Array.isArray(response?.assignments)
         ? response.assignments
         : Array.isArray(response?.data)
           ? response.data
           : [];
-      
+
       console.log('Processed assignments list:', list);
       setAssignments(list);
     } catch (error) {
@@ -125,8 +125,8 @@ export default function AssignmentsScreen({ navigation }: any) {
           <View style={styles.detailItem}>
             <Ionicons name="trophy" size={16} color={theme.colors.textSecondary} />
             <Text style={styles.detailText}>
-              {assignment.submittedMarks ? 
-                `${assignment.submittedMarks}/${assignment.maxMarks}` : 
+              {assignment.submittedMarks ?
+                `${assignment.submittedMarks}/${assignment.maxMarks}` :
                 `Max: ${assignment.maxMarks}`
               }
             </Text>
@@ -137,16 +137,20 @@ export default function AssignmentsScreen({ navigation }: any) {
           {assignment.status === 'pending' && (
             <Button
               mode="contained"
-              onPress={() => {/* Navigate to submit assignment */}}
-              style={styles.actionButton}
+              onPress={() => navigation.navigate('AssignmentDetail', { assignmentId: assignment.id, mode: 'submit' })}
+              style={[styles.actionButton, { flex: 1, marginRight: 8 }]}
+              textColor="#FFFFFF"
+              labelStyle={{ fontSize: 12 }}
             >
               Submit Assignment
             </Button>
           )}
           <Button
             mode="outlined"
-            onPress={() => {/* View assignment details */}}
-            style={styles.actionButton}
+            onPress={() => navigation.navigate('AssignmentDetail', { assignmentId: assignment.id, mode: 'view' })}
+            style={[styles.actionButton, { flex: 1, backgroundColor: 'transparent' }]}
+            textColor={theme.colors.primary}
+            labelStyle={{ fontSize: 12 }}
           >
             View Details
           </Button>
@@ -157,7 +161,7 @@ export default function AssignmentsScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      <StatusBar 
+      <StatusBar
         barStyle={theme.colors.statusBarStyle}
         backgroundColor={theme.colors.surface}
         translucent={false}
@@ -165,8 +169,8 @@ export default function AssignmentsScreen({ navigation }: any) {
       <ScrollView
         style={styles.content}
         refreshControl={
-          <RefreshControl 
-            refreshing={refreshing} 
+          <RefreshControl
+            refreshing={refreshing}
             onRefresh={onRefresh}
             colors={[theme.colors.primary]}
           />
@@ -217,7 +221,7 @@ export default function AssignmentsScreen({ navigation }: any) {
       <FAB
         style={styles.fab}
         icon="plus"
-        onPress={() => {/* Add new assignment or action */}}
+        onPress={() => {/* Add new assignment or action */ }}
       />
     </View>
   );
@@ -321,8 +325,7 @@ const createStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'space-between',
   },
   actionButton: {
-    flex: 0.48,
-    backgroundColor: theme.colors.primary,
+    borderRadius: 22,
   },
   summaryCard: {
     marginBottom: 20,
