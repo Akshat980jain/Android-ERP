@@ -36,12 +36,14 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
             setError(null);
             const response: any = await apiService.getAssignmentById(assignmentId);
 
-            // Normalise: response may be { assignment: {...} } or { data: {...} } or the object itself
-            const data = response?.assignment || response?.data || response;
+            // Backend returns: { success: true, assignment: {...} }
+            const data = response?.assignment || response?.data?.assignment || response?.data;
             if (data && (data._id || data.id)) {
                 setAssignment(data);
+            } else if (response?.success === false) {
+                setError(response.error || response.message || 'Assignment not found.');
             } else {
-                setError('Assignment not found.');
+                setError('Assignment details could not be loaded.');
             }
         } catch (e: any) {
             setError('Failed to load assignment. Please try again.');

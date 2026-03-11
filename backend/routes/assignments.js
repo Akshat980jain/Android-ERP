@@ -82,6 +82,45 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
+// GET single assignment by ID
+router.get('/:id', auth, async (req, res) => {
+  try {
+    const assignment = await Assignment.findById(req.params.id)
+      .populate('course', 'name code')
+      .populate('faculty', 'name firstName lastName');
+
+    if (!assignment) {
+      return res.status(404).json({ success: false, message: 'Assignment not found' });
+    }
+
+    const obj = assignment.toObject();
+
+    // For students: add their own submission status, strip other students' data
+    if (req.user.role === 'student') {
+      const submission = (obj.submissions || []).find(
+        s => s && s.student && s.student.toString() === req.user._id.toString()
+      );
+      obj.hasSubmitted = !!submission;
+      obj.submissionStatus = submission?.status;
+      obj.marks = submission?.marks;
+      obj.feedback = submission?.feedback;
+    }
+
+    // Normalize attachments
+    obj.attachments = Array.isArray(obj.attachments)
+      ? obj.attachments.map(f => ({ filename: f.filename, url: f.url, size: f.size || 0 }))
+      : [];
+
+    // Never expose raw submissions array to any user via this route
+    delete obj.submissions;
+
+    res.json({ success: true, assignment: obj });
+  } catch (error) {
+    console.error('Get assignment by ID error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 // Create assignment (Faculty/Admin) with optional attachments
 router.post('/', auth, authorize('faculty', 'admin'), assignmentAttachmentsUpload.array('attachments', 10), [
   body('title').trim().notEmpty().withMessage('Title is required'),
