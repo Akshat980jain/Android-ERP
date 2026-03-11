@@ -96,40 +96,22 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
             const rawUrl = getFileUrl(relativeUrl);
             const fullUrl = encodeURI(rawUrl);
 
-            // Sanitise filename: replace spaces with underscores for the local file
-            const safeFilename = filename.replace(/\s+/g, '_');
+            console.log('Downloading file from:', fullUrl);
 
-            // Use the new File-based API (SDK 54)
-            const destFile = new FileSystem.File(FileSystem.Paths.cache, safeFilename);
+            // Use the SDK 54 native downloader
+            const cacheDir = new FileSystem.Directory(FileSystem.Paths.cache);
+            const downloadedFile = await FileSystem.File.downloadFileAsync(fullUrl, cacheDir);
 
-            // Download via fetch → write to file
-            const response = await fetch(fullUrl);
-            if (!response.ok) {
-                Alert.alert('Error', `Download failed (HTTP ${response.status}).`);
-                return;
+            console.log('File downloaded to:', downloadedFile.uri);
+
+            const canShare = await Sharing.isAvailableAsync();
+            if (canShare) {
+                await Sharing.shareAsync(downloadedFile.uri, {
+                    dialogTitle: filename,
+                });
+            } else {
+                Alert.alert('Downloaded', 'File saved successfully.');
             }
-
-            const blob = await response.blob();
-            const reader = new FileReader();
-            reader.onloadend = async () => {
-                try {
-                    const base64 = (reader.result as string).split(',')[1];
-                    destFile.write(base64, { encoding: 'base64' });
-
-                    const canShare = await Sharing.isAvailableAsync();
-                    if (canShare) {
-                        await Sharing.shareAsync(destFile.uri, {
-                            dialogTitle: filename,
-                        });
-                    } else {
-                        Alert.alert('Downloaded', `File saved successfully.`);
-                    }
-                } catch (writeErr: any) {
-                    console.error('File write error:', writeErr);
-                    Alert.alert('Error', 'Failed to save the file.');
-                }
-            };
-            reader.readAsDataURL(blob);
         } catch (e: any) {
             console.error('Download error:', e);
             Alert.alert('Error', `Could not download the file: ${e.message || 'Unknown error'}`);
