@@ -392,14 +392,60 @@ class ApiService {
     return this.request(`/assignments/${assignmentId}`);
   }
 
+  // Get an authenticated download URL for an assignment file
+  async getAssignmentFileDownloadUrl(assignmentId: string, fileIndex: number): Promise<string> {
+    const token = await this.getToken();
+    const urls = getCandidateBaseUrls();
+    const baseUrl = urls[0] || this.baseURL;
+    return `${baseUrl}/assignments/${assignmentId}/download/${fileIndex}?token=${token}`;
+  }
+
+  // Expose the auth token for authenticated downloads
+  async getAuthToken(): Promise<string | null> {
+    return this.getToken();
+  }
+
   async submitAssignment(assignmentId: string, submissionData: {
     content?: string;
-    attachments?: any[];
+    files?: { uri: string; name: string; type: string }[];
   }): Promise<ApiResponse<any>> {
-    return this.request(`/assignments/${assignmentId}/submit`, {
-      method: 'POST',
-      body: JSON.stringify(submissionData),
-    });
+    const formData = new FormData();
+    if (submissionData.content) {
+      formData.append('content', submissionData.content);
+    }
+    if (submissionData.files && submissionData.files.length > 0) {
+      submissionData.files.forEach(f => {
+        formData.append('files', {
+          uri: f.uri,
+          name: f.name,
+          type: f.type,
+        } as any);
+      });
+    }
+    // Use request but override headers (no Content-Type — fetch sets multipart boundary)
+    const token = await this.getToken();
+    const urls = getCandidateBaseUrls();
+    for (const baseURL of urls) {
+      const url = `${baseURL}/assignments/${assignmentId}/submit`;
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
+          body: formData,
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        const data = await response.json();
+        return data;
+      } catch (e) {
+        continue;
+      }
+    }
+    return { success: false, error: 'Failed to submit assignment' } as any;
   }
 
   async createAssignment(assignmentData: {

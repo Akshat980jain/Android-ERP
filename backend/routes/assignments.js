@@ -223,6 +223,54 @@ router.post('/', auth, authorize('faculty', 'admin'), assignmentAttachmentsUploa
   }
 });
 
+// Download assignment question file (supports auth via header OR query param ?token=)
+router.get('/:id/download/:fileIndex', async (req, res) => {
+  try {
+    // Accept token from Authorization header or query param
+    let token = req.header('Authorization')?.replace('Bearer ', '');
+    if (!token && req.query.token) {
+      token = req.query.token;
+    }
+    if (!token) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+
+    // Verify token manually (since we removed the auth middleware)
+    const jwt = require('jsonwebtoken');
+    const User = require('../models/User');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id).select('-password');
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Invalid token' });
+    }
+
+    const assignment = await Assignment.findById(req.params.id);
+    if (!assignment) {
+      return res.status(404).json({ success: false, message: 'Assignment not found' });
+    }
+
+    const fileIndex = parseInt(req.params.fileIndex, 10);
+    if (isNaN(fileIndex) || fileIndex < 0 || !assignment.attachments || fileIndex >= assignment.attachments.length) {
+      return res.status(404).json({ success: false, message: 'File not found' });
+    }
+
+    const file = assignment.attachments[fileIndex];
+    const filePath = path.join(__dirname, '..', file.url);
+
+    // Check if file exists on disk
+    const fs = require('fs');
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ success: false, message: 'File not available on this server. It may have been uploaded to a different instance.' });
+    }
+
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.filename)}"`);
+    res.sendFile(path.resolve(filePath));
+  } catch (error) {
+    console.error('Download file error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 // Submit assignment (Student) with files
 router.post('/:assignmentId/submit', auth, authorize('student'), checkVerification, submissionFilesUpload.array('files', 10), async (req, res) => {
   try {

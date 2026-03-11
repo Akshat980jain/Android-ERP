@@ -12,16 +12,10 @@ import {
 } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import apiService from '../../services/api';
-import { API_CONFIG } from '../../config/api.config';
-
-function getFileUrl(relativePath: string): string {
-    // Always use HTTPS production URL for downloads (Android blocks HTTP cleartext)
-    const base = API_CONFIG.PRODUCTION_URL.replace(/\/api\/?$/, '');
-    return `${base}${relativePath}`;
-}
 
 function getFileIcon(filename: string): { icon: string; color: string } {
     const ext = filename.split('.').pop()?.toLowerCase() || '';
@@ -59,6 +53,7 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
     const [submissionContent, setSubmissionContent] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [showSubmitForm, setShowSubmitForm] = useState(mode === 'submit');
+    const [selectedFiles, setSelectedFiles] = useState<{ uri: string; name: string; type: string; size?: number }[]>([]);
 
     const loadAssignment = useCallback(async () => {
         try {
@@ -91,17 +86,13 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
         loadAssignment();
     };
 
-    const downloadFile = async (filename: string, relativeUrl: string) => {
+    const downloadFile = async (filename: string, fileIndex: number) => {
         try {
-            // Encode URL (handles filenames with spaces/special chars)
-            const rawUrl = getFileUrl(relativeUrl);
-            const fullUrl = encodeURI(rawUrl);
+            const downloadUrl = await apiService.getAssignmentFileDownloadUrl(assignmentId, fileIndex);
+            console.log('Downloading file from:', downloadUrl);
 
-            console.log('Downloading file from:', fullUrl);
-
-            // Use the SDK 54 native downloader
             const cacheDir = new FileSystem.Directory(FileSystem.Paths.cache);
-            const downloadedFile = await FileSystem.File.downloadFileAsync(fullUrl, cacheDir);
+            const downloadedFile = await FileSystem.File.downloadFileAsync(downloadUrl, cacheDir);
 
             console.log('File downloaded to:', downloadedFile.uri);
 
@@ -119,18 +110,49 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
         }
     };
 
+    const pickFiles = async () => {
+        try {
+            const result = await DocumentPicker.getDocumentAsync({
+                type: ['application/pdf', 'application/msword',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'image/png', 'image/jpeg', 'text/plain',
+                    'application/vnd.ms-powerpoint',
+                    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                    'application/vnd.ms-excel',
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+                multiple: true,
+            });
+            if (!result.canceled && result.assets) {
+                const newFiles = result.assets.map(a => ({
+                    uri: a.uri,
+                    name: a.name,
+                    type: a.mimeType || 'application/octet-stream',
+                    size: a.size,
+                }));
+                setSelectedFiles(prev => [...prev, ...newFiles]);
+            }
+        } catch (e: any) {
+            Alert.alert('Error', 'Could not pick files.');
+        }
+    };
+
+    const removeFile = (index: number) => {
+        setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    };
+
     const handleSubmit = async () => {
-        if (!submissionContent.trim()) {
-            Alert.alert('Error', 'Please enter your submission content.');
+        if (!submissionContent.trim() && selectedFiles.length === 0) {
+            Alert.alert('Error', 'Please enter your answer or attach files.');
             return;
         }
         setSubmitting(true);
         try {
             const res: any = await apiService.submitAssignment(assignmentId, {
-                content: submissionContent,
+                content: submissionContent || undefined,
+                files: selectedFiles.length > 0 ? selectedFiles : undefined,
             });
             if (res?.success === false) {
-                Alert.alert('Error', res.error || 'Submission failed.');
+                Alert.alert('Error', res.error || res.message || 'Submission failed.');
             } else {
                 Alert.alert('Success', 'Assignment submitted successfully!', [
                     { text: 'OK', onPress: () => navigation.goBack() },
@@ -291,7 +313,7 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
                                         { backgroundColor: theme.colors.surface },
                                         idx < assignment.attachments.length - 1 && { marginBottom: 8 },
                                     ]}
-                                    onPress={() => downloadFile(file.filename, file.url)}
+                                    onPress={() => downloadFile(file.filename, idx)}
                                     activeOpacity={0.7}
                                 >
                                     <Ionicons name={icon as any} size={24} color={color} />
@@ -342,6 +364,36 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
                                     value={submissionContent}
                                     onChangeText={setSubmissionContent}
                                 />
+
+                                {/* File Picker */}
+                                <TouchableOpacity
+                                    style={[s.attachBtn, { borderColor: theme.colors.border }]}
+                                    onPress={pickFiles}
+                                >
+                                    <Ionicons name="attach" size={20} color={theme.colors.primary} />
+                                    <Text style={[s.attachBtnText, { color: theme.colors.primary }]}>Attach Files</Text>
+                                </TouchableOpacity>
+
+                                {selectedFiles.length > 0 && (
+                                    <View style={{ marginBottom: 12 }}>
+                                        {selectedFiles.map((f, i) => {
+                                            const { icon, color } = getFileIcon(f.name);
+                                            const size = f.size ? formatFileSize(f.size) : '';
+                                            return (
+                                                <View key={i} style={[s.fileRow, { backgroundColor: theme.colors.surface, marginBottom: i < selectedFiles.length - 1 ? 6 : 0 }]}>
+                                                    <Ionicons name={icon as any} size={20} color={color} />
+                                                    <View style={s.fileInfo}>
+                                                        <Text style={[s.fileName, { color: theme.colors.text }]} numberOfLines={1}>{f.name}</Text>
+                                                        {size ? <Text style={[s.fileSize, { color: theme.colors.textSecondary }]}>{size}</Text> : null}
+                                                    </View>
+                                                    <TouchableOpacity onPress={() => removeFile(i)}>
+                                                        <Ionicons name="close-circle" size={22} color="#EF4444" />
+                                                    </TouchableOpacity>
+                                                </View>
+                                            );
+                                        })}
+                                    </View>
+                                )}
                                 <View style={s.submitActions}>
                                     <TouchableOpacity
                                         style={[s.outlineBtn, { borderColor: theme.colors.border }]}
@@ -416,6 +468,8 @@ const createStyles = (theme: any) =>
         primaryBtnText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
         outlineBtn: { paddingHorizontal: 20, paddingVertical: 12, borderRadius: 20, borderWidth: 1 },
         outlineBtnText: { fontWeight: '600', fontSize: 14 },
+        attachBtn: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderStyle: 'dashed', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14, marginBottom: 12, gap: 8 },
+        attachBtnText: { fontSize: 14, fontWeight: '600' },
         /* File attachments */
         fileRow: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 10 },
         fileInfo: { flex: 1, marginLeft: 12, marginRight: 8 },
