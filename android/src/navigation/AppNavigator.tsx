@@ -33,6 +33,7 @@ import SettingsScreen from '../screens/modules/SettingsScreen';
 import EventsScreen from '../screens/modules/EventsScreen';
 import ReportsScreen from '../screens/modules/ReportsScreen';
 import CourseScreen from '../screens/modules/CourseScreen';
+import CourseDetailScreen from '../screens/modules/CourseDetailScreen';
 import ExamScreen from '../screens/modules/ExamScreen';
 import CalendarScreen from '../screens/modules/CalendarScreen';
 import ChatScreen from '../screens/modules/ChatScreen';
@@ -316,6 +317,7 @@ function AppNavigator() {
         <Stack.Screen name="Notifications" component={NotificationsScreen} />
         <Stack.Screen name="RequestApproval" component={RequestApprovalScreen} />
         <Stack.Screen name="Courses" component={CourseScreen} />
+        <Stack.Screen name="CourseDetail" component={CourseDetailScreen} />
         <Stack.Screen name="Exams" component={ExamScreen} />
         <Stack.Screen name="Calendar" component={CalendarScreen} />
         <Stack.Screen name="Chat" component={ChatScreen} />

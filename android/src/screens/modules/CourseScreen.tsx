@@ -32,7 +32,7 @@ interface CourseItem {
     description?: string;
 }
 
-export default function CourseScreen() {
+export default function CourseScreen({ navigation }: any) {
     const { user } = useAuth();
     const { theme } = useTheme();
     const [refreshing, setRefreshing] = useState(false);
@@ -85,64 +85,69 @@ export default function CourseScreen() {
     };
 
     const renderCourseCard = (course: CourseItem) => (
-        <Card
+        <TouchableOpacity
             key={course._id}
-            style={[styles.courseCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
+            activeOpacity={0.75}
+            onPress={() => navigation.navigate('CourseDetail', { courseId: course._id, courseName: course.name })}
         >
-            <Card.Content>
-                <View style={styles.courseHeader}>
-                    <View style={{ flex: 1 }}>
-                        <Title style={[styles.courseName, { color: theme.colors.text }]}>{course.name}</Title>
-                        <Chip style={[styles.codeChip, { backgroundColor: theme.colors.primary + '20' }]}
-                            textStyle={{ color: theme.colors.primary, fontSize: 11, fontWeight: '600' }}>
-                            {course.code}
-                        </Chip>
-                    </View>
-                    <View style={[styles.creditsBadge, { backgroundColor: theme.colors.primary }]}>
-                        <Text style={styles.creditsText}>{course.credits}</Text>
-                        <Text style={styles.creditsLabel}>Credits</Text>
-                    </View>
-                </View>
-
-                <View style={[styles.courseDetails, { borderTopColor: theme.colors.border }]}>
-                    <View style={styles.detailRow}>
-                        <Ionicons name="person-outline" size={16} color={theme.colors.textSecondary} />
-                        <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Faculty:</Text>
-                        <Text style={[styles.detailValue, { color: theme.colors.text }]}>{getFacultyName(course.faculty)}</Text>
+            <Card
+                style={[styles.courseCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
+            >
+                <Card.Content>
+                    <View style={styles.courseHeader}>
+                        <View style={{ flex: 1 }}>
+                            <Title style={[styles.courseName, { color: theme.colors.text }]}>{course.name}</Title>
+                            <Chip style={[styles.codeChip, { backgroundColor: theme.colors.primary + '20' }]}
+                                textStyle={{ color: theme.colors.primary, fontSize: 11, fontWeight: '600' }}>
+                                {course.code}
+                            </Chip>
+                        </View>
+                        <View style={[styles.creditsBadge, { backgroundColor: theme.colors.primary }]}>
+                            <Text style={styles.creditsText}>{course.credits}</Text>
+                            <Text style={styles.creditsLabel}>Credits</Text>
+                        </View>
                     </View>
 
-                    {course.semester && (
+                    <View style={[styles.courseDetails, { borderTopColor: theme.colors.border }]}>
                         <View style={styles.detailRow}>
-                            <Ionicons name="school-outline" size={16} color={theme.colors.textSecondary} />
-                            <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Semester:</Text>
-                            <Text style={[styles.detailValue, { color: theme.colors.text }]}>{course.semester}</Text>
+                            <Ionicons name="person-outline" size={16} color={theme.colors.textSecondary} />
+                            <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Faculty:</Text>
+                            <Text style={[styles.detailValue, { color: theme.colors.text }]}>{getFacultyName(course.faculty)}</Text>
                         </View>
-                    )}
 
-                    {course.department && (
-                        <View style={styles.detailRow}>
-                            <Ionicons name="business-outline" size={16} color={theme.colors.textSecondary} />
-                            <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Dept:</Text>
-                            <Text style={[styles.detailValue, { color: theme.colors.text }]}>{course.department}</Text>
-                        </View>
-                    )}
+                        {course.semester && (
+                            <View style={styles.detailRow}>
+                                <Ionicons name="school-outline" size={16} color={theme.colors.textSecondary} />
+                                <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Semester:</Text>
+                                <Text style={[styles.detailValue, { color: theme.colors.text }]}>{course.semester}</Text>
+                            </View>
+                        )}
 
-                    {course.schedule && course.schedule.length > 0 && (
-                        <View style={styles.scheduleSection}>
-                            <Text style={[styles.scheduleSectionTitle, { color: theme.colors.textSecondary }]}>Schedule</Text>
-                            {course.schedule.map((s, i) => (
-                                <View key={i} style={styles.scheduleRow}>
-                                    <Ionicons name="time-outline" size={14} color={theme.colors.textSecondary} />
-                                    <Text style={[styles.scheduleText, { color: theme.colors.text }]}>
-                                        {s.day} · {s.startTime} - {s.endTime} · {s.room}
-                                    </Text>
-                                </View>
-                            ))}
-                        </View>
-                    )}
-                </View>
-            </Card.Content>
-        </Card>
+                        {course.department && (
+                            <View style={styles.detailRow}>
+                                <Ionicons name="business-outline" size={16} color={theme.colors.textSecondary} />
+                                <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Dept:</Text>
+                                <Text style={[styles.detailValue, { color: theme.colors.text }]}>{course.department}</Text>
+                            </View>
+                        )}
+
+                        {course.schedule && course.schedule.length > 0 && (
+                            <View style={styles.scheduleSection}>
+                                <Text style={[styles.scheduleSectionTitle, { color: theme.colors.textSecondary }]}>Schedule</Text>
+                                {course.schedule.map((s, i) => (
+                                    <View key={i} style={styles.scheduleRow}>
+                                        <Ionicons name="time-outline" size={14} color={theme.colors.textSecondary} />
+                                        <Text style={[styles.scheduleText, { color: theme.colors.text }]}>
+                                            {s.day} · {s.startTime} - {s.endTime} · {s.room}
+                                        </Text>
+                                    </View>
+                                ))}
+                            </View>
+                        )}
+                    </View>
+                </Card.Content>
+            </Card>
+        </TouchableOpacity>
     );
 
     return (

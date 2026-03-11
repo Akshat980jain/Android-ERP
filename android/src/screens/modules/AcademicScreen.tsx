@@ -12,8 +12,6 @@ import {
   Title,
   Paragraph,
   Button,
-  List,
-  Chip,
   FAB,
 } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
@@ -74,15 +72,15 @@ export default function AcademicScreen({ navigation }: any) {
             <Text style={[styles.facultyName, { color: theme.colors.textSecondary }]}>Faculty: {course.faculty}</Text>
           </View>
           <View style={styles.courseStats}>
-            <Chip mode="outlined" style={[styles.chip, { borderColor: theme.colors.border }]} textStyle={{ color: theme.colors.text }}>
-              {course.credits} Credits
-            </Chip>
-            <Chip mode="outlined" style={[styles.chip, { borderColor: theme.colors.border }]} textStyle={{ color: theme.colors.text }}>
-              Sem {course.semester}
-            </Chip>
+            <View style={[styles.badge, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+              <Text style={[styles.badgeText, { color: theme.colors.text }]}>{course.credits} Credits</Text>
+            </View>
+            <View style={[styles.badge, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+              <Text style={[styles.badgeText, { color: theme.colors.text }]}>Sem {course.semester}</Text>
+            </View>
           </View>
         </View>
-        
+
         <View style={[styles.courseMetrics, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.metric}>
             <Ionicons name="checkmark-circle" size={16} color="#10B981" />
@@ -100,7 +98,12 @@ export default function AcademicScreen({ navigation }: any) {
           <Button
             mode="outlined"
             compact
-            onPress={() => {/* Navigate to course details */}}
+            onPress={() => navigation.navigate('CourseDetail', {
+              courseId: course.id,
+              courseName: course.courseName,
+              attendance: course.attendance,
+              grade: course.grade,
+            })}
             style={styles.actionButton}
             textColor={theme.colors.primary}
           >
@@ -109,8 +112,9 @@ export default function AcademicScreen({ navigation }: any) {
           <Button
             mode="contained"
             compact
-            onPress={() => {/* Navigate to assignments */}}
+            onPress={() => navigation.navigate('Assignments', { courseId: course.id })}
             style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
+            textColor="#FFFFFF"
           >
             Assignments
           </Button>
@@ -164,7 +168,7 @@ export default function AcademicScreen({ navigation }: any) {
               </View>
               <View style={styles.summaryItem}>
                 <Text style={[styles.summaryNumber, { color: theme.colors.primary }]}>
-                  {courses.length > 0 ? 
+                  {courses.length > 0 ?
                     Math.round(courses.reduce((acc, c) => acc + (toViewModel(c).attendance || 0), 0) / courses.length) : 0}%
                 </Text>
                 <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary }]}>Avg Attendance</Text>
@@ -183,7 +187,7 @@ export default function AcademicScreen({ navigation }: any) {
           style={[styles.fab, { backgroundColor: theme.colors.primary }]}
           icon="plus"
           color="#FFFFFF"
-          onPress={() => {/* Add new course or action */}}
+          onPress={() => {/* Add new course or action */ }}
         />
       )}
     </View>
@@ -254,8 +258,16 @@ const styles = StyleSheet.create({
   courseStats: {
     alignItems: 'flex-end',
   },
-  chip: {
+  badge: {
     marginBottom: 4,
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '500',
   },
   courseMetrics: {
     flexDirection: 'row',
