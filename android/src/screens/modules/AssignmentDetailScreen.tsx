@@ -9,10 +9,37 @@ import {
     ActivityIndicator,
     Alert,
     TextInput,
+    Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import apiService from '../../services/api';
+import { API_CONFIG } from '../../config/api.config';
+
+function getFileUrl(relativePath: string): string {
+    const base = API_CONFIG.BASE_URL.replace(/\/api\/?$/, '');
+    return `${base}${relativePath}`;
+}
+
+function getFileIcon(filename: string): { icon: string; color: string } {
+    const ext = filename.split('.').pop()?.toLowerCase() || '';
+    switch (ext) {
+        case 'pdf': return { icon: 'document-text', color: '#EF4444' };
+        case 'doc': case 'docx': return { icon: 'document-text', color: '#3B82F6' };
+        case 'jpg': case 'jpeg': case 'png': case 'gif': return { icon: 'image', color: '#10B981' };
+        case 'ppt': case 'pptx': return { icon: 'easel', color: '#F59E0B' };
+        case 'xls': case 'xlsx': return { icon: 'grid', color: '#10B981' };
+        case 'zip': case 'rar': return { icon: 'archive', color: '#8B5CF6' };
+        default: return { icon: 'attach', color: '#6B7280' };
+    }
+}
+
+function formatFileSize(bytes: number): string {
+    if (!bytes || bytes === 0) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 export default function AssignmentDetailScreen({ route, navigation }: any) {
     const { theme } = useTheme();
@@ -219,6 +246,38 @@ export default function AssignmentDetailScreen({ route, navigation }: any) {
                     ) : null}
                 </View>
 
+                {/* ── Question Files ──────────────────────────────── */}
+                {Array.isArray(assignment.attachments) && assignment.attachments.length > 0 && (
+                    <View style={[s.card, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+                        <Text style={[s.sectionTitle, { color: theme.colors.textSecondary }]}>QUESTION FILES</Text>
+                        {assignment.attachments.map((file: any, idx: number) => {
+                            const { icon, color } = getFileIcon(file.filename || '');
+                            const size = formatFileSize(file.size || 0);
+                            return (
+                                <TouchableOpacity
+                                    key={idx}
+                                    style={[
+                                        s.fileRow,
+                                        { backgroundColor: theme.colors.surface },
+                                        idx < assignment.attachments.length - 1 && { marginBottom: 8 },
+                                    ]}
+                                    onPress={() => Linking.openURL(getFileUrl(file.url))}
+                                    activeOpacity={0.7}
+                                >
+                                    <Ionicons name={icon as any} size={24} color={color} />
+                                    <View style={s.fileInfo}>
+                                        <Text style={[s.fileName, { color: theme.colors.text }]} numberOfLines={1}>
+                                            {file.filename}
+                                        </Text>
+                                        {size ? <Text style={[s.fileSize, { color: theme.colors.textSecondary }]}>{size}</Text> : null}
+                                    </View>
+                                    <Ionicons name="open-outline" size={18} color={theme.colors.textSecondary} />
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </View>
+                )}
+
                 {/* ── Marks & Feedback (if graded) ─────────────────────── */}
                 {hasSubmitted && (typeof assignment.marks === 'number' || assignment.feedback) && (
                     <View style={[s.card, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
@@ -327,6 +386,11 @@ const createStyles = (theme: any) =>
         primaryBtnText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
         outlineBtn: { paddingHorizontal: 20, paddingVertical: 12, borderRadius: 20, borderWidth: 1 },
         outlineBtnText: { fontWeight: '600', fontSize: 14 },
+        /* File attachments */
+        fileRow: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 10 },
+        fileInfo: { flex: 1, marginLeft: 12, marginRight: 8 },
+        fileName: { fontSize: 14, fontWeight: '600' },
+        fileSize: { fontSize: 11, marginTop: 2 },
         /* Loading / Error */
         loadingText: { marginTop: 14, fontSize: 14 },
         emptyTitle: { fontSize: 18, fontWeight: '700', marginTop: 14 },
