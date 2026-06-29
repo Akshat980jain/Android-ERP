@@ -3,8 +3,9 @@ import { BarChart3, TrendingUp, Users, AlertTriangle, Target, Award } from 'luci
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { useAuth } from '../../contexts/AuthContext';
+import apiClient from '../../utils/api';
 
-const API_URL = import.meta.env.VITE_API_URL || '';
+const API_URL = apiClient.rootURL;
 
 interface StudentAnalytics {
   student: {

@@ -8,7 +8,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import apiClient from '../../utils/api';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const API_URL = import.meta.env.VITE_API_URL || '';
+const API_URL = apiClient.rootURL;
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface Student {
@@ -642,10 +642,7 @@ function StudentAttendanceView() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/attendance/summary`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
+        const data = await apiClient.request<any>('/attendance/summary');
         if (data.success) setStats(data.stats || []);
       } catch { /* ignore */ }
       setLoading(false);

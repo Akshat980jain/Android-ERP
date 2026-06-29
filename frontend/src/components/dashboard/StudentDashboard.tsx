@@ -47,7 +47,7 @@ import { DynamicBackground } from '../ui/DynamicBackground';
 import { InteractiveParticles } from '../ui/InteractiveParticles';
 import { DynamicShadows } from '../ui/DynamicShadows';
 
-const API_URL = import.meta.env.VITE_API_URL || '';
+const API_URL = apiClient.rootURL;
 
 interface Assignment {
   _id: string;

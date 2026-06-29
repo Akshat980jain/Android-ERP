@@ -4,9 +4,10 @@ import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { useAuth } from '../../contexts/AuthContext';
+import apiClient from '../../utils/api';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 
-const API_URL = import.meta.env.VITE_API_URL || '';
+const API_URL = apiClient.rootURL;
 
 interface ReportData {
   academic?: any;

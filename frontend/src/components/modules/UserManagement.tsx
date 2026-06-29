@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
+import apiClient from '../../utils/api';
 import { Card } from '../ui/Card';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { Toast } from '../ui/Toast';
@@ -32,7 +33,7 @@ const statusColors: Record<string, string> = {
   rejected: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400',
 };
 
-const API_URL = import.meta.env.VITE_API_URL || '';
+const API_URL = apiClient.rootURL;
 
 const UserManagement: React.FC = () => {
   const { token } = useAuth();

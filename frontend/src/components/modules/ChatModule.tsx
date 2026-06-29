@@ -3,8 +3,9 @@ import { MessageCircle, Send, Users, Search, Plus, Phone, Video } from 'lucide-r
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
+import apiClient from '../../utils/api';
 
-const API_URL = import.meta.env.VITE_API_URL || '';
+const API_URL = apiClient.rootURL;
 
 interface Chat {
   _id: string;

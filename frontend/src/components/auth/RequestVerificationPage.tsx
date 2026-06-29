@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import apiClient from '../../utils/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   UserPlus, ArrowLeft, GraduationCap, Users, Shield, Briefcase, BookOpen,
@@ -78,7 +79,7 @@ const selectCls =
    REQUEST VERIFICATION PAGE
    ════════════════════════════════════════════════ */
 export default function RequestVerificationPage() {
-  const API_URL = import.meta.env.VITE_API_URL || '';
+  const API_URL = apiClient.rootURL;
   const [form, setForm] = useState({
     name: '', email: '', password: '', confirmPassword: '',
     branch: '', course: '', requestedRole: 'student',

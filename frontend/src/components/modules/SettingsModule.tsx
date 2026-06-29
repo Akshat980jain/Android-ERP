@@ -7,7 +7,7 @@ import { Input } from '../ui/Input';
 import { useAuth } from '../../contexts/AuthContext';
 import apiClient from '../../utils/api';
 
-const API_URL = import.meta.env.VITE_API_URL || '';
+const API_URL = apiClient.rootURL;
 
 interface SystemSettings {
   institution: {

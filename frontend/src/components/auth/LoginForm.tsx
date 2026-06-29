@@ -3,6 +3,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, GraduationCap, Eye, EyeOff, AlertCircle, ArrowLeft, Shield } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import apiClient from '../../utils/api';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -327,26 +328,15 @@ export function LoginForm() {
 
   // Check if backend is reachable (optional diagnostic)
   const testConnection = useCallback(async () => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/health`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        showToast('Server connection is working!', 'success');
-      } else {
-        showToast(`Server responded with status: ${response.status}`, 'error');
-      }
-    } catch (error) {
-      console.error('Connection test failed:', error);
-      showToast('Cannot connect to server. Please check if the server is running on port 5000.', 'error');
+    const res = await apiClient.testConnection();
+    if (res.success) {
+      showToast(res.message, 'success');
+    } else {
+      showToast(res.message, 'error');
     }
   }, [showToast]);
 
-  const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const API = apiClient.rootURL;
 
   const startOtpTimer = () => {
     if (otpTimerRef.current) clearInterval(otpTimerRef.current);

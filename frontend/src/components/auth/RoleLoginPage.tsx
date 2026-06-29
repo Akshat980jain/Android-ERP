@@ -6,6 +6,7 @@ import {
     Users, Briefcase, BookOpen, ChevronRight, CheckCircle
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import apiClient from '../../utils/api';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -256,7 +257,7 @@ export function RoleLoginPage({ role }: { role?: string }) {
         }
     };
 
-    const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const API = apiClient.rootURL;
 
     const startOtpTimer = () => {
         if (otpTimerRef.current) clearInterval(otpTimerRef.current);

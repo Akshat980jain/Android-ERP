@@ -24,7 +24,7 @@ const LOCAL_IP = '192.168.1.3';
 const LOCAL_PORT = '5000';
 
 // Your hosted backend URL
-const PRODUCTION_URL = 'https://android-1ej6.onrender.com/api';
+const PRODUCTION_URL = 'https://android-erp-backend.onrender.com/api';
 
 // ==================== DO NOT EDIT BELOW ====================
 

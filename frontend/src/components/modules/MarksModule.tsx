@@ -2,8 +2,9 @@
 import { useState, useEffect } from 'react';
 import { GraduationCap, TrendingUp, FileText, Edit, Save, Plus, Trash2, Download, Upload } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import apiClient from '../../utils/api';
 
-const API_URL = import.meta.env.VITE_API_URL || '';
+const API_URL = apiClient.rootURL;
 
 interface StudentMark {
   _id: string;

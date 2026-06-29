@@ -4,8 +4,9 @@ import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
 import { PdfViewer } from '../ui/PdfViewer';
+import apiClient from '../../utils/api';
 
-const API_URL = import.meta.env.VITE_API_URL || '';
+const API_URL = apiClient.rootURL;
 
 interface Assignment {
   _id: string;

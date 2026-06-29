@@ -1,10 +1,43 @@
-const API_BASE_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api`;
+const getCandidateBaseUrls = (): string[] => {
+  const urls: string[] = [];
+  
+  // Use current env URL or fallback to standard URLs
+  const hostedUrl = import.meta.env.VITE_API_URL || 'https://android-erp-backend.onrender.com';
+  
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    // If running locally, check localhost first, then hosted fallback
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.')) {
+      urls.push('http://localhost:5000');
+      urls.push(hostedUrl);
+    } else {
+      urls.push(hostedUrl);
+      urls.push('http://localhost:5000');
+    }
+  } else {
+    urls.push(hostedUrl);
+    urls.push('http://localhost:5000');
+  }
+
+  // Ensure they have the /api suffix where appropriate
+  return urls.map(url => url.endsWith('/api') ? url : `${url}/api`);
+};
 
 class ApiClient {
   private baseURL: string;
+  private currentBaseURL: string;
 
   constructor(baseURL: string) {
     this.baseURL = baseURL;
+    this.currentBaseURL = getCandidateBaseUrls()[0] || baseURL;
+  }
+
+  get currentAPIURL(): string {
+    return this.currentBaseURL;
+  }
+
+  get rootURL(): string {
+    return this.currentBaseURL.replace(/\/api$/, '');
   }
 
   private getAuthHeaders(token?: string): HeadersInit {
@@ -21,36 +54,51 @@ class ApiClient {
     options: RequestInit = {},
     token?: string
   ): Promise<T> {
-    const url = `${this.baseURL}${endpoint}`;
-    const config: RequestInit = {
-      headers: this.getAuthHeaders(token),
-      ...options
-    };
+    const urlsToTry = getCandidateBaseUrls();
+    let lastError: any = new Error('All connection attempts failed');
 
-    try {
-      const response = await fetch(url, config);
+    for (let i = 0; i < urlsToTry.length; i++) {
+      const activeBase = urlsToTry[i];
+      const url = `${activeBase}${endpoint}`;
+      const config: RequestInit = {
+        headers: this.getAuthHeaders(token),
+        ...options
+      };
 
-      // Check if response is ok before trying to parse JSON
-      if (!response.ok) {
-        // Try to get the response text for error handling
-        const errorText = await response.text();
+      try {
+        const response = await fetch(url, config);
 
-        let errorData;
-        try {
-          errorData = JSON.parse(errorText);
-        } catch {
-          errorData = { message: errorText };
+        if (!response.ok) {
+          const errorText = await response.text();
+          let errorData;
+          try {
+            errorData = JSON.parse(errorText);
+          } catch {
+            errorData = { message: errorText };
+          }
+          throw new Error(`HTTP ${response.status}: ${errorData.message || response.statusText}`);
         }
 
-        throw new Error(`HTTP ${response.status}: ${errorData.message || response.statusText}`);
+        const data = await response.json();
+        // Update cached working URL on success
+        this.currentBaseURL = activeBase;
+        return data;
+      } catch (error: any) {
+        lastError = error;
+        // Do not retry on standard client/authentication error status codes (400, 401, 403, 404)
+        if (error.message && (
+          error.message.includes('HTTP 400') ||
+          error.message.includes('HTTP 401') ||
+          error.message.includes('HTTP 403') ||
+          error.message.includes('HTTP 404')
+        )) {
+          throw error;
+        }
+        console.warn(`[API] Attempt with ${activeBase} failed for endpoint ${endpoint}. Retrying next URL if available...`, error);
       }
-
-      const data = await response.json();
-
-      return data;
-    } catch (error) {
-      throw error;
     }
+
+    throw lastError;
   }
 
   // Auth endpoints
@@ -235,28 +283,33 @@ class ApiClient {
 
   // Test server connectivity
   async testConnection(): Promise<{ success: boolean; message: string }> {
-    try {
-      const response = await fetch(`${this.baseURL}/health`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+    const urlsToTry = getCandidateBaseUrls();
+    let lastErrorMsg = 'All connection attempts failed';
 
-      if (response.ok) {
-        return { success: true, message: 'Server connection successful' };
-      } else {
-        return {
-          success: false,
-          message: `Server responded with status: ${response.status} ${response.statusText}`
-        };
+    for (const activeBase of urlsToTry) {
+      try {
+        const response = await fetch(`${activeBase}/health`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          this.currentBaseURL = activeBase;
+          return { success: true, message: `Server connection successful via ${activeBase}` };
+        } else {
+          lastErrorMsg = `Server at ${activeBase} responded with status: ${response.status} ${response.statusText}`;
+        }
+      } catch (error) {
+        lastErrorMsg = `Connection to ${activeBase} failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
       }
-    } catch (error) {
-      return {
-        success: false,
-        message: `Connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-      };
     }
+
+    return {
+      success: false,
+      message: lastErrorMsg
+    };
   }
 
   // Notifications
