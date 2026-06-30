@@ -34,3 +34,9 @@ npm-debug.log*
 # Temp files
 *.tmp
 fix_motion_tags.*
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
