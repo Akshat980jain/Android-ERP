@@ -24,11 +24,9 @@ const getCandidateBaseUrls = (): string[] => {
 };
 
 class ApiClient {
-  private baseURL: string;
   private currentBaseURL: string;
 
   constructor(baseURL: string) {
-    this.baseURL = baseURL;
     this.currentBaseURL = getCandidateBaseUrls()[0] || baseURL;
   }
 
